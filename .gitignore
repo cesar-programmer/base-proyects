@@ -1,37 +1,51 @@
-# Dependencies
+# Node.js dependencies
 node_modules/
 /.pnp
 .pnp.js
+# Bun (alternativa a npm/yarn/pnpm)
+.bun/
 
-# Environment variables
+# Package manager files
+.pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+npm-debug.log*
+lerna-debug.log*
+
+# Build outputs (Frontend y Backend)
+frontend/build/
+frontend/dist/
+backend/build/
+backend/dist/
+
+# Cache y archivos temporales
+.npm/
+.eslintcache
+.prettiercache
+.vite/
+coverage/
+.cache/
+
+# Archivos de entorno
 .env
-.env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Testing
-/coverage
 
-# Production
-/frontend/build/
-/frontend/dist/
-/backend/dist/
-/backend/build/
 
-# Docker
+# Docker y bases de datos
 .docker/
+docker-compose.override.yml
+/mysql/data/
 
 # Logs
-logs
+logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+*.log.*
 
-# Editor directories and files
+# Editor/IDE directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea/
@@ -40,34 +54,45 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
-.DS_Store
-*.pem
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Sistema de control de versiones para husky
+.husky/
 
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
 
-# Database
-/mysql/data/
+# Test outputs
+.vitest/
+.vitest-report/
+jest-html-reporters-*.html
+/coverage
 
-# Cache
-.npm
-.eslintcache
-.prettiercache
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
+# Salida de `npm pack`
 *.tgz
 
-# Yarn Integrity file
-.yarn-integrity
+# Archivos SSL locales
+*.pem
+
+# Netlify
+.netlify/
+netlify.toml
+
+# Otros
+.deno/
+*.sqlite
+*.sqlite3
+*.pid
+.idea/
+
+# Production
+/frontend/build/
+/frontend/dist/
+/backend/dist/
+/backend/build/
 
 # Local Netlify folder
 .netlify
-
-# misc
-*.pem
-.DS_Store
-Thumbs.db

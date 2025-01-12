@@ -28,7 +28,7 @@ const Label = ({ children, htmlFor }) => (
   </label>
 );
 
-const LoginPage = () => {
+export default function LoginPageAdmin() {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -61,6 +61,9 @@ const LoginPage = () => {
         </div>
         <h1 className="text-2xl font-bold mb-6 text-center text-green-800">
           Iniciar Sesión
+        </h1>
+        <h1 className="text-xl font-bold mb-6 text-center text-green-800">
+          Administrador
         </h1>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -110,4 +113,3 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;

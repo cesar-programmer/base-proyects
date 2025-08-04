@@ -17,7 +17,7 @@ export const adminRoutes = [
       { path: "gestion-usuarios", element: <GestionUsuariosDashboard /> },
       { path: "configuracion-fechas", element: <ConfiguracionFechasDashboard /> },
       { path: "correcciones", element: <CorreccionesDashboard /> },
-      { path: "revision-actividades", element: <RevisionActividadesDashboard /> },
+      { path: "historial-reportes", element: <RevisionActividadesDashboard /> },
     ],
   },
 ]

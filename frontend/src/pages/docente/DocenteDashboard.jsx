@@ -1,9 +1,173 @@
-export default function DocenteDashboard() {
-  return (
-    <div>
-      <h1>Dashboard del docente</h1>
-      <h2>Esto es un dashboard de docente</h2>
-      <h3>Esto es un dashboard de docente otra vez</h3>
+/* eslint-disable react/prop-types */
+import { Calendar, FileText, BarChart3, ClipboardList, Bell } from "lucide-react"
+import { Link } from "react-router-dom";
+
+// Componentes reutilizables
+const Button = ({ children, className, ...props }) => (
+  <button 
+    className={`px-4 py-2 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);
+
+const Card = ({ children, className, ...props }) => (
+  <div 
+    className={`bg-white shadow-lg rounded-lg border border-gray-200 ${className}`}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+// Componente de tarjeta de sección docente
+const DocenteSectionCard = ({ section }) => (
+  <Card className="hover:shadow-xl transition-shadow duration-300 border-l-4 border-l-green-500">
+    <div className="p-6 pb-3">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-green-100 rounded-lg">
+          <section.icon className="h-6 w-6 text-green-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-green-800">{section.title}</h3>
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 mt-2">{section.description}</p>
     </div>
-  )
+    <div className="p-6 pt-0">
+      {section.Link ? (
+        <Link 
+          to={section.Link}
+          className="w-full bg-green-600 hover:bg-green-700 text-white focus:ring-green-500 px-4 py-2 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 inline-block text-center"
+        >
+          {section.buttonText}
+        </Link>
+      ) : (
+        <Button className="w-full bg-green-600 hover:bg-green-700 text-white focus:ring-green-500">
+          {section.buttonText}
+        </Button>
+      )}
+    </div>
+  </Card>
+);
+
+// Componente de encabezado del dashboard
+const DashboardHeader = () => (
+  <div className="text-center">
+    <h1 className="text-3xl font-bold text-green-800 mb-2">
+      Panel de Control del Docente
+    </h1>
+    <p className="text-green-600">Gestiona tus actividades académicas y reportes.</p>
+  </div>
+);
+
+// Componente de tarjeta de resumen de actividades
+const ActivitySummaryCard = ({ item }) => (
+  <div className="text-center p-4">
+    <div className={`text-4xl font-bold mb-2 ${item.color}`}>{item.count}</div>
+    <div className="text-sm text-gray-600">{item.label}</div>
+  </div>
+);
+
+// Componente de elemento de recordatorio
+const ReminderItem = ({ reminder }) => (
+  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100 hover:bg-green-100 transition-colors duration-200">
+    <span className="text-gray-900 font-medium">{reminder.task}</span>
+    <span className="text-green-600 font-medium">{reminder.date}</span>
+  </div>
+);
+
+// Datos de las secciones del dashboard
+const docenteSections = [
+  {
+    title: "Actividades Planificadas",
+    description: "Organiza las actividades para el semestre",
+    icon: Calendar,
+    buttonText: "Ir a Actividades Planificadas",
+    Link: "/docente/actividades-planificadas",
+  },
+  {
+    title: "Actividades Realizadas", 
+    description: "Registra las actividades que has completado",
+    icon: FileText,
+    buttonText: "Ir a Actividades Realizadas",
+    Link: "/docente/historial-reportes",
+  },
+  {
+    title: "Reportes Pendientes",
+    description: "Revisa y envía los reportes pendientes", 
+    icon: ClipboardList,
+    buttonText: "Ver Reportes Pendientes",
+    Link: "/docente/reportes-pendientes",
+  },
+  {
+    title: "Estadísticas",
+    description: "Visualiza tu progreso y rendimiento",
+    icon: BarChart3,
+    buttonText: "Ver Estadísticas",
+    Link: "/docente/estadisticas",
+  },
+];
+
+// Componente principal
+export default function DocenteDashboard() {
+  // Datos del resumen de actividades
+  const activitySummary = [
+    { count: 12, label: "Actividades Planificadas", color: "text-blue-600" },
+    { count: 8, label: "Actividades Completadas", color: "text-green-600" },
+    { count: 4, label: "Actividades Pendientes", color: "text-orange-600" },
+  ];
+
+  // Próximos recordatorios
+  const upcomingReminders = [
+    { task: "Entrega de reporte mensual", date: "15 de Junio" },
+    { task: "Actualización de actividades realizadas", date: "30 de Junio" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <DashboardHeader />
+
+        {/* Secciones principales del dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          {docenteSections.map((section, index) => (
+            <DocenteSectionCard key={index} section={section} />
+          ))}
+        </div>
+
+        {/* Resumen de Actividades */}
+        <Card>
+          <div className="p-6 pb-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-green-800">Resumen de Actividades</h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {activitySummary.map((item, index) => (
+                <ActivitySummaryCard key={index} item={item} />
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Próximos Recordatorios */}
+        <Card>
+          <div className="p-6 pb-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
+              <Bell className="h-6 w-6" />
+              Próximos Recordatorios
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {upcomingReminders.map((reminder, index) => (
+                <ReminderItem key={index} reminder={reminder} />
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
 }

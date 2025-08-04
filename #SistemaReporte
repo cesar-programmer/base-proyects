@@ -1,0 +1,16 @@
+Sistema de Reportes Semestrales de Docentes (UABC)
+
+Descripción
+
+Plataforma web que digitaliza el registro, seguimiento y evaluación de actividades académicas de los docentes de la Universidad Autónoma de Baja California.
+Permite a los profesores planificar y reportar sus actividades semestrales, mientras que los directivos pueden aprobarlas,
+generar reportes estadísticos y configurar recordatorios automáticos. El sistema prioriza la transparencia,
+la trazabilidad y la toma de decisiones basada en datos.
+
+
+## Tecnologías
+
+- React
+- TailwindCSS
+- Vite
+- TypeScript

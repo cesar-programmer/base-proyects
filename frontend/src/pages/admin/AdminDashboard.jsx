@@ -1,8 +1,269 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable react/prop-types */
+import {
+  ClipboardList,
+  BarChart3,
+  Calendar,
+  Users,
+  Bell,
+  Settings,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  RefreshCcw,
+} from "lucide-react"
+import { Link } from "react-router-dom"
+
+// Componentes reutilizables
+const Button = ({ children, className, ...props }) => (
+  <button 
+    className={`px-4 py-2 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);
+
+const Card = ({ children, className, ...props }) => (
+  <div 
+    className={`bg-white shadow-lg rounded-lg border border-gray-200 ${className}`}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+// Componente de tarjeta de sección administrativa
+const AdminSectionCard = ({ section }) => (
+  <Card className="hover:shadow-xl transition-shadow duration-300 border-l-4 border-l-green-500">
+    <div className="p-6 pb-3">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-green-100 rounded-lg">
+          <section.icon className="h-6 w-6 text-green-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-green-800">{section.title}</h3>
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 mt-2">{section.description}</p>
+    </div>
+    
+    <div className="px-6 pb-6">
+      {section.link ? (
+        <Link to={section.link}>
+          <Button
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium focus:ring-green-500"
+          >
+            {section.buttonText}
+          </Button>
+        </Link>
+      ) : (
+        <Button
+          onClick={section.buttonAction}
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium focus:ring-green-500"
+        >
+          {section.buttonText}
+        </Button>
+      )}
+    </div>
+  </Card>
+);
+
+// Componente de progreso de cumplimiento
+const ComplianceProgress = ({ item }) => (
+  <div className="text-center">
+    <div className={`text-4xl font-bold mb-2 ${item.textColor}`}>
+      {item.percentage}%
+    </div>
+    <div className="text-sm text-gray-600 mb-3">{item.label}</div>
+    <div className="w-full bg-gray-200 rounded-full h-2">
+      <div
+        className={`${item.color} h-2 rounded-full transition-all duration-500`}
+        style={{ width: `${item.percentage}%` }}
+      ></div>
+    </div>
+  </div>
+);
+
+// Componente de actividad pendiente
+const PendingActivityItem = ({ activity }) => (
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="flex items-center gap-3">
+      <AlertTriangle className="h-5 w-5 text-orange-500" />
+      <div>
+        <div className="font-medium text-gray-900">{activity.name}</div>
+        <div className="text-sm text-gray-600">{activity.activity}</div>
+      </div>
+    </div>
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+      Pendiente
+    </span>
+  </div>
+);
+
+// Componente de encabezado del dashboard
+const DashboardHeader = () => (
+  <div className="text-center">
+    <h1 className="text-3xl font-bold text-green-800 mb-2">
+      Panel de Control del Administrador
+    </h1>
+  </div>
+);
+
+// Componente de sección de cumplimiento
+const ComplianceSection = () => (
+  <Card>
+    <div className="p-6 pb-6 border-b border-gray-200">
+      <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
+        <CheckCircle className="h-6 w-6" />
+        Resumen de Cumplimiento
+      </h2>
+    </div>
+    
+    <div className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {complianceData.map((item, index) => (
+          <ComplianceProgress key={index} item={item} />
+        ))}
+      </div>
+    </div>
+  </Card>
+);
+
+// Componente de sección de actividades pendientes
+const PendingActivitiesSection = () => (
+  <Card>
+    <div className="p-6 pb-6 border-b border-gray-200">
+      <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
+        <Clock className="h-6 w-6" />
+        Actividades Pendientes de Revisión
+      </h2>
+    </div>
+    
+    <div className="p-6">
+      <div className="space-y-4">
+        {pendingActivities.map((activity, index) => (
+          <PendingActivityItem key={index} activity={activity} />
+        ))}
+      </div>
+    </div>
+  </Card>
+);
+
+// Componente de pie de página
+const DashboardFooter = () => (
+  <div className="text-center py-6 border-t border-green-200 bg-green-800 text-white rounded-lg">
+    <p className="text-sm">
+      © 2023 Universidad Autónoma de Baja California. Todos los derechos reservados.
+    </p>
+  </div>
+);
+
+// Datos estáticos
+const complianceData = [
+  { 
+    label: "Actividades Completadas", 
+    percentage: 85, 
+    color: "bg-green-500", 
+    textColor: "text-green-600" 
+  },
+  { 
+    label: "Actividades Pendientes", 
+    percentage: 10, 
+    color: "bg-orange-500", 
+    textColor: "text-orange-600" 
+  },
+  { 
+    label: "Actividades Atrasadas", 
+    percentage: 5, 
+    color: "bg-red-500", 
+    textColor: "text-red-600" 
+  },
+];
+
+const pendingActivities = [
+  { 
+    name: "Dr. Juan Pérez", 
+    activity: "Reporte de Investigación" 
+  },
+  { 
+    name: "Dra. María González", 
+    activity: "Actividades de Tutoría" 
+  },
+  { 
+    name: "Mtro. Carlos Rodríguez", 
+    activity: "Informe de Gestión Académica" 
+  },
+];
+
+const adminSections = [
+  {
+    title: "Revisión de Actividades",
+    description: "Revisa las actividades registradas por los docentes",
+    icon: ClipboardList,
+    buttonText: "Ver Revisión de Actividades",
+    buttonAction: () => {},
+    link: "/admin/revision-actividades",
+  },
+  {
+    title: "Reportes y Estadísticas",
+    description: "Genera reportes personalizados y visualiza estadísticas",
+    icon: BarChart3,
+    buttonText: "Ver Reportes y Estadísticas",
+    buttonAction: () => {},
+    link: "/admin/estadisticas",
+  },
+  {
+    title: "Configuración de Fechas",
+    description: "Establece las fechas límite para actividades",
+    icon: Calendar,
+    buttonText: "Configurar Fechas",
+    buttonAction: () => {},
+    link: "/admin/configuracion-fechas",
+  },
+  {
+    title: "Gestión de Usuarios",
+    description: "Administra usuarios y asigna permisos",
+    icon: Users,
+    buttonText: "Gestionar Usuarios",
+    buttonAction: () => {},
+    link: "/admin/gestion-usuarios",
+  },
+  {
+    title: "Configuración de Recordatorios",
+    description: "Configura recordatorios automáticos para los docentes",
+    icon: Bell,
+    buttonText: "Configurar Recordatorios",
+    buttonAction: () => {},
+    link: "/admin/configuracion-recordatorio",
+  },
+  {
+    title: "Correcciones Pendientes",
+    description: "Consulta formularios devueltos para seguimiento y control",
+    icon: RefreshCcw,
+    buttonText: "Ver Correcciones",
+    buttonAction: () => {},
+    link: "/admin/correcciones",
+  },
+];
+
+// Componente principal
 export default function AdminDashboard() {
   return (
-    <div>
-      <h1>Dashboard del admin</h1>
-      <h2>Esto es un dashboard de administrador</h2>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <DashboardHeader />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {adminSections.map((section, index) => (
+            <AdminSectionCard key={index} section={section} />
+          ))}
+        </div>
+
+        <ComplianceSection />
+        <PendingActivitiesSection />
+        <DashboardFooter />
+      </div>
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // Schema para subir archivo
 const uploadFileSchema = Joi.object({
@@ -28,7 +28,7 @@ const listFilesSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(20)
 });
 
-module.exports = {
+export {
   uploadFileSchema,
   deleteFileSchema,
   downloadFileSchema,

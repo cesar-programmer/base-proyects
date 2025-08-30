@@ -1,7 +1,7 @@
-const request = require('supertest');
-const app = require('../src/index');
-const { User, Role } = require('../src/db/models');
-const bcrypt = require('bcryptjs');
+import request from 'supertest';
+import app from '../src/index.js';
+import { User, Role } from '../src/db/models/index.js';
+import bcrypt from 'bcryptjs';
 
 describe('Auth Controller', () => {
   let testUser;

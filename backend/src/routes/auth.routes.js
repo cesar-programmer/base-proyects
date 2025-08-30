@@ -1,8 +1,8 @@
-const express = require('express');
-const AuthController = require('../controllers/auth.controller');
-const { verifyToken } = require('../middleware/auth.middleware');
-const { validatorHandler } = require('../middleware/validation_handler');
-const { loginSchema, registerSchema, changePasswordSchema } = require('../schemas/auth.schema');
+import express from 'express';
+import AuthController from '../controllers/auth.controller.js';
+import { verifyToken } from '../middleware/auth.middleware.js';
+import { validatorHandler } from '../middleware/validation_handler.js';
+import { loginSchema, registerSchema, changePasswordSchema } from '../schemas/auth.schema.js';
 
 const router = express.Router();
 const authController = new AuthController();
@@ -34,4 +34,4 @@ router.post('/logout',
   authController.logout.bind(authController)
 );
 
-module.exports = router;
+export default router;

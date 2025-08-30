@@ -1,16 +1,16 @@
-const { Sequelize } = require('sequelize');
-const { Role, RoleSchema } = require('./role.model');
-const { Permiso, PermisoSchema } = require('./permiso.model');
-const { User, UserSchema } = require('./user.model');
-const { PeriodoAcademico, PeriodoAcademicoSchema } = require('./periodoAcademico.model');
-const { FechaLimite, FechaLimiteSchema } = require('./fechaLimite.model');
-const { CatalogoActividad, CatalogoActividadSchema } = require('./catalogoActividad.model');
-const { Reporte, ReporteSchema } = require('./reporte.model');
-const { Actividad, ActividadSchema } = require('./actividad.model');
-const { Archivo, ArchivoSchema } = require('./archivo.model');
-const { Notificacion, NotificacionSchema } = require('./notificacion.model');
-const { HistorialCambio, HistorialCambioSchema } = require('./historialCambio.model');
-const { Configuracion, ConfiguracionSchema } = require('./configuracion.model');
+import { Sequelize } from 'sequelize';
+import { Role, RoleSchema } from './role.model.js';
+import { Permiso, PermisoSchema } from './permiso.model.js';
+import { User, UserSchema } from './user.model.js';
+import { PeriodoAcademico, PeriodoAcademicoSchema } from './periodoAcademico.model.js';
+import { FechaLimite, FechaLimiteSchema } from './fechaLimite.model.js';
+import { CatalogoActividad, CatalogoActividadSchema } from './catalogoActividad.model.js';
+import { Reporte, ReporteSchema } from './reporte.model.js';
+import { Actividad, ActividadSchema } from './actividad.model.js';
+import { Archivo, ArchivoSchema } from './archivo.model.js';
+import { Notificacion, NotificacionSchema } from './notificacion.model.js';
+import { HistorialCambio, HistorialCambioSchema } from './historialCambio.model.js';
+import { Configuracion, ConfiguracionSchema } from './configuracion.model.js';
 
 // Configuración de la base de datos (se puede mover a un archivo de configuración separado)
 const sequelize = new Sequelize({
@@ -84,10 +84,23 @@ const closeDatabase = async () => {
   }
 };
 
-module.exports = {
+export {
   sequelize,
   models,
   syncDatabase,
   authenticateDatabase,
-  closeDatabase
+  closeDatabase,
+  // Individual model exports
+  Role,
+  Permiso,
+  User,
+  PeriodoAcademico,
+  FechaLimite,
+  CatalogoActividad,
+  Reporte,
+  Actividad,
+  Archivo,
+  Notificacion,
+  HistorialCambio,
+  Configuracion
 };

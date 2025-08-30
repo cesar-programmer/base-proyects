@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import { models } from '../db/models/index.js';
 
 class EstadisticaService {
   // Obtener estadísticas generales del sistema
@@ -358,4 +358,4 @@ class EstadisticaService {
   }
 }
 
-module.exports = EstadisticaService;
+export default EstadisticaService;

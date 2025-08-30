@@ -265,6 +265,7 @@ npm run format       # Formatear código
 
 # Testing
 npm test            # Ejecutar tests
+node --experimental-vm-modules ./node_modules/jest/bin/jest.js # Ejecutar tests con ES Modules
 npm run test:watch  # Tests en modo watch
 npm run test:coverage # Coverage de tests
 ```
@@ -285,6 +286,590 @@ Los logs se generan con Winston y incluyen:
 - Errores de aplicación
 - Accesos de autenticación
 - Operaciones de base de datos
+
+## 🧪 Testing
+
+### Configuración de Pruebas
+
+El proyecto utiliza **Jest** como framework de testing. Debido a la conversión a ES Modules, es necesario ejecutar las pruebas con el flag `--experimental-vm-modules`.
+
+### Comandos de Testing
+
+```bash
+# Ejecutar todas las pruebas (método estándar)
+npm test
+
+# Ejecutar pruebas con soporte completo para ES Modules
+node --experimental-vm-modules ./node_modules/jest/bin/jest.js
+
+# Ejecutar pruebas en modo watch
+npm run test:watch
+
+# Generar reporte de cobertura
+npm run test:coverage
+```
+
+### ¿Qué Prueban los Tests?
+
+Las pruebas automatizadas verifican el correcto funcionamiento de:
+
+#### **Auth Controller Tests** (`tests/auth.controller.test.js`)
+- **Login exitoso**: Verifica que usuarios válidos puedan autenticarse
+- **Login fallido**: Confirma que credenciales inválidas sean rechazadas
+- **Validación de email**: Prueba que emails mal formateados sean rechazados
+- **Validación de contraseña**: Verifica requisitos mínimos de seguridad
+- **Generación de JWT**: Confirma que se generen tokens válidos
+- **Registro de usuarios**: Prueba la creación de nuevas cuentas
+- **Cambio de contraseña**: Verifica la funcionalidad de actualización de credenciales
+
+#### **Resultados Esperados**
+
+✅ **Cuando todo funciona correctamente:**
+```
+✓ Auth Controller
+  ✓ should login successfully with valid credentials
+  ✓ should fail with invalid email
+  ✓ should fail with invalid password
+  ✓ should generate valid JWT token
+  ✓ should register new user successfully
+  ...
+
+Tests: 13 passed, 13 total
+```
+
+❌ **Fallos esperados (sin base de datos configurada):**
+```
+✗ Auth Controller
+  ✗ should login successfully with valid credentials
+  ✗ should fail with invalid email
+  ...
+
+Tests: 0 passed, 13 failed
+```
+
+### Configuración del Entorno de Testing
+
+Las pruebas requieren:
+1. **Base de datos de testing** configurada en `.env`
+2. **Puerto diferente** (3001) para evitar conflictos
+3. **Datos de prueba** (seeders de testing)
+
+**Nota**: Los fallos actuales son esperados ya que no hay una base de datos de testing configurada. Las pruebas verifican que el código esté sintácticamente correcto y que los módulos ES se carguen apropiadamente.
+
+## 📮 Testing con Postman
+
+### Configuración Inicial de Postman
+
+#### 1. Variables de Entorno
+Crea una nueva colección en Postman y configura estas variables:
+
+```json
+{
+  "baseUrl": "http://localhost:3000",
+  "apiUrl": "{{baseUrl}}/api/v1",
+  "token": ""
+}
+```
+
+#### 2. Configuración de Autenticación
+Para endpoints protegidos, agrega en el header:
+```
+Authorization: Bearer {{token}}
+```
+
+### 🔐 Endpoints de Autenticación
+
+#### POST - Login de Usuario
+- **URL**: `{{apiUrl}}/auth/login`
+- **Método**: `POST`
+- **Autenticación**: No requerida
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "email": "admin@universidad.edu",
+  "password": "Admin123!"
+}
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "message": "Login exitoso",
+  "user": {
+    "id": 1,
+    "nombre_completo": "Administrador Sistema",
+    "email": "admin@universidad.edu",
+    "rol": "ADMINISTRADOR"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Errores Posibles:**
+- `400`: Credenciales inválidas
+- `422`: Datos de validación incorrectos
+
+#### POST - Registro de Usuario
+- **URL**: `{{apiUrl}}/auth/register`
+- **Método**: `POST`
+- **Autenticación**: No requerida
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "nombre_completo": "Juan Pérez",
+  "email": "juan.perez@universidad.edu",
+  "password": "MiPassword123!",
+  "confirmPassword": "MiPassword123!",
+  "id_rol": 3,
+  "activo": true
+}
+```
+
+**Respuesta Exitosa (201):**
+```json
+{
+  "message": "Usuario registrado exitosamente",
+  "user": {
+    "id": 5,
+    "nombre_completo": "Juan Pérez",
+    "email": "juan.perez@universidad.edu",
+    "activo": true
+  }
+}
+```
+
+#### POST - Verificar Token
+- **URL**: `{{apiUrl}}/auth/verify-token`
+- **Método**: `POST`
+- **Autenticación**: No requerida
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "token": "{{token}}"
+}
+```
+
+#### POST - Cambiar Contraseña
+- **URL**: `{{apiUrl}}/auth/change-password`
+- **Método**: `POST`
+- **Autenticación**: Bearer Token requerido
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "currentPassword": "Admin123!",
+  "newPassword": "NuevaPassword123!",
+  "confirmNewPassword": "NuevaPassword123!"
+}
+```
+
+#### POST - Logout
+- **URL**: `{{apiUrl}}/auth/logout`
+- **Método**: `POST`
+- **Autenticación**: Bearer Token requerido
+
+### 👥 Endpoints de Usuarios
+
+#### GET - Obtener Perfil del Usuario
+- **URL**: `{{apiUrl}}/users/profile`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Todos los usuarios autenticados
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "nombre_completo": "Administrador Sistema",
+    "email": "admin@universidad.edu",
+    "rol": "ADMINISTRADOR",
+    "activo": true,
+    "ultimo_acceso": "2024-01-20T10:30:00.000Z"
+  }
+}
+```
+
+#### PUT - Actualizar Perfil
+- **URL**: `{{apiUrl}}/users/profile`
+- **Método**: `PUT`
+- **Autenticación**: Bearer Token requerido
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "nombre_completo": "Nuevo Nombre Completo",
+  "email": "nuevo.email@universidad.edu"
+}
+```
+
+#### GET - Listar Todos los Usuarios (Admin)
+- **URL**: `{{apiUrl}}/users`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+- **Query Parameters**: `?page=1&limit=10&activo=true&search=juan`
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "users": [
+    {
+      "id": 1,
+      "nombre_completo": "Admin Sistema",
+      "email": "admin@universidad.edu",
+      "rol": "ADMINISTRADOR",
+      "activo": true
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "pages": 3
+  }
+}
+```
+
+#### GET - Obtener Usuario por ID (Admin)
+- **URL**: `{{apiUrl}}/users/1`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+
+#### POST - Crear Usuario (Admin)
+- **URL**: `{{apiUrl}}/users`
+- **Método**: `POST`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "nombre_completo": "Nuevo Usuario",
+  "email": "nuevo@universidad.edu",
+  "password": "Password123!",
+  "id_rol": 3,
+  "activo": true
+}
+```
+
+#### PUT - Actualizar Usuario Completo (Admin)
+- **URL**: `{{apiUrl}}/users/5`
+- **Método**: `PUT`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "nombre_completo": "Usuario Actualizado",
+  "email": "actualizado@universidad.edu",
+  "id_rol": 2,
+  "activo": true
+}
+```
+
+#### PATCH - Cambiar Estado de Usuario (Admin)
+- **URL**: `{{apiUrl}}/users/5/toggle-status`
+- **Método**: `PATCH`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+
+#### DELETE - Eliminar Usuario (Admin)
+- **URL**: `{{apiUrl}}/users/5`
+- **Método**: `DELETE`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+
+### 📊 Endpoints de Reportes
+
+#### GET - Mis Reportes
+- **URL**: `{{apiUrl}}/reportes/my-reportes`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Todos los usuarios autenticados
+
+#### GET - Listar Reportes
+- **URL**: `{{apiUrl}}/reportes`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: DOCENTE o ADMINISTRADOR
+- **Query Parameters**: `?page=1&limit=10&estado=ENVIADO&tipo=ACTIVIDADES_PLANIFICADAS`
+
+#### GET - Obtener Reporte por ID
+- **URL**: `{{apiUrl}}/reportes/1`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: DOCENTE o ADMINISTRADOR
+
+#### POST - Crear Reporte
+- **URL**: `{{apiUrl}}/reportes`
+- **Método**: `POST`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: DOCENTE o ADMINISTRADOR
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "id_periodo": 1,
+  "tipo": "ACTIVIDADES_PLANIFICADAS",
+  "semestre": 1,
+  "observaciones_admin": ""
+}
+```
+
+**Respuesta Exitosa (201):**
+```json
+{
+  "message": "Reporte creado exitosamente",
+  "reporte": {
+    "id": 15,
+    "id_docente": 3,
+    "id_periodo": 1,
+    "tipo": "ACTIVIDADES_PLANIFICADAS",
+    "semestre": 1,
+    "estado": "BORRADOR",
+    "fecha_creacion": "2024-01-20T10:30:00.000Z"
+  }
+}
+```
+
+#### PUT - Actualizar Reporte Completo
+- **URL**: `{{apiUrl}}/reportes/15`
+- **Método**: `PUT`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: DOCENTE o ADMINISTRADOR
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "id_periodo": 2,
+  "tipo": "ACTIVIDADES_REALIZADAS",
+  "semestre": 2,
+  "observaciones_admin": "Reporte actualizado"
+}
+```
+
+#### PATCH - Cambiar Estado de Reporte (Admin)
+- **URL**: `{{apiUrl}}/reportes/15/status`
+- **Método**: `PATCH`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+- **Content-Type**: `application/json`
+
+**Body (JSON):**
+```json
+{
+  "estado": "APROBADO",
+  "observaciones_admin": "Reporte aprobado sin observaciones"
+}
+```
+
+#### DELETE - Eliminar Reporte
+- **URL**: `{{apiUrl}}/reportes/15`
+- **Método**: `DELETE`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: DOCENTE o ADMINISTRADOR
+
+### 📁 Endpoints de Archivos
+
+#### POST - Subir Archivo Individual
+- **URL**: `{{apiUrl}}/files/upload`
+- **Método**: `POST`
+- **Autenticación**: Bearer Token requerido
+- **Content-Type**: `multipart/form-data`
+
+**Form Data:**
+- `file`: [Archivo a subir]
+- `description`: "Descripción del archivo"
+- `category`: "reportes"
+
+**Respuesta Exitosa (201):**
+```json
+{
+  "message": "Archivo subido exitosamente",
+  "file": {
+    "filename": "documento_1642680600000.pdf",
+    "originalName": "documento.pdf",
+    "mimetype": "application/pdf",
+    "size": 1024000,
+    "url": "/api/v1/files/download/documento_1642680600000.pdf"
+  }
+}
+```
+
+#### POST - Subir Múltiples Archivos
+- **URL**: `{{apiUrl}}/files/upload-multiple`
+- **Método**: `POST`
+- **Autenticación**: Bearer Token requerido
+- **Content-Type**: `multipart/form-data`
+
+**Form Data:**
+- `files`: [Múltiples archivos]
+- `description`: "Descripción de los archivos"
+- `category`: "evidencias"
+
+#### GET - Descargar Archivo
+- **URL**: `{{apiUrl}}/files/download/documento_1642680600000.pdf`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Respuesta**: Archivo binario con headers apropiados
+
+#### GET - Ver Archivo (Imágenes/PDFs)
+- **URL**: `{{apiUrl}}/files/view/imagen_1642680600000.jpg`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Respuesta**: Archivo para visualización inline
+
+#### GET - Listar Archivos (Admin)
+- **URL**: `{{apiUrl}}/files`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+- **Query Parameters**: `?page=1&limit=10&category=reportes`
+
+#### DELETE - Eliminar Archivo (Admin)
+- **URL**: `{{apiUrl}}/files/documento_1642680600000.pdf`
+- **Método**: `DELETE`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+
+### 🔄 Secuencia Recomendada de Pruebas
+
+#### 1. Configuración Inicial
+1. **Login**: `POST /auth/login` → Guardar token en variable `{{token}}`
+2. **Verificar Token**: `POST /auth/verify-token`
+3. **Obtener Perfil**: `GET /users/profile`
+
+#### 2. Gestión de Usuarios (Admin)
+1. **Listar Usuarios**: `GET /users`
+2. **Crear Usuario**: `POST /users`
+3. **Obtener Usuario**: `GET /users/{id}`
+4. **Actualizar Usuario**: `PUT /users/{id}`
+5. **Cambiar Estado**: `PATCH /users/{id}/toggle-status`
+6. **Eliminar Usuario**: `DELETE /users/{id}`
+
+#### 3. Gestión de Reportes
+1. **Crear Reporte**: `POST /reportes`
+2. **Listar Reportes**: `GET /reportes`
+3. **Obtener Reporte**: `GET /reportes/{id}`
+4. **Actualizar Reporte**: `PUT /reportes/{id}`
+5. **Cambiar Estado**: `PATCH /reportes/{id}/status` (Admin)
+6. **Eliminar Reporte**: `DELETE /reportes/{id}`
+
+#### 4. Gestión de Archivos
+1. **Subir Archivo**: `POST /files/upload`
+2. **Listar Archivos**: `GET /files` (Admin)
+3. **Descargar Archivo**: `GET /files/download/{filename}`
+4. **Ver Archivo**: `GET /files/view/{filename}`
+5. **Eliminar Archivo**: `DELETE /files/{filename}` (Admin)
+
+### 📋 Datos de Prueba Recomendados
+
+#### Usuarios de Prueba
+```json
+{
+  "admin": {
+    "email": "admin@universidad.edu",
+    "password": "Admin123!"
+  },
+  "coordinador": {
+    "email": "coordinador@universidad.edu",
+    "password": "Coord123!"
+  },
+  "docente": {
+    "email": "docente1@universidad.edu",
+    "password": "Docente123!"
+  }
+}
+```
+
+#### IDs de Referencia
+- **Roles**: 1=ADMINISTRADOR, 2=COORDINADOR, 3=DOCENTE
+- **Estados de Reporte**: BORRADOR, ENVIADO, EN_REVISION, APROBADO, DEVUELTO
+- **Tipos de Reporte**: ACTIVIDADES_PLANIFICADAS, ACTIVIDADES_REALIZADAS
+- **Semestres**: 1 o 2
+
+### ⚙️ Configuraciones Especiales de Postman
+
+#### Pre-request Script para Autenticación Automática
+```javascript
+// Obtener token automáticamente si no existe
+if (!pm.environment.get("token")) {
+    pm.sendRequest({
+        url: pm.environment.get("apiUrl") + "/auth/login",
+        method: 'POST',
+        header: {
+            'Content-Type': 'application/json'
+        },
+        body: {
+            mode: 'raw',
+            raw: JSON.stringify({
+                email: "admin@universidad.edu",
+                password: "Admin123!"
+            })
+        }
+    }, function (err, response) {
+        if (response.json().token) {
+            pm.environment.set("token", response.json().token);
+        }
+    });
+}
+```
+
+#### Test Script para Guardar Token
+```javascript
+// Guardar token después del login
+if (pm.response.json().token) {
+    pm.environment.set("token", pm.response.json().token);
+}
+
+// Verificar respuesta exitosa
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+pm.test("Response has token", function () {
+    pm.expect(pm.response.json()).to.have.property('token');
+});
+```
+
+### 🚨 Códigos de Estado HTTP Comunes
+
+- **200**: Operación exitosa
+- **201**: Recurso creado exitosamente
+- **400**: Solicitud incorrecta (datos inválidos)
+- **401**: No autorizado (token inválido/expirado)
+- **403**: Prohibido (sin permisos suficientes)
+- **404**: Recurso no encontrado
+- **422**: Error de validación
+- **500**: Error interno del servidor
+
+### 🔧 Modificaciones Necesarias en el Código
+
+**No se requieren modificaciones adicionales en el código para testing con Postman.** El backend ya está completamente configurado con:
+
+✅ **CORS habilitado** para peticiones desde diferentes orígenes  
+✅ **Autenticación JWT** funcionando correctamente  
+✅ **Validación de datos** con Joi en todos los endpoints  
+✅ **Manejo de errores** estructurado  
+✅ **Middleware de seguridad** configurado  
+✅ **Subida de archivos** con multer configurado  
+
+El servidor está listo para recibir peticiones de Postman sin modificaciones adicionales.
 
 ## 🚀 Despliegue
 

@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import { models } from '../db/models/index.js';
 
 class ReporteService {
   // Obtener todos los reportes
@@ -316,4 +316,4 @@ class ReporteService {
   }
 }
 
-module.exports = ReporteService;
+export default ReporteService;

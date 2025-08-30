@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // Esquema para obtener reporte por ID
 const getReporteSchema = Joi.object({
@@ -211,7 +211,7 @@ const sendReporteSchema = Joi.object({
     })
 });
 
-module.exports = {
+export {
   getReporteSchema,
   createReporteSchema,
   updateReporteSchema,

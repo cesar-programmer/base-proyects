@@ -1,6 +1,6 @@
-const { Model, DataTypes } = require('sequelize');
-const { REPORTES_TABLE } = require('./reporte.model');
-const { USUARIOS_TABLE } = require('./user.model');
+import { Model, DataTypes } from 'sequelize';
+import { REPORTES_TABLE } from './reporte.model.js';
+import { USUARIOS_TABLE } from './user.model.js';
 
 const HISTORIAL_CAMBIOS_TABLE = 'historial_cambios';
 
@@ -73,4 +73,4 @@ class HistorialCambio extends Model {
   }
 }
 
-module.exports = { HISTORIAL_CAMBIOS_TABLE, HistorialCambioSchema, HistorialCambio };
+export { HISTORIAL_CAMBIOS_TABLE, HistorialCambioSchema, HistorialCambio };

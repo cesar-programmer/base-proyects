@@ -1,6 +1,6 @@
-const { Model, DataTypes } = require('sequelize');
-const { USUARIOS_TABLE } = require('./user.model');
-const { PERIODOS_ACADEMICOS_TABLE } = require('./periodoAcademico.model');
+import { Model, DataTypes } from 'sequelize';
+import { USUARIOS_TABLE } from './user.model.js';
+import { PERIODOS_ACADEMICOS_TABLE } from './periodoAcademico.model.js';
 
 const REPORTES_TABLE = 'reportes';
 
@@ -113,4 +113,4 @@ class Reporte extends Model {
   }
 }
 
-module.exports = { REPORTES_TABLE, ReporteSchema, Reporte };
+export { REPORTES_TABLE, ReporteSchema, Reporte };

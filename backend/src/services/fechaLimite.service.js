@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import { models } from '../db/models/index.js';
 
 class FechaLimiteService {
   // Obtener todas las fechas límite
@@ -244,4 +244,4 @@ class FechaLimiteService {
   }
 }
 
-module.exports = FechaLimiteService;
+export default FechaLimiteService;

@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+import { Model, DataTypes } from 'sequelize';
 
 const CATALOGO_ACTIVIDADES_TABLE = 'catalogo_actividades';
 
@@ -66,4 +66,4 @@ class CatalogoActividad extends Model {
   }
 }
 
-module.exports = { CATALOGO_ACTIVIDADES_TABLE, CatalogoActividadSchema, CatalogoActividad };
+export { CATALOGO_ACTIVIDADES_TABLE, CatalogoActividadSchema, CatalogoActividad };

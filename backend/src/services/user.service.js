@@ -1,6 +1,6 @@
-const boom = require('@hapi/boom');
-const bcrypt = require('bcryptjs');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import bcrypt from 'bcryptjs';
+import { models } from '../db/models/index.js';
 
 class UserService {
   // Obtener todos los usuarios
@@ -221,4 +221,4 @@ class UserService {
   }
 }
 
-module.exports = UserService;
+export default UserService;

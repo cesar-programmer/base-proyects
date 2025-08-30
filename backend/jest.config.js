@@ -1,6 +1,9 @@
-module.exports = {
+export default {
   // Entorno de testing
   testEnvironment: 'node',
+  
+  // Soporte para ES modules
+  transform: {},
   
   // Directorios de tests
   testMatch: [

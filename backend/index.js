@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import routerApi from './src/routes/index.js';
 
 // Configurar variables de entorno
 dotenv.config();
@@ -45,8 +46,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// TODO: Aquí irán las rutas de la API
-// app.use('/api/v1', routes);
+// Configurar rutas de la API
+routerApi(app);
 
 // Middleware de manejo de errores 404
 app.use('*', (req, res) => {

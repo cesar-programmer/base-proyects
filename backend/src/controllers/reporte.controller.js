@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { ReporteService } = require('../services');
+import boom from '@hapi/boom';
+import { ReporteService } from '../services/index.js';
 
 const reporteService = new ReporteService();
 
@@ -242,4 +242,4 @@ class ReporteController {
   }
 }
 
-module.exports = ReporteController;
+export default ReporteController;

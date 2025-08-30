@@ -1,14 +1,14 @@
 // Exportar todos los servicios del sistema
-const RoleService = require('./role.service');
-const UserService = require('./user.service');
-const FechaLimiteService = require('./fechaLimite.service');
-const ReporteService = require('./reporte.service');
-const ActividadService = require('./actividad.service');
-const NotificacionService = require('./notificacion.service');
-const CatalogoActividadService = require('./catalogoActividad.service');
-const EstadisticaService = require('./estadistica.service');
+import RoleService from './role.service.js';
+import UserService from './user.service.js';
+import FechaLimiteService from './fechaLimite.service.js';
+import ReporteService from './reporte.service.js';
+import ActividadService from './actividad.service.js';
+import NotificacionService from './notificacion.service.js';
+import CatalogoActividadService from './catalogoActividad.service.js';
+import EstadisticaService from './estadistica.service.js';
 
-module.exports = {
+export {
   RoleService,
   UserService,
   FechaLimiteService,

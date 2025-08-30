@@ -1,5 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
-const { ROLES_TABLE } = require('./role.model');
+import { Model, DataTypes } from 'sequelize';
 
 const ROLES_TABLE = 'roles';
 
@@ -51,4 +50,4 @@ class Role extends Model {
   }
 }
 
-module.exports = { ROLES_TABLE, RoleSchema, Role };
+export { ROLES_TABLE, RoleSchema, Role };

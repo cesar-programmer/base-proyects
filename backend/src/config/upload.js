@@ -1,7 +1,7 @@
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const boom = require('@hapi/boom');
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import boom from '@hapi/boom';
 
 // Crear directorios si no existen
 const createUploadDirs = () => {
@@ -156,7 +156,7 @@ const validateFileExists = (filePath) => {
   return fs.existsSync(filePath);
 };
 
-module.exports = {
+export {
   upload,
   uploadSingle,
   uploadMultiple,

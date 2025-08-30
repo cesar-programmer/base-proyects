@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import { models } from '../db/models/index.js';
 
 class RoleService {
   // Obtener todos los roles
@@ -122,4 +122,4 @@ class RoleService {
   }
 }
 
-module.exports = RoleService;
+export default RoleService;

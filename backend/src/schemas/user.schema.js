@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // Esquema para obtener usuario por ID
 const getUserSchema = Joi.object({
@@ -183,7 +183,7 @@ const changeUserPasswordSchema = Joi.object({
     })
 });
 
-module.exports = {
+export {
   getUserSchema,
   createUserSchema,
   updateUserSchema,

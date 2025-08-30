@@ -1,8 +1,8 @@
-const boom = require('@hapi/boom');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { UserService } = require('../services');
-const config = require('../config/config');
+import boom from '@hapi/boom';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { UserService } from '../services/index.js';
+import config from '../config/config.js';
 
 const userService = new UserService();
 
@@ -136,4 +136,4 @@ class AuthController {
   }
 }
 
-module.exports = AuthController;
+export default AuthController;

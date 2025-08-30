@@ -1,35 +1,19 @@
-const express = require('express');
+import express from 'express';
 
-// Importar todas las rutas
-const authRoutes = require('./auth.routes');
-const userRoutes = require('./user.routes');
-const reporteRoutes = require('./reporte.routes');
-const actividadRoutes = require('./actividad.routes');
-const notificacionRoutes = require('./notificacion.routes');
-const estadisticaRoutes = require('./estadistica.routes');
-const fechaLimiteRoutes = require('./fechaLimite.routes');
-const catalogoActividadRoutes = require('./catalogoActividad.routes');
-const periodoAcademicoRoutes = require('./periodoAcademico.routes');
-const rolRoutes = require('./rol.routes');
-const archivoRoutes = require('./archivo.routes');
-const filesRoutes = require('./files.routes');
+// Importar todas las rutas disponibles
+import authRoutes from './auth.routes.js';
+import userRoutes from './user.routes.js';
+import reporteRoutes from './reporte.routes.js';
+import filesRoutes from './files.routes.js';
 
 function routerApi(app) {
   const router = express.Router();
   app.use('/api/v1', router);
 
-  // Configurar todas las rutas
+  // Configurar todas las rutas disponibles
   router.use('/auth', authRoutes);
   router.use('/users', userRoutes);
   router.use('/reportes', reporteRoutes);
-  router.use('/actividades', actividadRoutes);
-  router.use('/notificaciones', notificacionRoutes);
-  router.use('/estadisticas', estadisticaRoutes);
-  router.use('/fechas-limite', fechaLimiteRoutes);
-  router.use('/catalogo-actividades', catalogoActividadRoutes);
-  router.use('/periodos-academicos', periodoAcademicoRoutes);
-  router.use('/roles', rolRoutes);
-  router.use('/archivos', archivoRoutes);
   router.use('/files', filesRoutes);
 
   // Ruta de prueba para verificar que la API está funcionando
@@ -65,4 +49,4 @@ function routerApi(app) {
   });
 }
 
-module.exports = routerApi;
+export default routerApi;

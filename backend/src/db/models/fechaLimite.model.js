@@ -1,5 +1,5 @@
-const { Model, DataTypes } = require('sequelize');
-const { PERIODOS_ACADEMICOS_TABLE } = require('./periodoAcademico.model');
+import { Model, DataTypes } from 'sequelize';
+import { PERIODOS_ACADEMICOS_TABLE } from './periodoAcademico.model.js';
 
 const FECHAS_LIMITE_TABLE = 'fechas_limite';
 
@@ -102,4 +102,4 @@ class FechaLimite extends Model {
   }
 }
 
-module.exports = { FECHAS_LIMITE_TABLE, FechaLimiteSchema, FechaLimite };
+export { FECHAS_LIMITE_TABLE, FechaLimiteSchema, FechaLimite };

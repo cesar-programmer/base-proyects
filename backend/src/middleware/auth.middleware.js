@@ -1,7 +1,7 @@
-const jwt = require('jsonwebtoken');
-const boom = require('@hapi/boom');
-const config = require('../config/config');
-const { UserService } = require('../services');
+import jwt from 'jsonwebtoken';
+import boom from '@hapi/boom';
+import config from '../config/config.js';
+import { UserService } from '../services/index.js';
 
 const userService = new UserService();
 
@@ -150,7 +150,7 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   verifyToken,
   checkRole,
   checkAdmin,

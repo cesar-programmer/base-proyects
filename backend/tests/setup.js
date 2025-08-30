@@ -1,5 +1,5 @@
 // Configuración global para tests
-const { sequelize } = require('../src/db/models');
+import { sequelize } from '../src/db/models/index.js';
 
 // Configurar base de datos de testing
 beforeAll(async () => {
@@ -20,6 +20,3 @@ afterEach(async () => {
 afterAll(async () => {
   await sequelize.close();
 });
-
-// Configurar timeout global
-jest.setTimeout(10000);

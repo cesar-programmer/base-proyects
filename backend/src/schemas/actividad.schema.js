@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // Schema para obtener actividad por ID
 const getActividadSchema = Joi.object({
@@ -115,7 +115,7 @@ const addFromCatalogoSchema = Joi.object({
   ).min(1).max(20).required() // Máximo 20 actividades por vez
 });
 
-module.exports = {
+export {
   getActividadSchema,
   createActividadSchema,
   updateActividadSchema,

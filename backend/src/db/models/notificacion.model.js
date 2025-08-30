@@ -1,6 +1,6 @@
-const { Model, DataTypes } = require('sequelize');
-const { USUARIOS_TABLE } = require('./user.model');
-const { FECHAS_LIMITE_TABLE } = require('./fechaLimite.model');
+import { Model, DataTypes } from 'sequelize';
+import { USUARIOS_TABLE } from './user.model.js';
+import { FECHAS_LIMITE_TABLE } from './fechaLimite.model.js';
 
 const NOTIFICACIONES_TABLE = 'notificaciones';
 
@@ -83,4 +83,4 @@ class Notificacion extends Model {
   }
 }
 
-module.exports = { NOTIFICACIONES_TABLE, NotificacionSchema, Notificacion };
+export { NOTIFICACIONES_TABLE, NotificacionSchema, Notificacion };

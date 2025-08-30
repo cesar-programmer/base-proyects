@@ -11,4 +11,4 @@ function validatorHandle(schema, property) {
     }
   };
 }
-export { validatorHandle };
+export { validatorHandle as validatorHandler };

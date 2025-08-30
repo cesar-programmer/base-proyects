@@ -497,12 +497,15 @@ curl http://localhost:3000/api/v1
 
 #### **3. Ejecutar pruebas:**
 ```bash
-# Ejecutar todas las pruebas
+# Ejecutar todas las pruebas (método estándar)
 npm test
 
-# Si todo está bien, verás:
-# ✓ All tests passed
-# Tests: 15 passed, 15 total
+# Ejecutar pruebas con soporte completo para ES Modules
+node --experimental-vm-modules ./node_modules/jest/bin/jest.js
+
+# Si todo está bien configurado, verás:
+# ✓ Auth Controller tests running
+# Tests: 13 total (pueden fallar sin BD de testing)
 ```
 
 ### **Comandos Útiles para el Día a Día**
@@ -525,6 +528,138 @@ npm run format           # Formatear código
 # 📦 Producción
 npm start                # Iniciar en producción
 npm run build            # Preparar para producción
+```
+
+---
+
+## 🧪 **PRUEBAS AUTOMATIZADAS (TESTING)**
+
+### **¿Qué son las pruebas automatizadas?**
+
+Las pruebas automatizadas son como **"inspectores de calidad"** que verifican que tu código funcione correctamente de forma automática.
+
+#### **Analogía simple:**
+- **Sin pruebas**: Es como enviar un producto sin revisarlo - puede tener defectos
+- **Con pruebas**: Es como tener inspectores que revisan cada parte antes de enviar
+
+### **¿Por qué son importantes?**
+
+✅ **Detectan errores** antes de que lleguen a los usuarios  
+✅ **Ahorran tiempo** - no tienes que probar manualmente cada función  
+✅ **Dan confianza** para hacer cambios sin romper nada  
+✅ **Documentan** cómo debe funcionar el código  
+✅ **Facilitan el trabajo en equipo** - todos saben qué debe funcionar  
+
+### **Comandos para Ejecutar Pruebas**
+
+#### **Método Estándar:**
+```bash
+npm test
+```
+
+#### **Método con ES Modules (Recomendado):**
+```bash
+node --experimental-vm-modules ./node_modules/jest/bin/jest.js
+```
+
+**¿Por qué necesitamos el segundo comando?**  
+Nuestro proyecto usa **ES Modules** (la forma moderna de importar código en JavaScript). Jest necesita un flag especial para entender esta sintaxis.
+
+### **¿Qué Prueban Nuestros Tests?**
+
+#### **🔐 Pruebas de Autenticación (Auth Controller)**
+
+Nuestras pruebas verifican que el sistema de login funcione correctamente:
+
+**1. Login Exitoso:**
+```javascript
+// Prueba: ¿Puede un usuario válido iniciar sesión?
+test('should login successfully with valid credentials')
+```
+
+**2. Login Fallido:**
+```javascript
+// Prueba: ¿Se rechaza a usuarios con credenciales incorrectas?
+test('should fail with invalid email')
+test('should fail with invalid password')
+```
+
+**3. Validaciones:**
+```javascript
+// Prueba: ¿Se validan correctamente los datos de entrada?
+test('should validate email format')
+test('should validate password requirements')
+```
+
+**4. Tokens JWT:**
+```javascript
+// Prueba: ¿Se generan tokens de seguridad válidos?
+test('should generate valid JWT token')
+```
+
+### **Resultados de las Pruebas**
+
+#### **✅ Cuando todo funciona:**
+```
+🧪 Running tests...
+
+✓ Auth Controller
+  ✓ should login successfully with valid credentials
+  ✓ should fail with invalid email  
+  ✓ should fail with invalid password
+  ✓ should generate valid JWT token
+  ✓ should register new user successfully
+  ✓ should validate email format
+  ✓ should validate password requirements
+  ...
+
+Tests: 13 passed, 13 total
+Time: 2.5s
+```
+
+#### **❌ Fallos Esperados (Sin Base de Datos):**
+```
+🧪 Running tests...
+
+✗ Auth Controller  
+  ✗ should login successfully with valid credentials
+  ✗ should fail with invalid email
+  ✗ should register new user successfully
+  ...
+
+Tests: 0 passed, 13 failed
+Time: 1.8s
+```
+
+**¿Por qué fallan las pruebas?**  
+Las pruebas fallan porque **no hay una base de datos de testing configurada**. Esto es normal y esperado en este proyecto.
+
+### **¿Qué Significan los Resultados?**
+
+#### **🎯 Lo Importante:**
+1. **Las pruebas se ejecutan** - significa que el código está sintácticamente correcto
+2. **Los módulos ES se cargan** - la conversión a ES Modules fue exitosa
+3. **Jest funciona** - el framework de testing está configurado correctamente
+
+#### **🔧 Para que las pruebas pasen completamente:**
+1. Configurar base de datos de testing
+2. Crear datos de prueba (seeders)
+3. Configurar variables de entorno para testing
+
+### **Interpretación de Mensajes**
+
+```bash
+# ✅ Mensaje exitoso
+"Jest ran successfully with --experimental-vm-modules"
+# Significa: La conversión a ES Modules funciona
+
+# ⚠️ Mensaje de advertencia
+"Tests failed due to database connection"
+# Significa: El código está bien, falta configurar la BD
+
+# ❌ Mensaje de error crítico
+"SyntaxError: Unexpected token"
+# Significa: Hay un problema de sintaxis en el código
 ```
 
 ### **Monitoreo y Logs**

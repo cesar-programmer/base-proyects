@@ -1,15 +1,15 @@
-const express = require('express');
-const ReporteController = require('../controllers/reporte.controller');
-const { verifyToken, checkAdmin, checkDocenteOrAdmin } = require('../middleware/auth.middleware');
-const { validatorHandler } = require('../middleware/validation_handler');
-const { 
+import express from 'express';
+import ReporteController from '../controllers/reporte.controller.js';
+import { verifyToken, checkAdmin, checkDocenteOrAdmin } from '../middleware/auth.middleware.js';
+import { validatorHandler } from '../middleware/validation_handler.js';
+import { 
   createReporteSchema, 
   updateReporteSchema, 
   getReporteSchema,
   changeReporteStatusSchema,
   getReportesByDocenteSchema,
   getReportesByPeriodSchema
-} = require('../schemas/reporte.schema');
+} from '../schemas/reporte.schema.js';
 
 const router = express.Router();
 const reporteController = new ReporteController();
@@ -91,4 +91,4 @@ router.patch('/:id/status',
   reporteController.changeReporteStatus.bind(reporteController)
 );
 
-module.exports = router;
+export default router;

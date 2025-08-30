@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import { models } from '../db/models/index.js';
 
 class CatalogoActividadService {
   // Obtener todas las actividades del catálogo
@@ -184,4 +184,4 @@ class CatalogoActividadService {
   }
 }
 
-module.exports = CatalogoActividadService;
+export default CatalogoActividadService;

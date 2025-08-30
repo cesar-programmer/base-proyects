@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { models } = require('../db/models');
+import boom from '@hapi/boom';
+import { models } from '../db/models/index.js';
 
 class NotificacionService {
   // Obtener todas las notificaciones
@@ -321,4 +321,4 @@ class NotificacionService {
   }
 }
 
-module.exports = NotificacionService;
+export default NotificacionService;

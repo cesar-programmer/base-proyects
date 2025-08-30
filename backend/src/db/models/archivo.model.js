@@ -1,5 +1,5 @@
-const { Model, DataTypes } = require('sequelize');
-const { ACTIVIDADES_TABLE } = require('./actividad.model');
+import { Model, DataTypes } from 'sequelize';
+import { ACTIVIDADES_TABLE } from './actividad.model.js';
 
 const ARCHIVOS_TABLE = 'archivos';
 
@@ -78,4 +78,4 @@ class Archivo extends Model {
   }
 }
 
-module.exports = { ARCHIVOS_TABLE, ArchivoSchema, Archivo };
+export { ARCHIVOS_TABLE, ArchivoSchema, Archivo };

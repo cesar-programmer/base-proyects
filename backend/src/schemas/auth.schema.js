@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 // Esquema para login
 const loginSchema = Joi.object({
@@ -139,7 +139,7 @@ const resetPasswordSchema = Joi.object({
     })
 });
 
-module.exports = {
+export {
   loginSchema,
   registerSchema,
   changePasswordSchema,

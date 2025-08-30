@@ -1,11 +1,11 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const boom = require('@hapi/boom');
-const { verifyToken, checkAdmin, checkDocenteOrAdmin } = require('../middleware/auth.middleware');
-const { uploadSingle, uploadMultiple, deleteFile, validateFileExists } = require('../config/upload');
-const validatorHandler = require('../middleware/validator.handler');
-const { uploadFileSchema, deleteFileSchema } = require('../schemas/file.schema');
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import boom from '@hapi/boom';
+import { verifyToken, checkAdmin, checkDocenteOrAdmin } from '../middleware/auth.middleware.js';
+import { uploadSingle, uploadMultiple, deleteFile, validateFileExists } from '../config/upload.js';
+import { validatorHandler } from '../middleware/validation_handler.js';
+import { uploadFileSchema, deleteFileSchema } from '../schemas/file.schema.js';
 
 const router = express.Router();
 
@@ -269,4 +269,4 @@ router.get('/',
   }
 );
 
-module.exports = router;
+export default router;

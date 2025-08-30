@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { ActividadService } = require('../services');
+import boom from '@hapi/boom';
+import { ActividadService } from '../services/index.js';
 
 const actividadService = new ActividadService();
 
@@ -260,4 +260,4 @@ class ActividadController {
   }
 }
 
-module.exports = ActividadController;
+export default ActividadController;

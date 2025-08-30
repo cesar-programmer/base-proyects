@@ -1,14 +1,14 @@
-const express = require('express');
-const UserController = require('../controllers/user.controller');
-const { verifyToken, checkAdmin, checkDocenteOrAdmin } = require('../middleware/auth.middleware');
-const { validatorHandler } = require('../middleware/validation_handler');
-const { 
+import express from 'express';
+import UserController from '../controllers/user.controller.js';
+import { verifyToken, checkAdmin, checkDocenteOrAdmin } from '../middleware/auth.middleware.js';
+import { validatorHandler } from '../middleware/validation_handler.js';
+import { 
   createUserSchema, 
   updateUserSchema, 
   getUserSchema,
   updateProfileSchema,
   getUsersByRoleSchema
-} = require('../schemas/user.schema');
+} from '../schemas/user.schema.js';
 
 const router = express.Router();
 const userController = new UserController();
@@ -82,4 +82,4 @@ router.patch('/:id/toggle-status',
   userController.toggleUserStatus.bind(userController)
 );
 
-module.exports = router;
+export default router;

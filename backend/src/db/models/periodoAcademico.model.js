@@ -1,4 +1,4 @@
-const { Model, DataTypes } = require('sequelize');
+import { Model, DataTypes } from 'sequelize';
 
 const PERIODOS_ACADEMICOS_TABLE = 'periodos_academicos';
 
@@ -74,4 +74,4 @@ class PeriodoAcademico extends Model {
   }
 }
 
-module.exports = { PERIODOS_ACADEMICOS_TABLE, PeriodoAcademicoSchema, PeriodoAcademico };
+export { PERIODOS_ACADEMICOS_TABLE, PeriodoAcademicoSchema, PeriodoAcademico };

@@ -1,6 +1,6 @@
-const { Model, DataTypes } = require('sequelize');
-const { REPORTES_TABLE } = require('./reporte.model');
-const { CATALOGO_ACTIVIDADES_TABLE } = require('./catalogoActividad.model');
+import { Model, DataTypes } from 'sequelize';
+import { REPORTES_TABLE } from './reporte.model.js';
+import { CATALOGO_ACTIVIDADES_TABLE } from './catalogoActividad.model.js';
 
 const ACTIVIDADES_TABLE = 'actividades';
 
@@ -116,4 +116,4 @@ class Actividad extends Model {
   }
 }
 
-module.exports = { ACTIVIDADES_TABLE, ActividadSchema, Actividad };
+export { ACTIVIDADES_TABLE, ActividadSchema, Actividad };

@@ -1,5 +1,5 @@
-const boom = require('@hapi/boom');
-const { UserService } = require('../services');
+import boom from '@hapi/boom';
+import { UserService } from '../services/index.js';
 
 const userService = new UserService();
 
@@ -173,4 +173,4 @@ class UserController {
   }
 }
 
-module.exports = UserController;
+export default UserController;

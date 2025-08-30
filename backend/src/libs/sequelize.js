@@ -1,25 +1,28 @@
 import { Sequelize } from 'sequelize';
-import { config } from '../config/config.js';
-import { setupUserModel } from '../db/models/index.js';
-// sequelize es un ORM que permite interactuar con la base de datos de una forma mas sencilla
-// aqui impotamos el cliente de sequelize y la configuracion de la base de datos que esta en el archivo config.js
+import dotenv from 'dotenv';
 
-// aqui se configura la base de datos
-const USER = encodeURIComponent(config.dbUser);
-// encodeURIComponent es para que si el usuario tiene caracteres especiales, no se rompa la conexion
-// protege la conexion a la base de datos de ataques de inyeccion de codigo sql y de ataques de cross site scripting
-const PASSWORD = encodeURIComponent(config.dbPassword);
-const URI = `postgres://${USER}:${PASSWORD}@${config.dbHost}:${config.dbPort}/${config.dbName}`;
+// Configurar variables de entorno
+dotenv.config();
 
-const sequelize = new Sequelize(URI, {
-  dialect: 'postgres',
-  logging: true
+// Configuración para MySQL (no PostgreSQL)
+const DB_USER = encodeURIComponent(process.env.DB_USER || 'user');
+const DB_PASSWORD = encodeURIComponent(process.env.DB_PASSWORD || 'password');
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_PORT = process.env.DB_PORT || 3306;
+const DB_NAME = process.env.DB_NAME || 'reportesdb';
+
+// Crear conexión a MySQL
+const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
+  host: DB_HOST,
+  port: DB_PORT,
+  dialect: 'mysql', // Cambiar de postgres a mysql
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  }
 });
 
-// aqui se configura el modelo de la base de datos
-setupUserModel(sequelize);
-
-// aqui se guardan todos los modelos de la base de datos en una variable para poder acceder a ellos desde cualquier parte de la aplicacion
-const models = sequelize.models;
-
-export { sequelize, models };
+export { sequelize };

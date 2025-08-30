@@ -9,7 +9,7 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares de seguridad helmet es para protegerse de vulnerabilidades
+// Middlewares de seguridad
 app.use(helmet());
 app.use(
   cors({

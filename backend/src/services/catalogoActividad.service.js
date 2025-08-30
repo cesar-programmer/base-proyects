@@ -7,7 +7,10 @@ class CatalogoActividadService {
     try {
       const actividades = await models.CatalogoActividad.findAll({
         where: { activo: true },
-        order: [['categoria', 'ASC'], ['titulo', 'ASC']]
+        order: [
+          ['categoria', 'ASC'],
+          ['titulo', 'ASC']
+        ]
       });
       return actividades;
     } catch (error) {
@@ -19,7 +22,7 @@ class CatalogoActividadService {
   async findByCategory(categoria) {
     try {
       const actividades = await models.CatalogoActividad.findAll({
-        where: { 
+        where: {
           categoria,
           activo: true
         },
@@ -87,8 +90,8 @@ class CatalogoActividadService {
       const actividad = await this.findOne(id);
       const newStatus = !actividad.activo;
       await actividad.update({ activo: newStatus });
-      
-      return { 
+
+      return {
         message: `Actividad ${newStatus ? 'activada' : 'desactivada'} correctamente`,
         activo: newStatus
       };

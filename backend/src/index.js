@@ -1,8 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
-import helmet from 'helmet';
 import morgan from 'morgan';
+import routerApi from './routes/index.js';
+import { logErrors, errorHandler, boomErrorHandler, queryErrorHandler } from './middleware/error.handler.js';
+import { generalSecurityMiddleware, securityHeaders } from './config/security.js';
 
 // Configurar variables de entorno
 dotenv.config();
@@ -10,13 +11,8 @@ dotenv.config();
 const app = express();
 
 // Middlewares de seguridad
-app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:8082',
-    credentials: true
-  })
-);
+app.use(generalSecurityMiddleware);
+app.use(securityHeaders);
 
 // Middlewares básicos
 app.use(morgan('combined'));
@@ -45,8 +41,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// TODO: Aquí irán las rutas de la API
-// app.use('/api/v1', routes);
+// Configurar rutas de la API
+routerApi(app);
 
 // Middleware de manejo de errores 404
 app.use('*', (req, res) => {
@@ -57,14 +53,10 @@ app.use('*', (req, res) => {
 });
 
 // Middleware global de manejo de errores
-app.use((err, req, res, _next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: 'Error interno del servidor',
-    message:
-      process.env.NODE_ENV === 'development' ? err.message : 'Algo salió mal'
-  });
-});
+app.use(logErrors);
+app.use(queryErrorHandler);
+app.use(boomErrorHandler);
+app.use(errorHandler);
 
 // Puerto
 const PORT = process.env.PORT || 3000;

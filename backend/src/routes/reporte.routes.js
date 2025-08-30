@@ -1,0 +1,94 @@
+const express = require('express');
+const ReporteController = require('../controllers/reporte.controller');
+const { verifyToken, checkAdmin, checkDocenteOrAdmin } = require('../middleware/auth.middleware');
+const { validatorHandler } = require('../middleware/validation_handler');
+const { 
+  createReporteSchema, 
+  updateReporteSchema, 
+  getReporteSchema,
+  changeReporteStatusSchema,
+  getReportesByDocenteSchema,
+  getReportesByPeriodSchema
+} = require('../schemas/reporte.schema');
+
+const router = express.Router();
+const reporteController = new ReporteController();
+
+// Rutas para usuarios autenticados
+router.get('/my-reportes',
+  verifyToken,
+  reporteController.getMyReportes.bind(reporteController)
+);
+
+// Rutas para docentes y administradores
+router.get('/',
+  verifyToken,
+  checkDocenteOrAdmin,
+  reporteController.getReportes.bind(reporteController)
+);
+
+router.get('/:id',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.getReporte.bind(reporteController)
+);
+
+router.post('/',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(createReporteSchema, 'body'),
+  reporteController.createReporte.bind(reporteController)
+);
+
+router.put('/:id',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  validatorHandler(updateReporteSchema, 'body'),
+  reporteController.updateReporte.bind(reporteController)
+);
+
+router.delete('/:id',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.deleteReporte.bind(reporteController)
+);
+
+router.get('/docente/:docenteId',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReportesByDocenteSchema, 'params'),
+  reporteController.getReportesByDocente.bind(reporteController)
+);
+
+router.get('/period/:periodId',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReportesByPeriodSchema, 'params'),
+  reporteController.getReportesByPeriod.bind(reporteController)
+);
+
+router.get('/stats/general',
+  verifyToken,
+  checkDocenteOrAdmin,
+  reporteController.getReporteStats.bind(reporteController)
+);
+
+// Rutas solo para administradores
+router.get('/pending/review',
+  verifyToken,
+  checkAdmin,
+  reporteController.getReportesPendingReview.bind(reporteController)
+);
+
+router.patch('/:id/status',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  validatorHandler(changeReporteStatusSchema, 'body'),
+  reporteController.changeReporteStatus.bind(reporteController)
+);
+
+module.exports = router;

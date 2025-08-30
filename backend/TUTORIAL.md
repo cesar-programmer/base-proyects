@@ -497,12 +497,9 @@ curl http://localhost:3000/api/v1
 
 #### **3. Ejecutar pruebas:**
 ```bash
-# Ejecutar todas las pruebas (método estándar)
+# Ejecutar todas las pruebas
 npm test
-
-# Ejecutar pruebas con soporte completo para ES Modules
-node --experimental-vm-modules ./node_modules/jest/bin/jest.js
-
+```
 # Si todo está bien configurado, verás:
 # ✓ Auth Controller tests running
 # Tests: 13 total (pueden fallar sin BD de testing)
@@ -527,8 +524,160 @@ npm run format           # Formatear código
 
 # 📦 Producción
 npm start                # Iniciar en producción
-npm run build            # Preparar para producción
 ```
+
+## 📋 **GUÍA COMPLETA DE SCRIPTS NPM**
+
+### **¿Qué son los Scripts de NPM?**
+Los scripts de NPM son comandos personalizados definidos en `package.json` que automatizan tareas comunes del desarrollo. Cada script ejecuta una o más herramientas para facilitar el trabajo.
+
+### **Scripts de Desarrollo**
+
+#### **`npm start`** - Servidor en Producción
+```bash
+npm start
+```
+**¿Qué hace?** Ejecuta `node src/index.js` para iniciar el servidor en modo producción.
+**¿Cuándo usarlo?** En el servidor de producción o para probar el comportamiento final.
+
+#### **`npm run dev`** - Servidor en Desarrollo
+```bash
+npm run dev
+```
+**¿Qué hace?** Ejecuta `nodemon src/index.js` que reinicia automáticamente el servidor cuando cambias archivos.
+**¿Cuándo usarlo?** Durante el desarrollo diario para ver cambios inmediatamente.
+
+### **Scripts de Base de Datos**
+
+#### **`npm run db:migrate`** - Aplicar Migraciones
+```bash
+npm run db:migrate
+```
+**¿Qué hace?** Ejecuta todas las migraciones pendientes para actualizar la estructura de la base de datos.
+**¿Cuándo usarlo?** Después de crear nuevas migraciones o al configurar el proyecto por primera vez.
+
+#### **`npm run db:seed`** - Poblar con Datos
+```bash
+npm run db:seed
+```
+**¿Qué hace?** Inserta datos de prueba en la base de datos usando los seeders.
+**¿Cuándo usarlo?** Para tener datos de ejemplo durante el desarrollo.
+
+#### **`npm run db:reset`** - Reset Completo
+```bash
+npm run db:reset
+```
+**¿Qué hace?** Deshace todas las migraciones, las vuelve a aplicar y ejecuta los seeders.
+**¿Cuándo usarlo?** Cuando necesitas empezar con una base de datos completamente limpia.
+
+### **Scripts de Calidad de Código**
+
+#### **`npm run lint`** - Revisar Código
+```bash
+npm run lint
+```
+**¿Qué hace?** Ejecuta ESLint para encontrar errores y problemas de estilo en el código.
+**¿Cuándo usarlo?** Antes de hacer commits para asegurar calidad del código.
+
+#### **`npm run format`** - Formatear Código
+```bash
+npm run format
+```
+**¿Qué hace?** Ejecuta Prettier para formatear automáticamente todo el código.
+**¿Cuándo usarlo?** Para mantener un estilo consistente en todo el proyecto.
+
+### **Scripts de Testing**
+
+#### **`npm test`** - Ejecutar Pruebas
+```bash
+npm test
+```
+**¿Qué hace?** Ejecuta todas las pruebas usando Jest con soporte para ES Modules.
+**¿Cuándo usarlo?** Para verificar que todo funciona correctamente antes de hacer cambios.
+
+#### **`npm run test:watch`** - Pruebas Continuas
+```bash
+npm run test:watch
+```
+**¿Qué hace?** Ejecuta las pruebas y las vuelve a ejecutar automáticamente cuando cambias archivos.
+**¿Cuándo usarlo?** Durante el desarrollo para obtener feedback inmediato.
+
+#### **`npm run test:coverage`** - Cobertura de Código
+```bash
+npm run test:coverage
+```
+**¿Qué hace?** Ejecuta las pruebas y genera un reporte de qué porcentaje del código está cubierto por tests.
+**¿Cuándo usarlo?** Para identificar áreas del código que necesitan más pruebas.
+
+## 📦 **GUÍA COMPLETA DE DEPENDENCIAS**
+
+### **¿Qué son las Dependencias?**
+Las dependencias son librerías externas que nuestro proyecto necesita para funcionar. Se dividen en dos tipos:
+- **Dependencias de Producción**: Necesarias para que la aplicación funcione en el servidor
+- **Dependencias de Desarrollo**: Solo necesarias durante el desarrollo
+
+### **🚀 Dependencias de Producción**
+
+#### **Framework y Servidor**
+- **`express`** - Framework web minimalista y flexible para Node.js
+- **`cors`** - Middleware para habilitar CORS (Cross-Origin Resource Sharing)
+- **`helmet`** - Middleware de seguridad que establece varios headers HTTP
+- **`morgan`** - Logger de peticiones HTTP para debugging
+
+#### **Base de Datos**
+- **`sequelize`** - ORM (Object-Relational Mapping) para bases de datos SQL
+- **`mysql2`** - Driver nativo de MySQL para Node.js con mejor rendimiento
+
+#### **Autenticación y Seguridad**
+- **`bcryptjs`** - Librería para hashear contraseñas de forma segura
+- **`jsonwebtoken`** - Implementación de JSON Web Tokens para autenticación
+- **`express-rate-limit`** - Middleware para limitar peticiones y prevenir ataques
+
+#### **Validación de Datos**
+- **`express-validator`** - Middleware de validación basado en validator.js
+- **`zod`** - Librería de validación y parsing de esquemas TypeScript-first
+- **`joi`** - Librería de validación de objetos para JavaScript
+
+#### **Utilidades**
+- **`dotenv`** - Carga variables de entorno desde archivos .env
+- **`winston`** - Librería de logging avanzada y configurable
+- **`@hapi/boom`** - Utilidades para crear objetos de error HTTP
+- **`multer`** - Middleware para manejar multipart/form-data (subida de archivos)
+
+### **🛠️ Dependencias de Desarrollo**
+
+#### **Herramientas de Testing**
+- **`jest`** - Framework de testing con funcionalidades completas
+- **`supertest`** - Librería para testing de APIs HTTP
+
+#### **Linting y Formateo**
+- **`eslint`** - Herramienta de linting para identificar problemas en el código
+- **`@eslint/js`** - Configuración base de ESLint para JavaScript
+- **`eslint-config-prettier`** - Configuración de ESLint compatible con Prettier
+- **`eslint-plugin-prettier`** - Plugin de ESLint que ejecuta Prettier como regla
+- **`eslint-plugin-react`** - Reglas específicas de ESLint para React
+- **`prettier`** - Formateador de código opinionado
+- **`globals`** - Lista de variables globales para diferentes entornos
+
+#### **Herramientas de Base de Datos**
+- **`sequelize-cli`** - Interfaz de línea de comandos para Sequelize
+
+#### **Desarrollo**
+- **`nodemon`** - Herramienta que reinicia automáticamente la aplicación cuando detecta cambios
+
+### **💡 ¿Por qué estas Dependencias?**
+
+**Express + Middlewares**: Proporcionan la base del servidor web con seguridad y logging.
+
+**Sequelize + MySQL2**: Ofrecen una abstracción robusta para trabajar con bases de datos.
+
+**Autenticación**: bcryptjs + jsonwebtoken crean un sistema de autenticación seguro.
+
+**Validación Triple**: express-validator, zod y joi proporcionan diferentes enfoques de validación según las necesidades.
+
+**Testing Completo**: Jest + supertest permiten testing unitario e integración de APIs.
+
+**Calidad de Código**: ESLint + Prettier mantienen el código limpio y consistente.
 
 ---
 
@@ -557,13 +706,8 @@ Las pruebas automatizadas son como **"inspectores de calidad"** que verifican qu
 npm test
 ```
 
-#### **Método con ES Modules (Recomendado):**
-```bash
-node --experimental-vm-modules ./node_modules/jest/bin/jest.js
-```
-
-**¿Por qué necesitamos el segundo comando?**  
-Nuestro proyecto usa **ES Modules** (la forma moderna de importar código en JavaScript). Jest necesita un flag especial para entender esta sintaxis.
+#### **Configuración de ES Modules:**
+El proyecto está configurado para usar **ES Modules** (la forma moderna de importar código en JavaScript). Jest está configurado automáticamente para soportar esta sintaxis, por lo que simplemente puedes usar `npm test`.
 
 ### **¿Qué Prueban Nuestros Tests?**
 
@@ -650,9 +794,9 @@ Las pruebas fallan porque **no hay una base de datos de testing configurada**. E
 
 ```bash
 # ✅ Mensaje exitoso
-"Jest ran successfully with --experimental-vm-modules"
-# Significa: La conversión a ES Modules funciona
-
+"Jest ran successfully"
+# Significa: La configuración de ES Modules funciona correctamente
+```
 # ⚠️ Mensaje de advertencia
 "Tests failed due to database connection"
 # Significa: El código está bien, falta configurar la BD

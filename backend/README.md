@@ -270,6 +270,82 @@ npm run test:watch  # Tests en modo watch
 npm run test:coverage # Coverage de tests
 ```
 
+### 📋 Descripción Detallada de Scripts
+
+#### **Scripts de Desarrollo**
+- **`npm start`**: Ejecuta el servidor en modo producción usando `node src/index.js`
+- **`npm run dev`**: Ejecuta el servidor en modo desarrollo con `nodemon` para reinicio automático
+
+#### **Scripts de Base de Datos**
+- **`npm run db:migrate`**: Ejecuta todas las migraciones pendientes usando Sequelize CLI
+- **`npm run db:migrate:undo`**: Deshace la última migración ejecutada
+- **`npm run db:migrate:undo:all`**: Deshace todas las migraciones (limpia la BD)
+- **`npm run db:seed`**: Ejecuta todos los seeders para poblar la BD con datos iniciales
+- **`npm run db:seed:undo`**: Deshace todos los seeders
+- **`npm run db:reset`**: Comando completo que limpia, migra y puebla la BD desde cero
+- **`npm run db:setup`**: Ejecuta migraciones y seeders (para configuración inicial)
+
+#### **Scripts de Calidad de Código**
+- **`npm run lint`**: Ejecuta ESLint para revisar el código en busca de errores y problemas de estilo
+- **`npm run lint:fix`**: Ejecuta ESLint y corrige automáticamente los errores que puede solucionar
+- **`npm run format`**: Formatea todo el código usando Prettier según las reglas definidas
+
+#### **Scripts de Testing**
+- **`npm test`**: Ejecuta todas las pruebas usando Jest con soporte para ES Modules
+- **`npm run test:watch`**: Ejecuta las pruebas en modo watch (se re-ejecutan al cambiar archivos)
+- **`npm run test:coverage`**: Ejecuta las pruebas y genera un reporte de cobertura de código
+
+## 📦 Dependencias del Proyecto
+
+### **Dependencias de Producción**
+
+#### **Framework y Servidor**
+- **`express`** (^4.18.2): Framework web minimalista y flexible para Node.js
+- **`cors`** (^2.8.5): Middleware para habilitar CORS (Cross-Origin Resource Sharing)
+- **`helmet`** (^7.1.0): Middleware de seguridad que establece varios headers HTTP
+- **`morgan`** (^1.10.0): Middleware de logging para HTTP requests
+- **`express-rate-limit`** (^7.1.5): Middleware para limitar la tasa de requests
+
+#### **Base de Datos**
+- **`sequelize`** (^6.35.2): ORM (Object-Relational Mapping) para Node.js
+- **`mysql2`** (^3.9.1): Cliente MySQL para Node.js con soporte para promesas
+
+#### **Autenticación y Seguridad**
+- **`bcryptjs`** (^2.4.3): Librería para hashear contraseñas de forma segura
+- **`jsonwebtoken`** (^9.0.2): Implementación de JSON Web Tokens para autenticación
+
+#### **Validación**
+- **`joi`** (^17.10.1): Librería de validación de esquemas para JavaScript
+- **`zod`** (^3.22.4): Librería de validación y parsing con TypeScript-first
+- **`express-validator`** (^7.0.1): Middleware de validación para Express
+
+#### **Utilidades**
+- **`dotenv`** (^16.4.1): Carga variables de entorno desde archivo .env
+- **`winston`** (^3.11.0): Librería de logging multi-transport para Node.js
+- **`@hapi/boom`** (^10.0.1): Utilidades para crear objetos de error HTTP
+- **`multer`** (^1.4.5-lts.1): Middleware para manejar multipart/form-data (subida de archivos)
+
+### **Dependencias de Desarrollo**
+
+#### **Testing**
+- **`jest`** (^29.7.0): Framework de testing para JavaScript
+- **`supertest`** (^6.3.4): Librería para testing de APIs HTTP
+
+#### **Linting y Formateo**
+- **`eslint`** (^8.57.1): Herramienta de linting para identificar problemas en el código
+- **`@eslint/js`** (^9.17.0): Configuraciones de ESLint para JavaScript
+- **`eslint-config-prettier`** (^9.1.0): Configuración de ESLint compatible con Prettier
+- **`eslint-plugin-prettier`** (^5.2.1): Plugin de ESLint para integrar Prettier
+- **`eslint-plugin-react`** (^7.37.3): Reglas de ESLint específicas para React
+- **`prettier`** (^3.4.2): Formateador de código opinionado
+- **`globals`** (^15.14.0): Variables globales para diferentes entornos
+
+#### **Base de Datos (Desarrollo)**
+- **`sequelize-cli`** (^6.6.2): Interfaz de línea de comandos para Sequelize
+
+#### **Desarrollo**
+- **`nodemon`** (^3.0.3): Herramienta que reinicia automáticamente la aplicación al detectar cambios
+
 ## 🛡️ Seguridad
 
 - **Rate Limiting**: Límites de requests por IP
@@ -291,17 +367,14 @@ Los logs se generan con Winston y incluyen:
 
 ### Configuración de Pruebas
 
-El proyecto utiliza **Jest** como framework de testing. Debido a la conversión a ES Modules, es necesario ejecutar las pruebas con el flag `--experimental-vm-modules`.
+El proyecto utiliza **Jest** como framework de testing con soporte completo para ES Modules.
 
 ### Comandos de Testing
 
 ```bash
-# Ejecutar todas las pruebas (método estándar)
+# Ejecutar todas las pruebas
 npm test
-
-# Ejecutar pruebas con soporte completo para ES Modules
-node --experimental-vm-modules ./node_modules/jest/bin/jest.js
-
+```
 # Ejecutar pruebas en modo watch
 npm run test:watch
 

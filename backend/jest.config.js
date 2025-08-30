@@ -4,6 +4,9 @@ export default {
   
   // Soporte para ES modules
   transform: {},
+  moduleNameMapper: {
+    '^(\.{1,2}/.*)\.js$': '$1'
+  },
   
   // Directorios de tests
   testMatch: [

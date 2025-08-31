@@ -1,14 +1,13 @@
 import { Model, DataTypes } from 'sequelize';
 
-const ROLES_TABLE = 'roles';
+const ROLES_TABLE = 'Roles';
 
 const RoleSchema = {
-  id_rol: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
-    type: DataTypes.INTEGER,
-    field: 'id_rol'
+    type: DataTypes.INTEGER
   },
   nombre: {
     allowNull: false,
@@ -19,6 +18,21 @@ const RoleSchema = {
   descripcion: {
     allowNull: true,
     type: DataTypes.TEXT
+  },
+  activo: {
+    allowNull: false,
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  createdAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
 };
 
@@ -27,7 +41,7 @@ class Role extends Model {
     // Un rol puede tener muchos usuarios
     this.hasMany(models.User, {
       as: 'usuarios',
-      foreignKey: 'id_rol'
+      foreignKey: 'rolId'
     });
     
     // Un rol puede tener muchos permisos (N:M)
@@ -44,7 +58,7 @@ class Role extends Model {
       sequelize,
       tableName: ROLES_TABLE,
       modelName: 'Role',
-      timestamps: false, // No usamos timestamps automáticos
+      timestamps: true,
       comment: 'Catálogo de roles en el sistema.'
     };
   }

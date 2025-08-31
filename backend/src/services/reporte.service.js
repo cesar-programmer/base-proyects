@@ -6,74 +6,72 @@ class ReporteService {
   async find() {
     try {
       const reportes = await models.Reporte.findAll({
-        include: [
-          {
-            model: models.User,
-            as: 'docente',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
-          },
-          {
-            model: models.PeriodoAcademico,
-            as: 'periodo',
-            attributes: ['id_periodo', 'nombre', 'activo']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividades',
-            attributes: ['id_actividad', 'titulo', 'categoria', 'horas_estimadas']
-          }
-        ],
-        order: [['fecha_creacion', 'DESC']]
-      });
+          include: [
+            {
+              model: models.User,
+              as: 'usuario',
+              attributes: ['id', 'nombre', 'apellido', 'email']
+            }
+          ],
+          order: [['createdAt', 'DESC']]
+        });
       return reportes;
     } catch (error) {
+      console.error('Error específico en reporte.service.js:', error);
       throw boom.internal('Error al obtener los reportes');
     }
   }
 
   // Obtener reportes por docente
-  async findByDocente(docenteId) {
+  async findByDocente(docenteId, filters = {}) {
     try {
+      const whereClause = { usuarioId: docenteId };
+      
+      // Aplicar filtros adicionales si se proporcionan
+      if (filters.estado) whereClause.estado = filters.estado;
+      if (filters.actividadId) whereClause.actividadId = filters.actividadId;
+      
       const reportes = await models.Reporte.findAll({
-        where: { id_docente: docenteId },
-        include: [
-          {
-            model: models.PeriodoAcademico,
-            as: 'periodo',
-            attributes: ['id_periodo', 'nombre', 'activo']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividades',
-            attributes: ['id_actividad', 'titulo', 'categoria', 'horas_estimadas', 'estado_realizado']
-          }
-        ],
-        order: [['fecha_creacion', 'DESC']]
-      });
-      return reportes;
-    } catch (error) {
-      throw boom.internal('Error al obtener los reportes del docente');
-    }
-  }
-
-  // Obtener reportes por periodo
-  async findByPeriod(periodId) {
-    try {
-      const reportes = await models.Reporte.findAll({
-        where: { id_periodo: periodId },
+        where: whereClause,
         include: [
           {
             model: models.User,
-            as: 'docente',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
             model: models.Actividad,
-            as: 'actividades',
-            attributes: ['id_actividad', 'titulo', 'categoria', 'horas_estimadas']
+            as: 'actividad',
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
           }
         ],
-        order: [['fecha_creacion', 'DESC']]
+        order: [['createdAt', 'DESC']]
+      });
+      return reportes;
+    } catch (error) {
+      console.error('Error detallado en findByDocente:', error);
+      throw boom.internal(`Error al obtener los reportes del docente: ${error.message}`);
+    }
+  }
+
+  // Obtener reportes por actividad
+  async findByActividad(actividadId) {
+    try {
+      const reportes = await models.Reporte.findAll({
+        where: { actividadId: actividadId },
+        include: [
+          {
+            model: models.User,
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
+          },
+          {
+            model: models.Actividad,
+            as: 'actividad',
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+          }
+        ],
+        order: [['createdAt', 'DESC']]
       });
       return reportes;
     } catch (error) {
@@ -89,16 +87,16 @@ class ReporteService {
         include: [
           {
             model: models.User,
-            as: 'docente',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
-            model: models.PeriodoAcademico,
-            as: 'periodo',
-            attributes: ['id_periodo', 'nombre']
+            model: models.Actividad,
+            as: 'actividad',
+            attributes: ['id', 'titulo', 'descripcion']
           }
         ],
-        order: [['fecha_creacion', 'DESC']]
+        order: [['createdAt', 'DESC']]
       });
       return reportes;
     } catch (error) {
@@ -113,41 +111,18 @@ class ReporteService {
         include: [
           {
             model: models.User,
-            as: 'docente',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
-            model: models.PeriodoAcademico,
-            as: 'periodo',
-            attributes: ['id_periodo', 'nombre', 'activo']
+            model: models.User,
+            as: 'revisadoPor',
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
             model: models.Actividad,
-            as: 'actividades',
-            include: [
-              {
-                model: models.CatalogoActividad,
-                as: 'catalogo',
-                attributes: ['id_catalogo', 'titulo', 'descripcion']
-              },
-              {
-                model: models.Archivo,
-                as: 'archivos',
-                attributes: ['id_archivo', 'nombre_original', 'tipo_mime']
-              }
-            ]
-          },
-          {
-            model: models.HistorialCambio,
-            as: 'historial_cambios',
-            include: [
-              {
-                model: models.User,
-                as: 'usuario_modificador',
-                attributes: ['id_usuario', 'nombre_completo']
-              }
-            ],
-            order: [['fecha_cambio', 'DESC']]
+            as: 'actividad',
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
           }
         ]
       });
@@ -166,22 +141,22 @@ class ReporteService {
   // Crear un nuevo reporte
   async create(reporteData) {
     try {
-      // Verificar que el docente existe
-      const docente = await models.User.findByPk(reporteData.id_docente);
-      if (!docente) {
-        throw boom.notFound('Docente no encontrado');
+      // Verificar que el usuario existe
+      const usuario = await models.User.findByPk(reporteData.usuarioId);
+      if (!usuario) {
+        throw boom.notFound('Usuario no encontrado');
       }
 
-      // Verificar que el periodo existe
-      const periodo = await models.PeriodoAcademico.findByPk(reporteData.id_periodo);
-      if (!periodo) {
-        throw boom.notFound('Periodo académico no encontrado');
+      // Verificar que la actividad existe
+      const actividad = await models.Actividad.findByPk(reporteData.actividadId);
+      if (!actividad) {
+        throw boom.notFound('Actividad no encontrada');
       }
 
       const newReporte = await models.Reporte.create(reporteData);
       
       // Retornar con relaciones incluidas
-      const reporteWithRelations = await this.findOne(newReporte.id_reporte);
+      const reporteWithRelations = await this.findOne(newReporte.id);
       return reporteWithRelations;
     } catch (error) {
       if (boom.isBoom(error)) throw error;
@@ -194,13 +169,11 @@ class ReporteService {
     try {
       const reporte = await this.findOne(id);
 
-      // Si se está cambiando el estado, registrar en historial
+      // Si se está cambiando el estado, actualizar fecha de revisión
       if (reporteData.estado && reporteData.estado !== reporte.estado) {
-        await models.HistorialCambio.create({
-          id_reporte: id,
-          id_usuario_modificador: reporteData.id_usuario_modificador || reporte.id_docente,
-          descripcion_cambio: `Estado cambiado de ${reporte.estado} a ${reporteData.estado}`
-        });
+        if (reporteData.estado === 'revisado' || reporteData.estado === 'aprobado' || reporteData.estado === 'rechazado') {
+          reporteData.fechaRevision = new Date();
+        }
       }
 
       const updatedReporte = await reporte.update(reporteData);
@@ -302,9 +275,9 @@ class ReporteService {
             attributes: ['id_usuario', 'nombre_completo', 'email']
           },
           {
-            model: models.PeriodoAcademico,
-            as: 'periodo',
-            attributes: ['id_periodo', 'nombre']
+            model: models.Actividad,
+            as: 'actividad',
+            attributes: ['id', 'nombre']
           }
         ],
         order: [['fecha_envio', 'ASC']]

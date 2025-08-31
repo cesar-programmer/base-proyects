@@ -16,23 +16,30 @@ const getReporteSchema = Joi.object({
 
 // Esquema para crear reporte
 const createReporteSchema = Joi.object({
-  id_docente: Joi.number()
-    .integer()
-    .positive()
-    .messages({
-      'number.base': 'El ID del docente debe ser un número',
-      'number.integer': 'El ID del docente debe ser un número entero',
-      'number.positive': 'El ID del docente debe ser un número positivo'
-    }),
-  id_periodo: Joi.number()
-    .integer()
-    .positive()
+  titulo: Joi.string()
+    .max(200)
     .required()
     .messages({
-      'number.base': 'El ID del período debe ser un número',
-      'number.integer': 'El ID del período debe ser un número entero',
-      'number.positive': 'El ID del período debe ser un número positivo',
-      'any.required': 'El período académico es requerido'
+      'string.max': 'El título no puede exceder 200 caracteres',
+      'any.required': 'El título es requerido'
+    }),
+  descripcion: Joi.string()
+    .required()
+    .messages({
+      'any.required': 'La descripción es requerida'
+    }),
+  fechaRealizacion: Joi.date()
+    .required()
+    .messages({
+      'any.required': 'La fecha de realización es requerida'
+    }),
+  usuarioId: Joi.number()
+    .integer()
+    .positive()
+    .messages({
+      'number.base': 'El ID del usuario debe ser un número',
+      'number.integer': 'El ID del usuario debe ser un número entero',
+      'number.positive': 'El ID del usuario debe ser un número positivo'
     }),
   tipo: Joi.string()
     .valid('ACTIVIDADES_PLANIFICADAS', 'ACTIVIDADES_REALIZADAS')
@@ -63,18 +70,23 @@ const createReporteSchema = Joi.object({
 
 // Esquema para actualizar reporte
 const updateReporteSchema = Joi.object({
-  id_periodo: Joi.number()
-    .integer()
-    .positive()
+  titulo: Joi.string()
+    .max(200)
     .messages({
-      'number.base': 'El ID del período debe ser un número',
-      'number.integer': 'El ID del período debe ser un número entero',
-      'number.positive': 'El ID del período debe ser un número positivo'
+      'string.max': 'El título no puede exceder 200 caracteres'
     }),
-  tipo: Joi.string()
-    .valid('ACTIVIDADES_PLANIFICADAS', 'ACTIVIDADES_REALIZADAS')
+  descripcion: Joi.string()
     .messages({
-      'any.only': 'El tipo debe ser ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS'
+      'string.base': 'La descripción debe ser texto'
+    }),
+  fechaRealizacion: Joi.date()
+    .messages({
+      'date.base': 'La fecha de realización debe ser una fecha válida'
+    }),
+  estado: Joi.string()
+    .valid('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado')
+    .messages({
+      'any.only': 'El estado debe ser borrador, enviado, revisado, aprobado o rechazado'
     }),
   semestre: Joi.number()
     .integer()
@@ -173,19 +185,11 @@ const getReportesQuerySchema = Joi.object({
     .messages({
       'any.only': 'El tipo debe ser ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS'
     }),
-  id_periodo: Joi.number()
+  usuarioId: Joi.number()
     .integer()
     .positive()
     .messages({
-      'number.base': 'El filtro de período debe ser un número',
-      'number.integer': 'El filtro de período debe ser un número entero',
-      'number.positive': 'El filtro de período debe ser un número positivo'
-    }),
-  id_docente: Joi.number()
-    .integer()
-    .positive()
-    .messages({
-      'number.base': 'El filtro de docente debe ser un número',
+      'number.base': 'El filtro de usuario debe ser un número',
       'number.integer': 'El filtro de docente debe ser un número entero',
       'number.positive': 'El filtro de docente debe ser un número positivo'
     }),

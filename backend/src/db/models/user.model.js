@@ -1,59 +1,79 @@
 import { Model, DataTypes } from 'sequelize';
-import { ROLES_TABLE } from './role.model.js';
 
-const USUARIOS_TABLE = 'usuarios';
+const USUARIOS_TABLE = 'Usuarios';
 
 const UserSchema = {
-  id_usuario: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
-    type: DataTypes.INTEGER,
-    field: 'id_usuario'
+    type: DataTypes.INTEGER
   },
-  nombre_completo: {
+  nombre: {
     allowNull: false,
-    type: DataTypes.STRING(255)
+    type: DataTypes.STRING(100)
+  },
+  apellido: {
+    allowNull: false,
+    type: DataTypes.STRING(100)
   },
   email: {
     allowNull: false,
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(150),
     unique: true,
     validate: {
       isEmail: true
     }
   },
-  password_hash: {
+  password: {
     allowNull: false,
-    type: DataTypes.STRING(255),
-    field: 'password_hash'
+    type: DataTypes.STRING(255)
   },
-  id_rol: {
+  telefono: {
+    allowNull: true,
+    type: DataTypes.STRING(20)
+  },
+  cedula: {
     allowNull: false,
-    type: DataTypes.INTEGER,
-    field: 'id_rol',
-    references: {
-      model: ROLES_TABLE,
-      key: 'id_rol'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'RESTRICT'
+    type: DataTypes.STRING(20),
+    unique: true
+  },
+  fechaNacimiento: {
+    allowNull: true,
+    type: DataTypes.DATE
+  },
+  direccion: {
+    allowNull: true,
+    type: DataTypes.TEXT
   },
   activo: {
     allowNull: false,
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
-  fecha_creacion: {
+  ultimoAcceso: {
+    allowNull: true,
+    type: DataTypes.DATE
+  },
+  rolId: {
+    allowNull: false,
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Roles',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'RESTRICT'
+  },
+  createdAt: {
     allowNull: false,
     type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'fecha_creacion'
+    defaultValue: DataTypes.NOW
   },
-  ultimo_login: {
-    allowNull: true,
+  updatedAt: {
+    allowNull: false,
     type: DataTypes.DATE,
-    field: 'ultimo_login'
+    defaultValue: DataTypes.NOW
   }
 };
 
@@ -62,13 +82,13 @@ class User extends Model {
     // Un usuario pertenece a un rol
     this.belongsTo(models.Role, {
       as: 'rol',
-      foreignKey: 'id_rol'
+      foreignKey: 'rolId'
     });
     
     // Un usuario puede crear muchos reportes
     this.hasMany(models.Reporte, {
       as: 'reportes',
-      foreignKey: 'id_docente'
+      foreignKey: 'usuarioId'
     });
     
     // Un usuario puede recibir muchas notificaciones
@@ -89,7 +109,7 @@ class User extends Model {
       sequelize,
       tableName: USUARIOS_TABLE,
       modelName: 'User',
-      timestamps: false,
+      timestamps: true,
       comment: 'Tabla central de usuarios del sistema.'
     };
   }

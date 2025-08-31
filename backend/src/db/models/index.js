@@ -17,14 +17,14 @@ const sequelize = new Sequelize({
   dialect: 'mysql',
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
-  username: process.env.DB_USER || 'user',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_NAME || 'reportesdb',
+  username: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'rootpassword',
+  database: process.env.DB_NAME || (process.env.NODE_ENV === 'test' ? 'reportes_db_test' : 'reportesdb'),
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   define: {
     freezeTableName: true, // Evita que Sequelize pluralice los nombres de las tablas
     underscored: false, // Usamos camelCase en los nombres de campos
-    timestamps: false // No usamos timestamps automáticos
+    timestamps: true // Usamos timestamps automáticos
   }
 });
 

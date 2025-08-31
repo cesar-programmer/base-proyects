@@ -1,104 +1,109 @@
 import { Model, DataTypes } from 'sequelize';
 import { USUARIOS_TABLE } from './user.model.js';
-import { PERIODOS_ACADEMICOS_TABLE } from './periodoAcademico.model.js';
 
-const REPORTES_TABLE = 'reportes';
+const REPORTES_TABLE = 'Reportes';
 
 const ReporteSchema = {
-  id_reporte: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
-    type: DataTypes.INTEGER,
-    field: 'id_reporte'
+    type: DataTypes.INTEGER
   },
-  id_docente: {
+  titulo: {
     allowNull: false,
-    type: DataTypes.INTEGER,
-    field: 'id_docente',
-    references: {
-      model: USUARIOS_TABLE,
-      key: 'id_usuario'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE'
+    type: DataTypes.STRING(200)
   },
-  id_periodo: {
+  descripcion: {
     allowNull: false,
-    type: DataTypes.INTEGER,
-    field: 'id_periodo',
-    references: {
-      model: PERIODOS_ACADEMICOS_TABLE,
-      key: 'id_periodo'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'RESTRICT'
+    type: DataTypes.TEXT
   },
-  tipo: {
+  fechaRealizacion: {
     allowNull: false,
-    type: DataTypes.ENUM('PLANIFICACION', 'REALIZADO'),
-    comment: 'Tipo de reporte'
+    type: DataTypes.DATE
+  },
+  participantesReales: {
+    allowNull: true,
+    type: DataTypes.INTEGER
+  },
+  resultados: {
+    allowNull: true,
+    type: DataTypes.TEXT
+  },
+  observaciones: {
+    allowNull: true,
+    type: DataTypes.TEXT
+  },
+  recomendaciones: {
+    allowNull: true,
+    type: DataTypes.TEXT
   },
   estado: {
     allowNull: false,
-    type: DataTypes.ENUM('BORRADOR', 'EN_REVISION', 'APROBADO', 'DEVUELTO', 'PENDIENTE'),
-    defaultValue: 'BORRADOR',
-    comment: 'Estado del reporte - agregado PENDIENTE para las vistas'
+    type: DataTypes.ENUM('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado'),
+    defaultValue: 'borrador'
   },
-  fecha_creacion: {
+  evidencias: {
+    allowNull: true,
+    type: DataTypes.JSON
+  },
+  fechaEnvio: {
+    allowNull: true,
+    type: DataTypes.DATE
+  },
+  fechaRevision: {
+    allowNull: true,
+    type: DataTypes.DATE
+  },
+  comentariosRevision: {
+    allowNull: true,
+    type: DataTypes.TEXT
+  },
+  actividadId: {
     allowNull: false,
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'fecha_creacion'
+    type: DataTypes.INTEGER,
+    references: {
+      model: 'Actividades',
+      key: 'id'
+    }
   },
-  fecha_envio: {
-    allowNull: true,
-    type: DataTypes.DATE,
-    field: 'fecha_envio'
-  },
-  fecha_ultima_modificacion: {
+  usuarioId: {
     allowNull: false,
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'fecha_ultima_modificacion'
+    type: DataTypes.INTEGER,
+    references: {
+      model: USUARIOS_TABLE,
+      key: 'id'
+    }
   },
-  observaciones_admin: {
+  revisadoPorId: {
     allowNull: true,
-    type: DataTypes.TEXT,
-    field: 'observaciones_admin',
-    comment: 'Comentarios del admin cuando devuelve un reporte.'
+    type: DataTypes.INTEGER,
+    references: {
+      model: USUARIOS_TABLE,
+      key: 'id'
+    }
   },
-  semestre: {
-    allowNull: true,
-    type: DataTypes.STRING(10),
-    comment: 'Semestre específico del reporte (ej: "2024-2")'
-  }
+
 };
 
 class Reporte extends Model {
   static associate(models) {
-    // Un reporte pertenece a un docente
+    // Un reporte pertenece a un usuario
     this.belongsTo(models.User, {
-      as: 'docente',
-      foreignKey: 'id_docente'
+      as: 'usuario',
+      foreignKey: 'usuarioId'
     });
     
-    // Un reporte pertenece a un periodo académico
-    this.belongsTo(models.PeriodoAcademico, {
-      as: 'periodo',
-      foreignKey: 'id_periodo'
+    // Un reporte puede ser revisado por un usuario
+    this.belongsTo(models.User, {
+      as: 'revisadoPor',
+      foreignKey: 'revisadoPorId'
     });
     
-    // Un reporte puede tener muchas actividades
-    this.hasMany(models.Actividad, {
-      as: 'actividades',
-      foreignKey: 'id_reporte'
-    });
-    
-    // Un reporte puede tener muchos cambios en el historial
-    this.hasMany(models.HistorialCambio, {
-      as: 'historial_cambios',
-      foreignKey: 'id_reporte'
+    // Un reporte pertenece a una actividad
+    this.belongsTo(models.Actividad, {
+      as: 'actividad',
+      foreignKey: 'actividadId'
     });
   }
 
@@ -107,8 +112,8 @@ class Reporte extends Model {
       sequelize,
       tableName: REPORTES_TABLE,
       modelName: 'Reporte',
-      timestamps: false,
-      comment: 'Representa cada formulario/reporte que un docente crea por semestre.'
+      timestamps: true,
+      comment: 'Representa cada reporte de actividad realizada.'
     };
   }
 }

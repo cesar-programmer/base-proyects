@@ -8,21 +8,18 @@ class ActividadService {
       const actividades = await models.Actividad.findAll({
         include: [
           {
-            model: models.Reporte,
-            as: 'reporte',
-            attributes: ['id_reporte', 'tipo', 'estado', 'semestre']
+            association: 'usuario',
+            attributes: ['id', 'nombre', 'email']
           },
           {
-            model: models.CatalogoActividad,
-            as: 'catalogo',
-            attributes: ['id_catalogo', 'titulo', 'descripcion', 'horas_estimadas']
+            association: 'periodoAcademico',
+            attributes: ['id', 'nombre', 'fechaInicio', 'fechaFin']
           }
-        ],
-        order: [['fecha_creacion', 'DESC']]
+        ]
       });
       return actividades;
     } catch (error) {
-      throw boom.internal('Error al obtener las actividades');
+      throw boom.badImplementation('Error al obtener las actividades', error);
     }
   }
 
@@ -30,17 +27,17 @@ class ActividadService {
   async findByReporte(reporteId) {
     try {
       const actividades = await models.Actividad.findAll({
-        where: { id_reporte: reporteId },
+        where: { reporteId: reporteId },
         include: [
           {
             model: models.CatalogoActividad,
             as: 'catalogo',
-            attributes: ['id_catalogo', 'titulo', 'descripcion', 'horas_estimadas']
+            attributes: ['id', 'titulo', 'descripcion', 'horas_estimadas']
           },
           {
             model: models.Archivo,
             as: 'archivos',
-            attributes: ['id_archivo', 'nombre_original', 'tipo_mime', 'fecha_subida']
+            attributes: ['id', 'nombre_original', 'tipo_mime', 'fecha_subida']
           }
         ],
         order: [['categoria', 'ASC'], ['titulo', 'ASC']]
@@ -60,7 +57,7 @@ class ActividadService {
           {
             model: models.Reporte,
             as: 'reporte',
-            attributes: ['id_reporte', 'tipo', 'estado', 'semestre']
+            attributes: ['id', 'tipo', 'estado', 'semestre']
           }
         ],
         order: [['fecha_creacion', 'DESC']]
@@ -77,55 +74,46 @@ class ActividadService {
       const actividad = await models.Actividad.findByPk(id, {
         include: [
           {
-            model: models.Reporte,
-            as: 'reporte',
-            attributes: ['id_reporte', 'tipo', 'estado', 'semestre']
+            association: 'usuario',
+            attributes: ['id', 'nombre', 'email']
           },
           {
-            model: models.CatalogoActividad,
-            as: 'catalogo',
-            attributes: ['id_catalogo', 'titulo', 'descripcion', 'horas_estimadas']
-          },
-          {
-            model: models.Archivo,
-            as: 'archivos',
-            attributes: ['id_archivo', 'nombre_original', 'tipo_mime', 'fecha_subida']
+            association: 'periodoAcademico',
+            attributes: ['id', 'nombre', 'fechaInicio', 'fechaFin']
           }
         ]
       });
-
       if (!actividad) {
         throw boom.notFound('Actividad no encontrada');
       }
-
       return actividad;
     } catch (error) {
-      if (boom.isBoom(error)) throw error;
-      throw boom.internal('Error al obtener la actividad');
+      if (error.isBoom) {
+        throw error;
+      }
+      throw boom.badImplementation('Error al obtener la actividad', error);
     }
   }
 
   // Crear una nueva actividad
   async create(actividadData) {
     try {
-      // Verificar que el reporte existe
-      const reporte = await models.Reporte.findByPk(actividadData.id_reporte);
-      if (!reporte) {
-        throw boom.notFound('Reporte no encontrado');
+      // Verificar que el usuario existe
+      const usuario = await models.User.findByPk(actividadData.usuarioId);
+      if (!usuario) {
+        throw boom.notFound('Usuario no encontrado');
       }
 
-      // Si es del catálogo, verificar que existe
-      if (actividadData.id_catalogo) {
-        const catalogo = await models.CatalogoActividad.findByPk(actividadData.id_catalogo);
-        if (!catalogo) {
-          throw boom.notFound('Actividad del catálogo no encontrada');
-        }
+      // Verificar que el periodo académico existe
+      const periodo = await models.PeriodoAcademico.findByPk(actividadData.periodoAcademicoId);
+      if (!periodo) {
+        throw boom.notFound('Periodo académico no encontrado');
       }
 
       const newActividad = await models.Actividad.create(actividadData);
       
       // Retornar con relaciones incluidas
-      const actividadWithRelations = await this.findOne(newActividad.id_actividad);
+      const actividadWithRelations = await this.findOne(newActividad.id);
       return actividadWithRelations;
     } catch (error) {
       if (boom.isBoom(error)) throw error;
@@ -138,19 +126,19 @@ class ActividadService {
     try {
       const actividad = await this.findOne(id);
 
-      // Si se está cambiando el reporte, verificar que existe
-      if (actividadData.id_reporte && actividadData.id_reporte !== actividad.id_reporte) {
-        const reporte = await models.Reporte.findByPk(actividadData.id_reporte);
-        if (!reporte) {
-          throw boom.notFound('Reporte no encontrado');
+      // Si se está cambiando el usuario, verificar que existe
+      if (actividadData.usuarioId && actividadData.usuarioId !== actividad.usuarioId) {
+        const usuario = await models.User.findByPk(actividadData.usuarioId);
+        if (!usuario) {
+          throw boom.notFound('Usuario no encontrado');
         }
       }
 
-      // Si se está cambiando el catálogo, verificar que existe
-      if (actividadData.id_catalogo && actividadData.id_catalogo !== actividad.id_catalogo) {
-        const catalogo = await models.CatalogoActividad.findByPk(actividadData.id_catalogo);
-        if (!catalogo) {
-          throw boom.notFound('Actividad del catálogo no encontrada');
+      // Si se está cambiando el periodo académico, verificar que existe
+      if (actividadData.periodoAcademicoId && actividadData.periodoAcademicoId !== actividad.periodoAcademicoId) {
+        const periodo = await models.PeriodoAcademico.findByPk(actividadData.periodoAcademicoId);
+        if (!periodo) {
+          throw boom.notFound('Periodo académico no encontrado');
         }
       }
 
@@ -177,52 +165,7 @@ class ActividadService {
     }
   }
 
-  // Agregar actividad desde el catálogo
-  async addFromCatalog(reporteId, catalogoId) {
-    try {
-      // Verificar que el reporte existe
-      const reporte = await models.Reporte.findByPk(reporteId);
-      if (!reporte) {
-        throw boom.notFound('Reporte no encontrado');
-      }
 
-      // Obtener la actividad del catálogo
-      const catalogo = await models.CatalogoActividad.findByPk(catalogoId);
-      if (!catalogo) {
-        throw boom.notFound('Actividad del catálogo no encontrada');
-      }
-
-      // Verificar que no esté ya agregada
-      const existingActividad = await models.Actividad.findOne({
-        where: {
-          id_reporte: reporteId,
-          id_catalogo: catalogoId
-        }
-      });
-
-      if (existingActividad) {
-        throw boom.conflict('Esta actividad ya está agregada al reporte');
-      }
-
-      // Crear la actividad
-      const newActividad = await models.Actividad.create({
-        id_reporte: reporteId,
-        id_catalogo: catalogoId,
-        titulo: catalogo.titulo,
-        descripcion: catalogo.descripcion,
-        categoria: catalogo.categoria,
-        horas_estimadas: catalogo.horas_estimadas,
-        es_personalizada: false
-      });
-
-      // Retornar con relaciones incluidas
-      const actividadWithRelations = await this.findOne(newActividad.id_actividad);
-      return actividadWithRelations;
-    } catch (error) {
-      if (boom.isBoom(error)) throw error;
-      throw boom.internal('Error al agregar actividad desde el catálogo');
-    }
-  }
 
   // Obtener estadísticas de actividades por categoría
   async getStatsByCategory() {

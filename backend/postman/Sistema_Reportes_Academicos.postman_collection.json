@@ -1,0 +1,77 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-1234-1234-123456789abc",
+		"name": "Sistema de Reportes Académicos - API",
+		"description": "Colección completa de endpoints para el Sistema de Reportes Académicos. Incluye autenticación, gestión de usuarios, períodos académicos, reportes y archivos.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Autenticación",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.json().token) {",
+									"    pm.environment.set('token', pm.response.json().token);",
+									"}",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@universidad.edu\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{apiUrl}}/auth/login",
+							"host": ["{{apiUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (!pm.environment.get('apiUrl')) {",
+					"    pm.environment.set('apiUrl', 'http://localhost:3000/api/v1');",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "apiUrl",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

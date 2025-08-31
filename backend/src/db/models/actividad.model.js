@@ -2,26 +2,25 @@ import { Model, DataTypes } from 'sequelize';
 import { REPORTES_TABLE } from './reporte.model.js';
 import { CATALOGO_ACTIVIDADES_TABLE } from './catalogoActividad.model.js';
 
-const ACTIVIDADES_TABLE = 'actividades';
+const ACTIVIDADES_TABLE = 'Actividades';
 
 const ActividadSchema = {
-  id_actividad: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
     type: DataTypes.INTEGER,
-    field: 'id_actividad'
+    field: 'id'
   },
-  id_reporte: {
+  usuarioId: {
     allowNull: false,
     type: DataTypes.INTEGER,
-    field: 'id_reporte',
-    references: {
-      model: REPORTES_TABLE,
-      key: 'id_reporte'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'CASCADE'
+    field: 'usuarioId'
+  },
+  periodoAcademicoId: {
+    allowNull: false,
+    type: DataTypes.INTEGER,
+    field: 'periodoAcademicoId'
   },
   titulo: {
     allowNull: false,
@@ -36,82 +35,74 @@ const ActividadSchema = {
     type: DataTypes.ENUM('DOCENCIA', 'INVESTIGACION', 'TUTORIAS', 'GESTION_ACADEMICA', 'EXTENSION', 'CAPACITACION', 'POSGRADO', 'OTRO'),
     comment: 'Agregadas EXTENSION y CAPACITACION para coincidir con las vistas'
   },
-  es_personalizada: {
-    allowNull: false,
-    type: DataTypes.BOOLEAN,
-    defaultValue: true,
-    field: 'es_personalizada',
-    comment: 'TRUE si fue agregada por el docente, FALSE si viene del catálogo.'
-  },
-  id_catalogo: {
-    allowNull: true,
-    type: DataTypes.INTEGER,
-    field: 'id_catalogo',
-    comment: 'Referencia a la actividad del catálogo si no es personalizada',
-    references: {
-      model: CATALOGO_ACTIVIDADES_TABLE,
-      key: 'id_catalogo'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'SET NULL'
-  },
-  fecha_inicio_estimada: {
+
+
+  fechaInicio: {
     allowNull: true,
     type: DataTypes.DATEONLY,
-    field: 'fecha_inicio_estimada'
+    field: 'fechaInicio'
   },
-  fecha_fin_estimada: {
+  fechaFin: {
     allowNull: true,
     type: DataTypes.DATEONLY,
-    field: 'fecha_fin_estimada'
+    field: 'fechaFin'
   },
-  horas_estimadas: {
+  ubicacion: {
+    allowNull: true,
+    type: DataTypes.STRING(255),
+    field: 'ubicacion'
+  },
+  presupuesto: {
+    allowNull: true,
+    type: DataTypes.DECIMAL(10,2),
+    field: 'presupuesto'
+  },
+  participantesEsperados: {
     allowNull: true,
     type: DataTypes.INTEGER,
-    field: 'horas_estimadas'
+    field: 'participantesEsperados'
   },
-  estado_realizado: {
+  archivoAdjunto: {
     allowNull: true,
-    type: DataTypes.ENUM('COMPLETADA', 'INCOMPLETA', 'NO_REALIZADA'),
-    field: 'estado_realizado',
-    comment: 'Se usa en el reporte de actividades realizadas.'
+    type: DataTypes.STRING(255),
+    field: 'archivoAdjunto'
   },
-  fecha_creacion: {
+  createdAt: {
     allowNull: false,
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    field: 'fecha_creacion'
+    field: 'createdAt'
+  },
+  updatedAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+    field: 'updatedAt'
   }
 };
 
 class Actividad extends Model {
   static associate(models) {
-    // Una actividad pertenece a un reporte
-    this.belongsTo(models.Reporte, {
-      as: 'reporte',
-      foreignKey: 'id_reporte'
+    // Una actividad pertenece a un usuario
+    this.belongsTo(models.User, {
+      as: 'usuario',
+      foreignKey: 'usuarioId'
     });
     
-    // Una actividad puede referenciar una actividad del catálogo
-    this.belongsTo(models.CatalogoActividad, {
-      as: 'catalogo',
-      foreignKey: 'id_catalogo'
-    });
-    
-    // Una actividad puede tener muchos archivos
-    this.hasMany(models.Archivo, {
-      as: 'archivos',
-      foreignKey: 'id_actividad'
+    // Una actividad pertenece a un periodo académico
+    this.belongsTo(models.PeriodoAcademico, {
+      as: 'periodoAcademico',
+      foreignKey: 'periodoAcademicoId'
     });
   }
 
   static config(sequelize) {
     return {
       sequelize,
-      tableName: ACTIVIDADES_TABLE,
+      tableName: 'Actividades',
       modelName: 'Actividad',
-      timestamps: false,
-      comment: 'Cada una de las actividades registradas dentro de un reporte.'
+      timestamps: true,
+      comment: 'Actividades académicas del sistema.'
     };
   }
 }

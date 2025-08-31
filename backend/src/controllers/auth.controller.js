@@ -24,20 +24,20 @@ class AuthController {
       }
 
       // Verificar contraseña
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
         throw boom.unauthorized('Credenciales inválidas');
       }
 
       // Actualizar último login
-      await userService.updateLastLogin(user.id_usuario);
+      await userService.updateLastLogin(user.id);
 
       // Generar token JWT
       const payload = {
-        id: user.id_usuario,
+        id: user.id,
         email: user.email,
         rol: user.rol.nombre,
-        id_rol: user.id_rol
+        rolId: user.rolId
       };
 
       const token = jwt.sign(payload, config.jwt.secret, {
@@ -45,7 +45,7 @@ class AuthController {
       });
 
       // Respuesta sin password
-      const { password_hash, ...userResponse } = user.toJSON();
+      const { password: userPassword, ...userResponse } = user.toJSON();
 
       res.json({
         message: 'Login exitoso',
@@ -64,13 +64,12 @@ class AuthController {
       
       // Hash de la contraseña
       const saltRounds = 10;
-      userData.password_hash = await bcrypt.hash(userData.password, saltRounds);
-      delete userData.password;
+      userData.password = await bcrypt.hash(userData.password, saltRounds);
 
       const newUser = await userService.create(userData);
       
-      // Respuesta sin password
-      const { password_hash, ...userResponse } = newUser.toJSON();
+      // El servicio ya devuelve el usuario sin password
+      const userResponse = newUser;
 
       res.status(201).json({
         message: 'Usuario creado exitosamente',
@@ -97,7 +96,7 @@ class AuthController {
         throw boom.unauthorized('Token inválido');
       }
 
-      const { password_hash, ...userResponse } = user.toJSON();
+      const { password: userPassword, ...userResponse } = user.toJSON();
 
       res.json({
         valid: true,

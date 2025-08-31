@@ -8,21 +8,29 @@ describe('Auth Controller', () => {
   let adminRole;
   
   beforeEach(async () => {
-    // Crear rol de administrador
-    adminRole = await Role.create({
-      nombre: 'ADMINISTRADOR',
-      descripcion: 'Administrador del sistema',
-      activo: true
-    });
+    // Crear o encontrar rol de administrador
+     [adminRole] = await Role.findOrCreate({
+       where: { nombre: 'ADMINISTRADOR' },
+       defaults: {
+         nombre: 'ADMINISTRADOR',
+         descripcion: 'Administrador del sistema',
+         activo: true
+       }
+     });
     
-    // Crear usuario de prueba
+    // Crear o encontrar usuario de prueba
     const hashedPassword = await bcrypt.hash('Test123!', 10);
-    testUser = await User.create({
-      nombre_completo: 'Usuario Test',
-      email: 'test@test.com',
-      password_hash: hashedPassword,
-      id_rol: adminRole.id_rol,
-      activo: true
+    [testUser] = await User.findOrCreate({
+      where: { email: 'test@test.com' },
+      defaults: {
+        nombre: 'Usuario',
+        apellido: 'Test',
+        email: 'test@test.com',
+        password: hashedPassword,
+        cedula: '12345678',
+        rolId: adminRole.id,
+        activo: true
+      }
     });
   });
   
@@ -83,10 +91,12 @@ describe('Auth Controller', () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send({
-          nombre_completo: 'Nuevo Usuario',
+          nombre: 'Nuevo',
+          apellido: 'Usuario',
           email: 'nuevo@test.com',
           password: 'NewUser123!',
-          id_rol: adminRole.id_rol
+          cedula: '87654321',
+          rolId: adminRole.id
         });
       
       expect(response.status).toBe(201);
@@ -99,10 +109,12 @@ describe('Auth Controller', () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send({
-          nombre_completo: 'Usuario Duplicado',
+          nombre: 'Usuario',
+          apellido: 'Duplicado',
           email: 'test@test.com', // Email ya existe
           password: 'Test123!',
-          id_rol: adminRole.id_rol
+          cedula: '11111111',
+          rolId: adminRole.id
         });
       
       expect(response.status).toBe(409);
@@ -113,10 +125,12 @@ describe('Auth Controller', () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send({
-          nombre_completo: 'Usuario Test',
+          nombre: 'Usuario',
+          apellido: 'Test',
           email: 'invalid-email',
           password: 'Test123!',
-          id_rol: adminRole.id_rol
+          cedula: '22222222',
+          rolId: adminRole.id
         });
       
       expect(response.status).toBe(400);
@@ -127,10 +141,12 @@ describe('Auth Controller', () => {
       const response = await request(app)
         .post('/api/v1/auth/register')
         .send({
-          nombre_completo: 'Usuario Test',
+          nombre: 'Usuario',
+          apellido: 'Test',
           email: 'weak@test.com',
           password: '123', // Contraseña débil
-          id_rol: adminRole.id_rol
+          cedula: '33333333',
+          rolId: adminRole.id
         });
       
       expect(response.status).toBe(400);

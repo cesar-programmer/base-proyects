@@ -2,6 +2,9 @@ export default {
   // Entorno de testing
   testEnvironment: 'node',
   
+  // Ejecutar tests secuencialmente para evitar problemas de concurrencia
+  maxWorkers: 1,
+  
   // Soporte para ES modules
   transform: {},
   moduleNameMapper: {

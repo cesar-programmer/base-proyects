@@ -7,13 +7,12 @@ class ReporteController {
   // Obtener todos los reportes
   async getReportes(req, res, next) {
     try {
-      const { page = 1, limit = 10, estado, tipo, id_periodo, id_docente } = req.query;
+      const { page = 1, limit = 10, estado, actividadId, usuarioId } = req.query;
       const filters = {};
       
       if (estado) filters.estado = estado;
-      if (tipo) filters.tipo = tipo;
-      if (id_periodo) filters.id_periodo = parseInt(id_periodo);
-      if (id_docente) filters.id_docente = parseInt(id_docente);
+      if (actividadId) filters.actividadId = parseInt(actividadId);
+      if (usuarioId) filters.usuarioId = parseInt(usuarioId);
 
       const reportes = await reporteService.find({
         page: parseInt(page),
@@ -50,9 +49,9 @@ class ReporteController {
     try {
       const reporteData = req.body;
       
-      // Si no es admin, asignar el ID del usuario autenticado como docente
+      // Si no es admin, asignar el ID del usuario autenticado
       if (req.user.rol !== 'ADMINISTRADOR') {
-        reporteData.id_docente = req.user.id;
+        reporteData.usuarioId = req.user.id;
       }
       
       const newReporte = await reporteService.create(reporteData);
@@ -72,9 +71,9 @@ class ReporteController {
       const { id } = req.params;
       const reporteData = req.body;
       
-      // Verificar permisos: solo el docente propietario o admin pueden actualizar
+      // Verificar permisos: solo el usuario propietario o admin pueden actualizar
       const reporte = await reporteService.findOne(id);
-      if (req.user.rol !== 'ADMINISTRADOR' && reporte.id_docente !== req.user.id) {
+      if (req.user.rol !== 'ADMINISTRADOR' && reporte.usuarioId !== req.user.id) {
         throw boom.forbidden('No tienes permisos para actualizar este reporte');
       }
       
@@ -96,7 +95,7 @@ class ReporteController {
       
       // Verificar permisos
       const reporte = await reporteService.findOne(id);
-      if (req.user.rol !== 'ADMINISTRADOR' && reporte.id_docente !== req.user.id) {
+      if (req.user.rol !== 'ADMINISTRADOR' && reporte.usuarioId !== req.user.id) {
         throw boom.forbidden('No tienes permisos para eliminar este reporte');
       }
       
@@ -110,21 +109,20 @@ class ReporteController {
     }
   }
 
-  // Obtener reportes por docente
+  // Obtener reportes por usuario
   async getReportesByDocente(req, res, next) {
     try {
       const { docenteId } = req.params;
-      const { estado, tipo, id_periodo } = req.query;
+      const { estado, actividadId } = req.query;
       
-      // Verificar permisos: solo el docente propietario o admin pueden ver
+      // Verificar permisos: solo el usuario propietario o admin pueden ver
       if (req.user.rol !== 'ADMINISTRADOR' && parseInt(docenteId) !== req.user.id) {
         throw boom.forbidden('No tienes permisos para ver estos reportes');
       }
       
-      const filters = { id_docente: parseInt(docenteId) };
+      const filters = { usuarioId: parseInt(docenteId) };
       if (estado) filters.estado = estado;
-      if (tipo) filters.tipo = tipo;
-      if (id_periodo) filters.id_periodo = parseInt(id_periodo);
+      if (actividadId) filters.actividadId = parseInt(actividadId);
       
       const reportes = await reporteService.findByDocente(docenteId, filters);
       
@@ -137,17 +135,16 @@ class ReporteController {
     }
   }
 
-  // Obtener reportes por período
+  // Obtener reportes por actividad
   async getReportesByPeriod(req, res, next) {
     try {
       const { periodId } = req.params;
-      const { estado, tipo } = req.query;
+      const { estado } = req.query;
       
       const filters = {};
       if (estado) filters.estado = estado;
-      if (tipo) filters.tipo = tipo;
       
-      const reportes = await reporteService.findByPeriod(periodId, filters);
+      const reportes = await reporteService.findByActividad(periodId, filters);
       
       res.json({
         message: 'Reportes obtenidos exitosamente',
@@ -183,11 +180,11 @@ class ReporteController {
   // Obtener estadísticas de reportes
   async getReporteStats(req, res, next) {
     try {
-      const { id_periodo, id_docente } = req.query;
+      const { actividadId, usuarioId } = req.query;
       const filters = {};
       
-      if (id_periodo) filters.id_periodo = parseInt(id_periodo);
-      if (id_docente) filters.id_docente = parseInt(id_docente);
+      if (actividadId) filters.actividadId = parseInt(actividadId);
+      if (usuarioId) filters.usuarioId = parseInt(usuarioId);
       
       const stats = await reporteService.getStats(filters);
       
@@ -223,12 +220,11 @@ class ReporteController {
   async getMyReportes(req, res, next) {
     try {
       const userId = req.user.id;
-      const { estado, tipo, id_periodo } = req.query;
+      const { estado, actividadId } = req.query;
       
-      const filters = { id_docente: userId };
+      const filters = { usuarioId: userId };
       if (estado) filters.estado = estado;
-      if (tipo) filters.tipo = tipo;
-      if (id_periodo) filters.id_periodo = parseInt(id_periodo);
+      if (actividadId) filters.actividadId = parseInt(actividadId);
       
       const reportes = await reporteService.findByDocente(userId, filters);
       

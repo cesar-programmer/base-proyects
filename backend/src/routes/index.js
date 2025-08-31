@@ -5,6 +5,15 @@ import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
 import reporteRoutes from './reporte.routes.js';
 import filesRoutes from './files.routes.js';
+import permisoRoutes from './permiso.routes.js';
+import periodoAcademicoRoutes from './periodoAcademico.routes.js';
+import actividadRoutes from './actividad.routes.js';
+import catalogoActividadRoutes from './catalogoActividad.routes.js';
+import fechaLimiteRoutes from './fechaLimite.routes.js';
+import archivoRoutes from './archivo.routes.js';
+import notificacionRoutes from './notificacion.routes.js';
+import historialCambioRoutes from './historialCambio.routes.js';
+import configuracionRoutes from './configuracion.routes.js';
 
 function routerApi(app) {
   const router = express.Router();
@@ -15,6 +24,15 @@ function routerApi(app) {
   router.use('/users', userRoutes);
   router.use('/reportes', reporteRoutes);
   router.use('/files', filesRoutes);
+  router.use('/permisos', permisoRoutes);
+  router.use('/periodos-academicos', periodoAcademicoRoutes);
+  router.use('/actividades', actividadRoutes);
+  router.use('/catalogo-actividades', catalogoActividadRoutes);
+  router.use('/fechas-limite', fechaLimiteRoutes);
+  router.use('/archivos', archivoRoutes);
+  router.use('/notificaciones', notificacionRoutes);
+  router.use('/historial-cambios', historialCambioRoutes);
+  router.use('/configuraciones', configuracionRoutes);
 
   // Ruta de prueba para verificar que la API está funcionando
   router.get('/health', (req, res) => {
@@ -36,13 +54,14 @@ function routerApi(app) {
         reportes: '/api/v1/reportes',
         actividades: '/api/v1/actividades',
         notificaciones: '/api/v1/notificaciones',
-        estadisticas: '/api/v1/estadisticas',
         fechasLimite: '/api/v1/fechas-limite',
         catalogoActividades: '/api/v1/catalogo-actividades',
         periodosAcademicos: '/api/v1/periodos-academicos',
-        roles: '/api/v1/roles',
+        permisos: '/api/v1/permisos',
         archivos: '/api/v1/archivos',
-        files: '/api/v1/files'
+        files: '/api/v1/files',
+        historialCambios: '/api/v1/historial-cambios',
+        configuraciones: '/api/v1/configuraciones'
       },
       documentation: 'Consultar documentación de la API para más detalles'
     });

@@ -16,20 +16,31 @@ const getUserSchema = Joi.object({
 
 // Esquema para crear usuario
 const createUserSchema = Joi.object({
-  nombre_completo: Joi.string()
+  nombre: Joi.string()
     .min(2)
-    .max(255)
+    .max(100)
     .required()
     .messages({
       'string.min': 'El nombre debe tener al menos 2 caracteres',
-      'string.max': 'El nombre no puede exceder 255 caracteres',
-      'any.required': 'El nombre completo es requerido'
+      'string.max': 'El nombre no puede exceder 100 caracteres',
+      'any.required': 'El nombre es requerido'
+    }),
+  apellido: Joi.string()
+    .min(2)
+    .max(100)
+    .required()
+    .messages({
+      'string.min': 'El apellido debe tener al menos 2 caracteres',
+      'string.max': 'El apellido no puede exceder 100 caracteres',
+      'any.required': 'El apellido es requerido'
     }),
   email: Joi.string()
     .email()
+    .max(150)
     .required()
     .messages({
       'string.email': 'El email debe tener un formato válido',
+      'string.max': 'El email no puede exceder 150 caracteres',
       'any.required': 'El email es requerido'
     }),
   password: Joi.string()
@@ -41,7 +52,30 @@ const createUserSchema = Joi.object({
       'string.pattern.base': 'La contraseña debe contener al menos una mayúscula, una minúscula y un número',
       'any.required': 'La contraseña es requerida'
     }),
-  id_rol: Joi.number()
+  cedula: Joi.string()
+    .max(20)
+    .required()
+    .messages({
+      'string.max': 'La cédula no puede exceder 20 caracteres',
+      'any.required': 'La cédula es requerida'
+    }),
+  telefono: Joi.string()
+    .max(20)
+    .optional()
+    .messages({
+      'string.max': 'El teléfono no puede exceder 20 caracteres'
+    }),
+  fechaNacimiento: Joi.date()
+    .optional()
+    .messages({
+      'date.base': 'La fecha de nacimiento debe ser una fecha válida'
+    }),
+  direccion: Joi.string()
+    .optional()
+    .messages({
+      'string.base': 'La dirección debe ser texto'
+    }),
+  rolId: Joi.number()
     .integer()
     .positive()
     .required()

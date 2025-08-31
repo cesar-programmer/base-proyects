@@ -3,12 +3,12 @@ import { Model, DataTypes } from 'sequelize';
 const CATALOGO_ACTIVIDADES_TABLE = 'catalogo_actividades';
 
 const CatalogoActividadSchema = {
-  id_catalogo: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
     type: DataTypes.INTEGER,
-    field: 'id_catalogo'
+    field: 'id'
   },
   titulo: {
     allowNull: false,
@@ -48,11 +48,11 @@ const CatalogoActividadSchema = {
 
 class CatalogoActividad extends Model {
   static associate(models) {
-    // Una actividad del catálogo puede ser usada en muchas actividades personalizadas
-    this.hasMany(models.Actividad, {
-      as: 'actividades',
-      foreignKey: 'id_catalogo'
-    });
+    // Comentado temporalmente - no hay relación directa con Actividades
+    // this.hasMany(models.Actividad, {
+    //   as: 'actividades',
+    //   foreignKey: 'id_catalogo'
+    // });
   }
 
   static config(sequelize) {

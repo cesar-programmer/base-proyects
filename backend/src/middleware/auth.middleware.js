@@ -36,11 +36,11 @@ const verifyToken = async (req, res, next) => {
 
     // Agregar información del usuario al request
     req.user = {
-      id: user.id_usuario,
+      id: user.id,
       email: user.email,
       rol: user.rol.nombre,
-      id_rol: user.id_rol,
-      nombre_completo: user.nombre_completo
+      id_rol: user.rolId,
+      nombre_completo: `${user.nombre} ${user.apellido}`
     };
 
     next();

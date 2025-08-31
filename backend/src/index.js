@@ -61,20 +61,23 @@ app.use(errorHandler);
 // Puerto
 const PORT = process.env.PORT || 3000;
 
-// Iniciar servidor
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-});
-
-// Manejo graceful de cierre
-process.on('SIGTERM', () => {
-  console.log('📴 Cerrando servidor...');
-  server.close(() => {
-    console.log('✅ Servidor cerrado correctamente');
-    process.exit(0);
+// Solo iniciar servidor si no estamos en modo test
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+    console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/health`);
   });
-});
+
+  // Manejo graceful de cierre
+  process.on('SIGTERM', () => {
+    console.log('📴 Cerrando servidor...');
+    server.close(() => {
+      console.log('✅ Servidor cerrado correctamente');
+      process.exit(0);
+    });
+  });
+}
 
 export default app;

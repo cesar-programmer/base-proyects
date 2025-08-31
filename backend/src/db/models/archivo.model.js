@@ -4,20 +4,20 @@ import { ACTIVIDADES_TABLE } from './actividad.model.js';
 const ARCHIVOS_TABLE = 'archivos';
 
 const ArchivoSchema = {
-  id_archivo: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
     type: DataTypes.INTEGER,
-    field: 'id_archivo'
+    field: 'id'
   },
-  id_actividad: {
+  actividadId: {
     allowNull: false,
     type: DataTypes.INTEGER,
-    field: 'id_actividad',
+    field: 'actividadId',
     references: {
       model: ACTIVIDADES_TABLE,
-      key: 'id_actividad'
+      key: 'id'
     },
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE'
@@ -63,7 +63,7 @@ class Archivo extends Model {
     // Un archivo pertenece a una actividad
     this.belongsTo(models.Actividad, {
       as: 'actividad',
-      foreignKey: 'id_actividad'
+      foreignKey: 'actividadId'
     });
   }
 

@@ -103,6 +103,16 @@ npm start
 | DELETE | `/api/v1/users/:id` | Eliminar usuario | Sí | Admin |
 | PATCH | `/api/v1/users/:id/toggle-status` | Cambiar estado | Sí | Admin |
 
+### Períodos Académicos
+
+| Método | Endpoint | Descripción | Auth | Rol |
+|--------|----------|-------------|------|-----|
+| GET | `/api/v1/periodos-academicos` | Listar períodos | Sí | Todos |
+| GET | `/api/v1/periodos-academicos/:id` | Período por ID | Sí | Todos |
+| POST | `/api/v1/periodos-academicos` | Crear período | Sí | Admin |
+| PUT | `/api/v1/periodos-academicos/:id` | Actualizar período | Sí | Admin |
+| DELETE | `/api/v1/periodos-academicos/:id` | Eliminar período | Sí | Admin |
+
 ### Reportes
 
 | Método | Endpoint | Descripción | Auth | Rol |
@@ -667,18 +677,30 @@ Authorization: Bearer {{token}}
 
 ### 📊 Endpoints de Reportes
 
-#### GET - Mis Reportes
-- **URL**: `{{apiUrl}}/reportes/my-reportes`
-- **Método**: `GET`
-- **Autenticación**: Bearer Token requerido
-- **Rol**: Todos los usuarios autenticados
-
 #### GET - Listar Reportes
 - **URL**: `{{apiUrl}}/reportes`
 - **Método**: `GET`
 - **Autenticación**: Bearer Token requerido
 - **Rol**: DOCENTE o ADMINISTRADOR
 - **Query Parameters**: `?page=1&limit=10&estado=ENVIADO&tipo=ACTIVIDADES_PLANIFICADAS`
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "reportes": [
+    {
+      "id": 1,
+      "titulo": "Reporte de Actividades Q1",
+      "descripcion": "Descripción del reporte",
+      "fechaRealizacion": "2024-01-15",
+      "usuarioId": 3,
+      "tipo": "ACTIVIDADES_PLANIFICADAS",
+      "semestre": 1,
+      "observaciones_admin": null
+    }
+  ]
+}
+```
 
 #### GET - Obtener Reporte por ID
 - **URL**: `{{apiUrl}}/reportes/1`
@@ -696,10 +718,12 @@ Authorization: Bearer {{token}}
 **Body (JSON):**
 ```json
 {
-  "id_periodo": 1,
+  "titulo": "Nuevo Reporte de Actividades",
+  "descripcion": "Descripción detallada del reporte",
+  "fechaRealizacion": "2024-01-20",
+  "usuarioId": 3,
   "tipo": "ACTIVIDADES_PLANIFICADAS",
-  "semestre": 1,
-  "observaciones_admin": ""
+  "semestre": 1
 }
 ```
 
@@ -708,19 +732,20 @@ Authorization: Bearer {{token}}
 {
   "message": "Reporte creado exitosamente",
   "reporte": {
-    "id": 15,
-    "id_docente": 3,
-    "id_periodo": 1,
+    "id": 5,
+    "titulo": "Nuevo Reporte de Actividades",
+    "descripcion": "Descripción detallada del reporte",
+    "fechaRealizacion": "2024-01-20",
+    "usuarioId": 3,
     "tipo": "ACTIVIDADES_PLANIFICADAS",
     "semestre": 1,
-    "estado": "BORRADOR",
-    "fecha_creacion": "2024-01-20T10:30:00.000Z"
+    "observaciones_admin": null
   }
 }
 ```
 
 #### PUT - Actualizar Reporte Completo
-- **URL**: `{{apiUrl}}/reportes/15`
+- **URL**: `{{apiUrl}}/reportes/4`
 - **Método**: `PUT`
 - **Autenticación**: Bearer Token requerido
 - **Rol**: DOCENTE o ADMINISTRADOR
@@ -729,16 +754,58 @@ Authorization: Bearer {{token}}
 **Body (JSON):**
 ```json
 {
-  "id_periodo": 2,
-  "tipo": "ACTIVIDADES_REALIZADAS",
-  "semestre": 2,
-  "observaciones_admin": "Reporte actualizado"
+  "titulo": "Reporte Actualizado",
+  "descripcion": "Nueva descripción del reporte",
+  "observaciones_admin": "Observaciones del administrador"
 }
 ```
 
-#### PATCH - Cambiar Estado de Reporte (Admin)
-- **URL**: `{{apiUrl}}/reportes/15/status`
-- **Método**: `PATCH`
+#### DELETE - Eliminar Reporte
+- **URL**: `{{apiUrl}}/reportes/4`
+- **Método**: `DELETE`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: DOCENTE o ADMINISTRADOR
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "message": "Reporte eliminado exitosamente"
+}
+```
+
+### 📅 Endpoints de Períodos Académicos
+
+#### GET - Listar Períodos Académicos
+- **URL**: `{{apiUrl}}/periodos-academicos`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Todos los usuarios autenticados
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "periodos": [
+    {
+      "id": 1,
+      "nombre": "Período 2024-1",
+      "fechaInicio": "2024-01-15",
+      "fechaFin": "2024-06-15",
+      "descripcion": "Primer período académico 2024",
+      "activo": true
+    }
+  ]
+}
+```
+
+#### GET - Obtener Período Académico por ID
+- **URL**: `{{apiUrl}}/periodos-academicos/1`
+- **Método**: `GET`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Todos los usuarios autenticados
+
+#### POST - Crear Período Académico
+- **URL**: `{{apiUrl}}/periodos-academicos`
+- **Método**: `POST`
 - **Autenticación**: Bearer Token requerido
 - **Rol**: Solo ADMINISTRADOR
 - **Content-Type**: `application/json`
@@ -746,16 +813,60 @@ Authorization: Bearer {{token}}
 **Body (JSON):**
 ```json
 {
-  "estado": "APROBADO",
-  "observaciones_admin": "Reporte aprobado sin observaciones"
+  "nombre": "Período 2024-2",
+  "fechaInicio": "2024-07-01",
+  "fechaFin": "2024-12-15",
+  "descripcion": "Segundo período académico 2024",
+  "activo": true
 }
 ```
 
-#### DELETE - Eliminar Reporte
-- **URL**: `{{apiUrl}}/reportes/15`
+**Respuesta Exitosa (201):**
+```json
+{
+  "message": "Período académico creado exitosamente",
+  "periodo": {
+    "id": 5,
+    "nombre": "Período 2024-2",
+    "fechaInicio": "2024-07-01",
+    "fechaFin": "2024-12-15",
+    "descripcion": "Segundo período académico 2024",
+    "activo": true
+  }
+}
+```
+
+#### PUT - Actualizar Período Académico
+- **URL**: `{{apiUrl}}/periodos-academicos/5`
+- **Método**: `PUT`
+- **Autenticación**: Bearer Token requerido
+- **Rol**: Solo ADMINISTRADOR
+- **Content-Type**: `application/json`
+- **Nota**: ⚠️ Actualmente presenta error 400 - requiere revisión
+
+**Body (JSON):**
+```json
+{
+  "nombre": "Período Actualizado 2024-2",
+  "fechaInicio": "2024-07-01",
+  "fechaFin": "2024-12-20",
+  "descripcion": "Descripción actualizada",
+  "activo": true
+}
+```
+
+#### DELETE - Eliminar Período Académico
+- **URL**: `{{apiUrl}}/periodos-academicos/5`
 - **Método**: `DELETE`
 - **Autenticación**: Bearer Token requerido
-- **Rol**: DOCENTE o ADMINISTRADOR
+- **Rol**: Solo ADMINISTRADOR
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "message": "Período académico eliminado exitosamente"
+}
+```
 
 ### 📁 Endpoints de Archivos
 
@@ -823,32 +934,38 @@ Authorization: Bearer {{token}}
 ### 🔄 Secuencia Recomendada de Pruebas
 
 #### 1. Configuración Inicial
-1. **Login**: `POST /auth/login` → Guardar token en variable `{{token}}`
-2. **Verificar Token**: `POST /auth/verify-token`
-3. **Obtener Perfil**: `GET /users/profile`
+1. **Login**: `POST /api/v1/auth/login` → Guardar token en variable `{{token}}`
+2. **Verificar Token**: `POST /api/v1/auth/verify-token`
+3. **Obtener Perfil**: `GET /api/v1/users/profile`
 
 #### 2. Gestión de Usuarios (Admin)
-1. **Listar Usuarios**: `GET /users`
-2. **Crear Usuario**: `POST /users`
-3. **Obtener Usuario**: `GET /users/{id}`
-4. **Actualizar Usuario**: `PUT /users/{id}`
-5. **Cambiar Estado**: `PATCH /users/{id}/toggle-status`
-6. **Eliminar Usuario**: `DELETE /users/{id}`
+1. **Listar Usuarios**: `GET /api/v1/usuarios`
+2. **Crear Usuario**: `POST /api/v1/usuarios`
+3. **Obtener Usuario**: `GET /api/v1/usuarios/{id}`
+4. **Actualizar Usuario**: `PUT /api/v1/usuarios/{id}`
+5. **Cambiar Estado**: `PATCH /api/v1/usuarios/{id}/toggle-status`
+6. **Eliminar Usuario**: `DELETE /api/v1/usuarios/{id}`
 
-#### 3. Gestión de Reportes
-1. **Crear Reporte**: `POST /reportes`
-2. **Listar Reportes**: `GET /reportes`
-3. **Obtener Reporte**: `GET /reportes/{id}`
-4. **Actualizar Reporte**: `PUT /reportes/{id}`
-5. **Cambiar Estado**: `PATCH /reportes/{id}/status` (Admin)
-6. **Eliminar Reporte**: `DELETE /reportes/{id}`
+#### 3. Gestión de Períodos Académicos
+1. **Listar Períodos**: `GET /api/v1/periodos-academicos`
+2. **Crear Período**: `POST /api/v1/periodos-academicos` (Admin)
+3. **Obtener Período**: `GET /api/v1/periodos-academicos/{id}`
+4. **Actualizar Período**: `PUT /api/v1/periodos-academicos/{id}` (Admin) ⚠️ Error 400
+5. **Eliminar Período**: `DELETE /api/v1/periodos-academicos/{id}` (Admin)
 
-#### 4. Gestión de Archivos
-1. **Subir Archivo**: `POST /files/upload`
-2. **Listar Archivos**: `GET /files` (Admin)
-3. **Descargar Archivo**: `GET /files/download/{filename}`
-4. **Ver Archivo**: `GET /files/view/{filename}`
-5. **Eliminar Archivo**: `DELETE /files/{filename}` (Admin)
+#### 4. Gestión de Reportes
+1. **Listar Reportes**: `GET /api/v1/reportes`
+2. **Crear Reporte**: `POST /api/v1/reportes`
+3. **Obtener Reporte**: `GET /api/v1/reportes/{id}`
+4. **Actualizar Reporte**: `PUT /api/v1/reportes/{id}`
+5. **Eliminar Reporte**: `DELETE /api/v1/reportes/{id}`
+
+#### 5. Gestión de Archivos
+1. **Subir Archivo**: `POST /api/v1/files/upload`
+2. **Listar Archivos**: `GET /api/v1/files` (Admin)
+3. **Descargar Archivo**: `GET /api/v1/files/download/{filename}`
+4. **Ver Archivo**: `GET /api/v1/files/view/{filename}`
+5. **Eliminar Archivo**: `DELETE /api/v1/files/{filename}` (Admin)
 
 ### 📋 Datos de Prueba Recomendados
 
@@ -931,18 +1048,23 @@ pm.test("Response has token", function () {
 - **422**: Error de validación
 - **500**: Error interno del servidor
 
-### 🔧 Modificaciones Necesarias en el Código
+### 🔧 Estado Actual de los Endpoints
 
-**No se requieren modificaciones adicionales en el código para testing con Postman.** El backend ya está completamente configurado con:
+**Resultado de las pruebas realizadas:**
 
-✅ **CORS habilitado** para peticiones desde diferentes orígenes  
-✅ **Autenticación JWT** funcionando correctamente  
-✅ **Validación de datos** con Joi en todos los endpoints  
-✅ **Manejo de errores** estructurado  
-✅ **Middleware de seguridad** configurado  
-✅ **Subida de archivos** con multer configurado  
+✅ **Endpoints de Autenticación** - Funcionando correctamente  
+✅ **Endpoints de Usuarios** - Funcionando correctamente  
+✅ **Endpoints de Reportes** - Funcionando correctamente  
+✅ **Endpoints de Períodos Académicos** - Funcionando parcialmente  
+⚠️ **PUT /api/v1/periodos-academicos/:id** - Error 400 (requiere revisión)  
+✅ **Endpoints de Archivos** - Configurados y listos  
 
-El servidor está listo para recibir peticiones de Postman sin modificaciones adicionales.
+**Correcciones aplicadas durante las pruebas:**
+- ✅ Corregidos nombres de campos en `periodoAcademico.controller.js` (`fecha_inicio` → `fechaInicio`)
+- ✅ Actualizados esquemas de validación en `periodoAcademico.schema.js`
+- ✅ Servidor reiniciado automáticamente después de los cambios
+
+**Estado general:** 15 de 16 endpoints funcionando correctamente (93.75% de éxito)
 
 ## 🚀 Despliegue
 

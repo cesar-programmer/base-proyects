@@ -11,10 +11,10 @@ class UserService {
           {
             model: models.Role,
             as: 'rol',
-            attributes: ['id_rol', 'nombre', 'descripcion']
+            attributes: ['id', 'nombre', 'descripcion']
           }
         ],
-        attributes: { exclude: ['password_hash'] }
+        attributes: { exclude: ['password'] }
       });
       return users;
     } catch (error) {
@@ -30,10 +30,10 @@ class UserService {
           {
             model: models.Role,
             as: 'rol',
-            attributes: ['id_rol', 'nombre', 'descripcion']
+            attributes: ['id', 'nombre', 'descripcion']
           }
         ],
-        attributes: { exclude: ['password_hash'] }
+        attributes: { exclude: ['password'] }
       });
 
       if (!user) {
@@ -56,7 +56,7 @@ class UserService {
           {
             model: models.Role,
             as: 'rol',
-            attributes: ['id_rol', 'nombre', 'descripcion']
+            attributes: ['id', 'nombre', 'descripcion']
           }
         ]
       });
@@ -84,20 +84,33 @@ class UserService {
         throw boom.conflict('Ya existe un usuario con ese email');
       }
 
-      // Hashear la contraseña
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(userData.password_hash, saltRounds);
-
-      const newUser = await models.User.create({
-        ...userData,
-        password_hash: hashedPassword
-      });
+      // Hashear la contraseña antes de crear el usuario
+      if (userData.password) {
+        userData.password = await bcrypt.hash(userData.password, 10);
+      }
+      
+      console.log('Datos del usuario antes de crear:', userData);
+      const newUser = await models.User.create(userData);
 
       // Retornar usuario sin contraseña
-      const { password_hash, ...userWithoutPassword } = newUser.toJSON();
+      const { password, ...userWithoutPassword } = newUser.toJSON();
       return userWithoutPassword;
     } catch (error) {
+      console.log('Error específico en create:', error);
+      console.log('Error name:', error.name);
+      console.log('Error message:', error.message);
       if (boom.isBoom(error)) throw error;
+      
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        if (error.fields && error.fields.email) {
+          throw boom.conflict('Ya existe un usuario con ese email');
+        }
+        if (error.fields && error.fields.cedula) {
+          throw boom.conflict('Ya existe un usuario con esa cédula');
+        }
+        throw boom.conflict('Ya existe un usuario con esos datos');
+      }
+      
       throw boom.internal('Error al crear el usuario');
     }
   }
@@ -119,15 +132,15 @@ class UserService {
       }
 
       // Si se está actualizando la contraseña, hashearla
-      if (userData.password_hash) {
+      if (userData.password) {
         const saltRounds = 10;
-        userData.password_hash = await bcrypt.hash(userData.password_hash, saltRounds);
+        userData.password = await bcrypt.hash(userData.password, saltRounds);
       }
 
       const updatedUser = await user.update(userData);
       
       // Retornar usuario sin contraseña
-      const { password_hash, ...userWithoutPassword } = updatedUser.toJSON();
+      const { password, ...userWithoutPassword } = updatedUser.toJSON();
       return userWithoutPassword;
     } catch (error) {
       if (boom.isBoom(error)) throw error;
@@ -168,7 +181,7 @@ class UserService {
   async updateLastLogin(id) {
     try {
       const user = await this.findOne(id);
-      await user.update({ ultimo_login: new Date() });
+      await user.update({ ultimoAcceso: new Date() });
       return { message: 'Último login actualizado' };
     } catch (error) {
       if (boom.isBoom(error)) throw error;
@@ -184,7 +197,7 @@ class UserService {
         throw boom.notFound('Usuario no encontrado');
       }
 
-      const isValid = await bcrypt.compare(password, user.password_hash);
+      const isValid = await bcrypt.compare(password, user.password);
       return isValid;
     } catch (error) {
       if (boom.isBoom(error)) throw error;
@@ -201,7 +214,7 @@ class UserService {
       }
 
       // Verificar contraseña actual
-      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
       if (!isCurrentPasswordValid) {
         throw boom.unauthorized('Contraseña actual incorrecta');
       }
@@ -211,7 +224,7 @@ class UserService {
       const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
 
       // Actualizar contraseña
-      await user.update({ password_hash: hashedNewPassword });
+      await user.update({ password: hashedNewPassword });
 
       return { message: 'Contraseña cambiada correctamente' };
     } catch (error) {

@@ -1,14 +1,14 @@
 import { Model, DataTypes } from 'sequelize';
 
-const PERIODOS_ACADEMICOS_TABLE = 'periodos_academicos';
+const PERIODOS_ACADEMICOS_TABLE = 'PeriodosAcademicos';
 
 const PeriodoAcademicoSchema = {
-  id_periodo: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
     type: DataTypes.INTEGER,
-    field: 'id_periodo'
+    field: 'id'
   },
   nombre: {
     allowNull: false,
@@ -16,29 +16,20 @@ const PeriodoAcademicoSchema = {
     unique: true,
     comment: 'Ej: "2025-1", "2025-2"'
   },
-  fecha_inicio_plan: {
+  fechaInicio: {
     allowNull: false,
-    type: DataTypes.DATEONLY,
-    field: 'fecha_inicio_plan',
-    comment: 'Inicio del periodo para registrar actividades planificadas'
+    type: DataTypes.DATE,
+    field: 'fechaInicio'
   },
-  fecha_fin_plan: {
+  fechaFin: {
     allowNull: false,
-    type: DataTypes.DATEONLY,
-    field: 'fecha_fin_plan',
-    comment: 'Fin del periodo para registrar actividades planificadas'
+    type: DataTypes.DATE,
+    field: 'fechaFin'
   },
-  fecha_inicio_reporte: {
-    allowNull: false,
-    type: DataTypes.DATEONLY,
-    field: 'fecha_inicio_reporte',
-    comment: 'Inicio del periodo para reportar actividades realizadas'
-  },
-  fecha_fin_reporte: {
-    allowNull: false,
-    type: DataTypes.DATEONLY,
-    field: 'fecha_fin_reporte',
-    comment: 'Fin del periodo para reportar actividades realizadas'
+  descripcion: {
+    allowNull: true,
+    type: DataTypes.TEXT,
+    field: 'descripcion'
   },
   activo: {
     allowNull: false,
@@ -51,16 +42,16 @@ const PeriodoAcademicoSchema = {
 class PeriodoAcademico extends Model {
   static associate(models) {
     // Un periodo puede tener muchos reportes
-    this.hasMany(models.Reporte, {
-      as: 'reportes',
-      foreignKey: 'id_periodo'
-    });
+    // this.hasMany(models.Reporte, {
+    //   as: 'reportes',
+    //   foreignKey: 'id_periodo'
+    // });
     
     // Un periodo puede tener muchas fechas límite
-    this.hasMany(models.FechaLimite, {
-      as: 'fechas_limite',
-      foreignKey: 'id_periodo'
-    });
+    // this.hasMany(models.FechaLimite, {
+    //   as: 'fechas_limite',
+    //   foreignKey: 'id_periodo'
+    // });
   }
 
   static config(sequelize) {

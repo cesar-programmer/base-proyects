@@ -3,40 +3,41 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('roles', {
-      id_rol: {
+    await queryInterface.createTable('Roles', {
+      id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
       nombre: {
-        allowNull: false,
         type: Sequelize.STRING(50),
+        allowNull: false,
         unique: true
       },
       descripcion: {
-        allowNull: true,
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       activo: {
-        allowNull: false,
         type: Sequelize.BOOLEAN,
+        allowNull: false,
         defaultValue: true
       },
-      fecha_creacion: {
+      createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
-
-    // Crear índices
-    await queryInterface.addIndex('roles', ['nombre']);
-    await queryInterface.addIndex('roles', ['activo']);
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('roles');
+    await queryInterface.dropTable('Roles');
   }
 };

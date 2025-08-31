@@ -1,6 +1,11 @@
 /* eslint-disable react/prop-types */
-import { Calendar, FileText, BarChart3, ClipboardList, Bell } from "lucide-react"
+import { useState, useEffect } from 'react';
+import { Calendar, FileText, BarChart3, ClipboardList, Bell, User, Activity, CheckCircle, Clock } from "lucide-react"
 import { Link } from "react-router-dom";
+import { useAuth } from '../../context/AuthContext';
+import activityService from '../../services/activityService';
+import reportService from '../../services/reportService';
+import { toast } from 'react-toastify';
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -19,6 +24,21 @@ const Card = ({ children, className, ...props }) => (
   >
     {children}
   </div>
+);
+
+// Componente de tarjeta de estadísticas
+const StatsCard = ({ title, value, icon: Icon, color = "green" }) => (
+  <Card className="p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
+      </div>
+      <div className={`p-3 bg-${color}-100 rounded-full`}>
+        <Icon className={`h-6 w-6 text-${color}-600`} />
+      </div>
+    </div>
+  </Card>
 );
 
 // Componente de tarjeta de sección docente
@@ -112,11 +132,57 @@ const docenteSections = [
 
 // Componente principal
 export default function DocenteDashboard() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    actividadesPlanificadas: 0,
+    reportesCompletados: 0,
+    reportesPendientes: 0,
+    progresoGeneral: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      
+      // Cargar actividades del docente
+      const activitiesResponse = await activityService.getActivitiesByTeacher(user.id);
+      const activities = activitiesResponse.data || [];
+      
+      // Cargar reportes del docente
+      const reportsResponse = await reportService.getReportsByTeacher(user.id);
+      const reports = reportsResponse.data || [];
+      
+      // Calcular estadísticas
+      const actividadesPlanificadas = activities.filter(a => a.estado === 'planificada').length;
+      const reportesCompletados = reports.filter(r => r.estado === 'aprobado').length;
+      const reportesPendientes = reports.filter(r => r.estado === 'pendiente').length;
+      const progresoGeneral = activities.length > 0 ? Math.round((reportesCompletados / activities.length) * 100) : 0;
+      
+      setStats({
+        actividadesPlanificadas,
+        reportesCompletados,
+        reportesPendientes,
+        progresoGeneral
+      });
+    } catch (error) {
+      toast.error('Error al cargar datos del dashboard: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Datos del resumen de actividades
   const activitySummary = [
-    { count: 12, label: "Actividades Planificadas", color: "text-blue-600" },
-    { count: 8, label: "Actividades Completadas", color: "text-green-600" },
-    { count: 4, label: "Actividades Pendientes", color: "text-orange-600" },
+    { count: stats.actividadesPlanificadas, label: "Actividades Planificadas", color: "text-blue-600" },
+    { count: stats.reportesCompletados, label: "Actividades Completadas", color: "text-green-600" },
+    { count: stats.reportesPendientes, label: "Actividades Pendientes", color: "text-orange-600" },
   ];
 
   // Próximos recordatorios
@@ -125,10 +191,51 @@ export default function DocenteDashboard() {
     { task: "Actualización de actividades realizadas", date: "30 de Junio" },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        <DashboardHeader />
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-green-800 mb-2">
+            Panel de Control del Docente
+          </h1>
+          <p className="text-green-600">Bienvenido, {user?.nombre || 'Docente'}. Gestiona tus actividades académicas y reportes.</p>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatsCard 
+            title="Actividades Planificadas"
+            value={stats.actividadesPlanificadas}
+            icon={Calendar}
+            color="blue"
+          />
+          <StatsCard 
+            title="Reportes Completados"
+            value={stats.reportesCompletados}
+            icon={CheckCircle}
+            color="green"
+          />
+          <StatsCard 
+            title="Reportes Pendientes"
+            value={stats.reportesPendientes}
+            icon={Clock}
+            color="yellow"
+          />
+          <StatsCard 
+            title="Progreso General"
+            value={`${stats.progresoGeneral}%`}
+            icon={BarChart3}
+            color="purple"
+          />
+        </div>
 
         {/* Secciones principales del dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">

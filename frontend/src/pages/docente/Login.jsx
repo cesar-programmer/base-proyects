@@ -1,7 +1,10 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import  { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const Button = ({ children, className, ...props }) => (
   <button 
@@ -29,21 +32,48 @@ const Label = ({ children, htmlFor }) => (
 );
 
 export default function LoginPageDocente() {
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(false);
+    setError('');
     
     try {
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Si hay error, ejecutar:
-      // setError(true);
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        // Verificar que el usuario sea docente
+        if (result.user.rol?.nombre === 'DOCENTE') {
+          toast.success('¡Bienvenido, Docente!');
+          navigate('/docente/dashboard');
+        } else {
+          setError('No tienes permisos de docente');
+          toast.error('Acceso denegado: Se requieren permisos de docente');
+        }
+      } else {
+        setError(result.error);
+        toast.error(result.error);
+      }
     } catch (error) {
-      setError(true);
+      const errorMessage = 'Error de conexión. Verifica que el servidor esté funcionando.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -71,8 +101,11 @@ export default function LoginPageDocente() {
               <Label htmlFor="email">Correo electrónico</Label>
               <Input 
                 id="email" 
+                name="email"
                 type="email" 
-                placeholder="correo@uabc.edu.mx" 
+                placeholder="docente@universidad.edu" 
+                value={formData.email}
+                onChange={handleChange}
                 required 
               />
             </div>
@@ -80,7 +113,10 @@ export default function LoginPageDocente() {
               <Label htmlFor="password">Contraseña</Label>
               <Input 
                 id="password" 
+                name="password"
                 type="password" 
+                value={formData.password}
+                onChange={handleChange}
                 required 
               />
             </div>
@@ -99,15 +135,17 @@ export default function LoginPageDocente() {
           </a>
         </div>
         {error && (
-          <div className="mt-4 p-4 bg-red-100 rounded-md">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-              <p className="text-sm text-red-600">
-                Credenciales incorrectas. Por favor, inténtalo de nuevo.
-              </p>
-            </div>
+          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded flex items-center">
+            <AlertCircle className="w-4 h-4 mr-2" />
+            <span>{error}</span>
           </div>
         )}
+        
+        <div className="mt-4 p-3 bg-blue-100 border border-blue-400 text-blue-700 rounded text-sm">
+          <strong>Credenciales de prueba:</strong><br />
+          Email: docente@universidad.edu<br />
+          Contraseña: docente123
+        </div>
       </div>
     </div>
   );

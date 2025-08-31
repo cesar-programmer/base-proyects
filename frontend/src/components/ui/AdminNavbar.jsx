@@ -1,10 +1,21 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Menu, X, User, LogOut } from "lucide-react";
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 export default function AdminNavbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
   const toggleMenu = () => setIsOpen(!isOpen);
+  
+  const handleLogout = () => {
+    logout();
+    toast.success('Sesión cerrada exitosamente');
+    navigate('/');
+  };
 
   return (
     <nav className="bg-green-800 text-white shadow-md">
@@ -62,22 +73,17 @@ export default function AdminNavbar() {
             >
               Correcciones
             </NavLink>
-            <NavLink
-              to="/perfil"
-              className={({ isActive }) =>
-                `hover:underline text-sm font-medium ${
-                  isActive ? "underline" : ""
-                }`
-              }
+            <div className="flex items-center space-x-2 text-sm font-medium">
+              <User className="w-4 h-4" />
+              <span>{user?.nombre || 'Administrador'}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-1 text-sm font-medium hover:underline transition-colors"
             >
-              Perfil
-            </NavLink>
-            <NavLink
-              to="/logout"
-              className="text-sm font-medium hover:underline"
-            >
-              Cerrar sesión
-            </NavLink>
+              <LogOut className="w-4 h-4" />
+              <span>Cerrar sesión</span>
+            </button>
           </div>
 
           {/* Botón hamburguesa (solo visible en mobile) */}
@@ -119,20 +125,20 @@ export default function AdminNavbar() {
             >
               Correcciones
             </NavLink>
-            <NavLink
-              to="/perfil"
-              onClick={() => setIsOpen(false)}
-              className="block px-2 py-1 text-sm font-medium hover:underline"
+            <div className="flex items-center space-x-2 px-2 py-1 text-sm font-medium border-t border-green-700 mt-2 pt-2">
+              <User className="w-4 h-4" />
+              <span>{user?.nombre || 'Administrador'}</span>
+            </div>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                handleLogout();
+              }}
+              className="flex items-center space-x-1 px-2 py-1 text-sm font-medium hover:underline w-full text-left transition-colors"
             >
-              Perfil
-            </NavLink>
-            <NavLink
-              to="/logout"
-              onClick={() => setIsOpen(false)}
-              className="block px-2 py-1 text-sm font-medium hover:underline"
-            >
-              Cerrar sesión
-            </NavLink>
+              <LogOut className="w-4 h-4" />
+              <span>Cerrar sesión</span>
+            </button>
           </div>
         )}
       </div>

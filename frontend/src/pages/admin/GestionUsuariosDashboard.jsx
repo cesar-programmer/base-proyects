@@ -1,7 +1,9 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import { useState } from "react"
-import { User, Search, Filter, CheckSquare, AlertTriangle, Users, Activity, Shield } from "lucide-react"
+import { useState, useEffect } from "react";
+import { User, Search, Plus, Edit, Trash2, Users, Eye, EyeOff } from "lucide-react";
+import userService from '../../services/userService';
+import { toast } from 'react-toastify';
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -61,399 +63,375 @@ const TabButton = ({ active, onClick, children }) => (
   </button>
 );
 
-// Componente de badge de estado
-const StatusBadge = ({ status }) => {
-  switch (status) {
-    case "asignado":
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <CheckSquare className="w-3 h-3 mr-1" />
-          Asignado
-        </span>
-      );
-    case "pendiente":
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          <AlertTriangle className="w-3 h-3 mr-1" />
-          Pendiente
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          Sin asignar
-        </span>
-      );
-  }
-};
 
-// Componente de encabezado
-const DashboardHeader = ({ teachersCount, activitiesCount }) => (
-  <div className="flex items-center justify-between">
-    <div>
-      <h1 className="text-2xl font-bold text-green-700">Configuración de Permisos Adicionales</h1>
-      <p className="text-gray-600">
-        Asigne permisos adicionales a los docentes para actividades específicas
-      </p>
-    </div>
-    <div className="flex items-center gap-2">
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border">
-        <Users className="w-4 h-4 mr-1" />
-        {teachersCount} Docentes
-      </span>
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border">
-        <Activity className="w-4 h-4 mr-1" />
-        {activitiesCount} Actividades
-      </span>
-    </div>
-  </div>
-);
-
-// Componente de navegación de pestañas
-const TabNavigation = ({ activeTab, setActiveTab }) => (
-  <div className="border-b border-gray-200">
-    <nav className="flex space-x-8">
-      <TabButton 
-        active={activeTab === "asignacion"} 
-        onClick={() => setActiveTab("asignacion")}
-      >
-        Asignación de Permisos
-      </TabButton>
-      <TabButton 
-        active={activeTab === "resumen"} 
-        onClick={() => setActiveTab("resumen")}
-      >
-        Resumen
-      </TabButton>
-    </nav>
-  </div>
-);
-
-// Componente de filtros y búsqueda
-const FiltersSection = ({ 
-  searchTerm, 
-  setSearchTerm, 
-  categoryFilter, 
-  setCategoryFilter, 
-  handleBulkPermissionChange 
-}) => (
-  <Card>
-    <div className="p-6 pb-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Filter className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">Filtros y Búsqueda</h3>
-      </div>
-      <p className="text-gray-600 text-sm">Filtre docentes y actividades para una asignación más eficiente</p>
-    </div>
-    <div className="p-6 pt-0">
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-2">
-          <Label>Buscar docente</Label>
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Nombre o departamento"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Categoría de actividad</Label>
-          <Select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="all">Todas las categorías</option>
-            <option value="Académica">Académica</option>
-            <option value="Investigación">Investigación</option>
-            <option value="Administrativa">Administrativa</option>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Acciones masivas</Label>
-          <div className="flex gap-1">
-            <Button
-              onClick={() => handleBulkPermissionChange("ver", true)}
-              className="text-xs px-3 py-1 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-            >
-              Ver a todos
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Card>
-);
-
-// Componente de matriz de permisos
-const PermissionsMatrix = ({ 
-  filteredCombinations, 
-  getPermissionAssignment, 
-  handlePermissionChange 
-}) => (
-  <Card>
-    <div className="p-6 pb-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Shield className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">Matriz de Permisos</h3>
-      </div>
-      <p className="text-gray-600 text-sm">Seleccione los permisos para cada combinación de docente y actividad</p>
-    </div>
-    <div className="p-6 pt-0">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
-                Docente
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
-                Actividad
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                Ver
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                Editar
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                Aprobar
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                Estado
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredCombinations.map(({ teacher, activity }) => {
-              const assignment = getPermissionAssignment(teacher.id, activity.id);
-              return (
-                <tr key={`${teacher.id}-${activity.id}`} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-green-700 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-white" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{activity.name}</div>
-                      <div className="text-sm text-gray-500">{activity.description}</div>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border mt-1">
-                        {activity.category}
-                      </span>
-                    </div>
-                  </td>
-                  {["ver", "editar", "aprobar"].map((permission) => (
-                    <td key={permission} className="px-6 py-4 whitespace-nowrap text-center">
-                      <input
-                        type="checkbox"
-                        checked={assignment.permissions.includes(permission)}
-                        onChange={() => handlePermissionChange(teacher.id, activity.id, permission)}
-                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
-                      />
-                    </td>
-                  ))}
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <StatusBadge status={assignment.status} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </Card>
-);
-
-// Componente de resumen
-const SummarySection = ({ permissionAssignments, teachersCount, activitiesCount }) => (
-  <div className="space-y-4">
-    <Card>
-      <div className="p-6 pb-4">
-        <h3 className="text-lg font-semibold">Resumen de Permisos</h3>
-        <p className="text-gray-600 text-sm">Vista general de los permisos asignados</p>
-      </div>
-      <div className="p-6 pt-0">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="text-center p-4 border rounded-lg">
-            <div className="text-2xl font-bold text-green-700">
-              {permissionAssignments.filter((a) => a.status === "asignado").length}
-            </div>
-            <div className="text-sm text-gray-600">Permisos Asignados</div>
-          </div>
-          <div className="text-center p-4 border rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">
-              {permissionAssignments.filter((a) => a.status === "pendiente").length}
-            </div>
-            <div className="text-sm text-gray-600">Permisos Pendientes</div>
-          </div>
-          <div className="text-center p-4 border rounded-lg">
-            <div className="text-2xl font-bold text-gray-600">
-              {teachersCount * activitiesCount - permissionAssignments.length}
-            </div>
-            <div className="text-sm text-gray-600">Sin Asignar</div>
-          </div>
-        </div>
-      </div>
-    </Card>
-  </div>
-);
-
-// Datos estáticos
-const teachers = [
-  { id: "1", name: "Dr. Juan Pérez", department: "Ingeniería", email: "juan.perez@uabc.edu.mx" },
-  { id: "2", name: "Dra. María González", department: "Ciencias", email: "maria.gonzalez@uabc.edu.mx" },
-  { id: "3", name: "Mtro. Carlos Rodríguez", department: "Humanidades", email: "carlos.rodriguez@uabc.edu.mx" },
-];
-
-const activities = [
-  { id: "1", name: "Revisión de Tesis", description: "Revisar y aprobar tesis de estudiantes", category: "Académica" },
-  { id: "2", name: "Evaluación de Proyectos", description: "Evaluar proyectos de investigación", category: "Investigación" },
-  { id: "3", name: "Gestión de Convenios", description: "Gestionar convenios con otras instituciones", category: "Administrativa" },
-];
 
 // Componente principal
 export default function GestionUsuariosDashboard() {
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("asignacion");
-  const [permissionAssignments, setPermissionAssignments] = useState([
-    { teacherId: "1", activityId: "1", permissions: ["ver", "editar"], status: "asignado" },
-    { teacherId: "1", activityId: "2", permissions: [], status: "pendiente" },
-    { teacherId: "2", activityId: "1", permissions: ["ver"], status: "pendiente" },
-  ]);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    password: '',
+    rolId: ''
+  });
 
-  const handlePermissionChange = (teacherId, activityId, permission) => {
-    setPermissionAssignments((prev) => {
-      const existingAssignment = prev.find((a) => a.teacherId === teacherId && a.activityId === activityId);
+  useEffect(() => {
+    loadUsers();
+    loadRoles();
+  }, []);
 
-      if (existingAssignment) {
-        const updatedPermissions = existingAssignment.permissions.includes(permission)
-          ? existingAssignment.permissions.filter((p) => p !== permission)
-          : [...existingAssignment.permissions, permission];
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await userService.getAllUsers();
+      setUsers(response.data || []);
+    } catch (error) {
+      toast.error('Error al cargar usuarios: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        return prev.map((a) =>
-          a.teacherId === teacherId && a.activityId === activityId
-            ? {
-                ...a,
-                permissions: updatedPermissions,
-                status: updatedPermissions.length > 0 ? "pendiente" : "sin_asignar",
-              }
-            : a,
-        );
-      } else {
-        return [...prev, { teacherId, activityId, permissions: [permission], status: "pendiente" }];
+  const loadRoles = async () => {
+    try {
+      const response = await userService.getRoles();
+      setRoles(response.data || []);
+    } catch (error) {
+      toast.error('Error al cargar roles: ' + error.message);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      await userService.createUser(formData);
+      toast.success('Usuario creado exitosamente');
+      setShowCreateModal(false);
+      setFormData({ nombre: '', email: '', password: '', rolId: '' });
+      loadUsers();
+    } catch (error) {
+      toast.error('Error al crear usuario: ' + error.message);
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const updateData = { ...formData };
+      if (!updateData.password) {
+        delete updateData.password;
       }
+      await userService.updateUser(editingUser.id, updateData);
+      toast.success('Usuario actualizado exitosamente');
+      setEditingUser(null);
+      setFormData({ nombre: '', email: '', password: '', rolId: '' });
+      loadUsers();
+    } catch (error) {
+      toast.error('Error al actualizar usuario: ' + error.message);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+      try {
+        await userService.deleteUser(userId);
+        toast.success('Usuario eliminado exitosamente');
+        loadUsers();
+      } catch (error) {
+        toast.error('Error al eliminar usuario: ' + error.message);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (userId) => {
+    try {
+      await userService.toggleUserStatus(userId);
+      toast.success('Estado del usuario actualizado');
+      loadUsers();
+    } catch (error) {
+      toast.error('Error al cambiar estado: ' + error.message);
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "all" || user.rol?.id?.toString() === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    setFormData({
+      nombre: user.nombre || '',
+      email: user.email || '',
+      password: '',
+      rolId: user.rol?.id?.toString() || ''
     });
   };
 
-  const handleBulkPermissionChange = (permission, checked) => {
-    const filteredCombinations = getFilteredCombinations();
-
-    filteredCombinations.forEach(({ teacher, activity }) => {
-      if (checked) {
-        handlePermissionChange(teacher.id, activity.id, permission);
-      } else {
-        setPermissionAssignments((prev) =>
-          prev.map((a) =>
-            a.teacherId === teacher.id && a.activityId === activity.id
-              ? { ...a, permissions: a.permissions.filter((p) => p !== permission) }
-              : a,
-          ),
-        );
-      }
-    });
+  const closeModals = () => {
+    setShowCreateModal(false);
+    setEditingUser(null);
+    setFormData({ nombre: '', email: '', password: '', rolId: '' });
   };
 
-  const handleConfirmAssignments = () => {
-    setPermissionAssignments((prev) =>
-      prev.map((a) => ({ ...a, status: a.permissions.length > 0 ? "asignado" : "sin_asignar" })),
-    );
-
-    alert("Permisos asignados exitosamente");
-  };
-
-  const getPermissionAssignment = (teacherId, activityId) => {
+  if (loading) {
     return (
-      permissionAssignments.find((a) => a.teacherId === teacherId && a.activityId === activityId) || {
-        teacherId,
-        activityId,
-        permissions: [],
-        status: "sin_asignar",
-      }
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600"></div>
+        </div>
+      </div>
     );
-  };
-
-  const getFilteredCombinations = () => {
-    const filteredTeachers = teachers.filter(
-      (teacher) =>
-        (teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          teacher.department.toLowerCase().includes(searchTerm.toLowerCase())),
-    );
-
-    const filteredActivities = activities.filter(
-      (activity) => categoryFilter === "all" || activity.category === categoryFilter,
-    );
-
-    return filteredTeachers.flatMap((teacher) => filteredActivities.map((activity) => ({ teacher, activity })));
-  };
-
-  const filteredCombinations = getFilteredCombinations();
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <DashboardHeader teachersCount={teachers.length} activitiesCount={activities.length} />
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Usuarios</h1>
+        <p className="text-gray-600">Administra usuarios del sistema</p>
+      </div>
 
-      <div className="space-y-4">
-        <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
-
-        {activeTab === "asignacion" && (
-          <div className="space-y-4">
-            <FiltersSection 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              handleBulkPermissionChange={handleBulkPermissionChange}
-            />
-
-            <PermissionsMatrix 
-              filteredCombinations={filteredCombinations}
-              getPermissionAssignment={getPermissionAssignment}
-              handlePermissionChange={handlePermissionChange}
-            />
-
-            <div className="flex justify-end">
-              <Button
-                onClick={handleConfirmAssignments}
-                className="flex items-center text-white bg-green-700 hover:bg-green-800"
-              >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                Confirmar Asignación de Permisos
-              </Button>
+      {/* Filtros y acciones */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Buscar usuarios..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
+            <Select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
+              <option value="all">Todos los roles</option>
+              {roles.map(role => (
+                <option key={role.id} value={role.id.toString()}>{role.nombre}</option>
+              ))}
+            </Select>
+          </div>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Nuevo Usuario
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabla de usuarios */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredUsers.map((user) => (
+                <tr key={user.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <User className="w-5 h-5 text-gray-400 mr-3" />
+                      <span className="text-sm font-medium text-gray-900">{user.nombre}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {user.rol?.nombre || 'Sin rol'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => handleToggleStatus(user.id)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {user.activo ? (
+                        <><Eye className="w-3 h-3 mr-1" /> Activo</>
+                      ) : (
+                        <><EyeOff className="w-3 h-3 mr-1" /> Inactivo</>
+                      )}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => openEditModal(user)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                      >
+                        <Edit className="w-3 h-3" />
+                        Editar
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredUsers.length === 0 && (
+          <div className="text-center py-8">
+            <Users className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No hay usuarios</h3>
+            <p className="mt-1 text-sm text-gray-500">No se encontraron usuarios con los filtros aplicados.</p>
           </div>
         )}
-
-        {activeTab === "resumen" && (
-          <SummarySection 
-            permissionAssignments={permissionAssignments}
-            teachersCount={teachers.length}
-            activitiesCount={activities.length}
-          />
-        )}
       </div>
+
+      {/* Modal de crear usuario */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Crear Nuevo Usuario</h3>
+            <form onSubmit={handleCreateUser}>
+              <div className="mb-4">
+                <Label htmlFor="nombre">Nombre</Label>
+                <Input
+                  id="nombre"
+                  type="text"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="rolId">Rol</Label>
+                <Select
+                  id="rolId"
+                  value={formData.rolId}
+                  onChange={(e) => setFormData({...formData, rolId: e.target.value})}
+                  required
+                >
+                  <option value="">Seleccionar rol</option>
+                  {roles.map(role => (
+                    <option key={role.id} value={role.id.toString()}>{role.nombre}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white flex-1">
+                  Crear Usuario
+                </Button>
+                <Button type="button" onClick={closeModals} className="bg-gray-600 hover:bg-gray-700 text-white flex-1">
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de editar usuario */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Editar Usuario</h3>
+            <form onSubmit={handleUpdateUser}>
+              <div className="mb-4">
+                <Label htmlFor="edit-nombre">Nombre</Label>
+                <Input
+                  id="edit-nombre"
+                  type="text"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="edit-password">Nueva Contraseña (opcional)</Label>
+                <Input
+                  id="edit-password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  placeholder="Dejar vacío para mantener la actual"
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="edit-rolId">Rol</Label>
+                <Select
+                  id="edit-rolId"
+                  value={formData.rolId}
+                  onChange={(e) => setFormData({...formData, rolId: e.target.value})}
+                  required
+                >
+                  <option value="">Seleccionar rol</option>
+                  {roles.map(role => (
+                    <option key={role.id} value={role.id.toString()}>{role.nombre}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex-1">
+                  Actualizar Usuario
+                </Button>
+                <Button type="button" onClick={closeModals} className="bg-gray-600 hover:bg-gray-700 text-white flex-1">
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

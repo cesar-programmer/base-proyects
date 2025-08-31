@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
-import React, { useMemo, useState } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import {
   CalendarDays,
   ListTodo,
@@ -18,7 +18,12 @@ import {
   GraduationCap,
   Send,
   ChevronDown,
+  Edit,
+  Eye
 } from "lucide-react"
+import { useAuth } from '../../context/AuthContext'
+import activityService from '../../services/activityService';
+import { toast } from 'react-hot-toast'
 
 const CATEGORIAS = [
   { label: "Docencia", icon: BookOpen },
@@ -305,11 +310,35 @@ function currentSemesterFor(date = new Date()) {
 }
 
 export default function PlannedActivities() {
+  const { user } = useAuth();
   const semestre = useMemo(() => currentSemesterFor(), [])
   const [actividades, setActividades] = useState([])
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [showNewActivityDialog, setShowNewActivityDialog] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState("")
+  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [editingActivity, setEditingActivity] = useState(null)
+
+  useEffect(() => {
+    loadActivities();
+  }, [user]);
+
+  const loadActivities = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const response = await activityService.getActivitiesByTeacher(user.id);
+      setActividades(response.data || []);
+    } catch (error) {
+      toast.error('Error al cargar actividades: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalActividades = actividades.length
   const totalHoras = actividades.reduce((sum, a) => sum + (Number(a.horas) || 0), 0)
@@ -349,26 +378,73 @@ export default function PlannedActivities() {
     setActividades((prev) => prev.map((a) => (a.id === id ? { ...a, [key]: value } : a)))
   }
 
-  const saveActivity = (id) => {
-    setActividades((prev) => prev.map((a) => (a.id === id ? { ...a, guardada: true } : a)))
-    setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
+  const saveActivity = async (id) => {
+    try {
+      const activity = actividades.find(a => a.id === id);
+      if (!activity) return;
+      
+      const activityData = {
+        ...activity,
+        teacherId: user.id,
+        semester: semestre
+      };
+      
+      if (activity.isNew) {
+        await activityService.createActivity(activityData);
+        toast.success('Actividad creada exitosamente');
+      } else {
+        await activityService.updateActivity(id, activityData);
+        toast.success('Actividad actualizada exitosamente');
+      }
+      
+      setActividades((prev) => prev.map((a) => (a.id === id ? { ...a, guardada: true, isNew: false } : a)))
+      setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
+      await loadActivities();
+    } catch (error) {
+      toast.error('Error al guardar actividad: ' + error.message);
+    }
   }
 
-  const deleteActivity = (id) => {
-    setActividades((prev) => prev.filter((a) => a.id !== id))
+  const deleteActivity = async (id) => {
+    try {
+      const activity = actividades.find(a => a.id === id);
+      if (!activity?.isNew) {
+        await activityService.deleteActivity(id);
+        toast.success('Actividad eliminada exitosamente');
+      }
+      setActividades((prev) => prev.filter((a) => a.id !== id))
+    } catch (error) {
+      toast.error('Error al eliminar actividad: ' + error.message);
+    }
   }
 
-  const guardarBorrador = () => {
-    setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
+  const guardarBorrador = async () => {
+    try {
+      for (const activity of actividades) {
+        if (!activity.guardada) {
+          await saveActivity(activity.id);
+        }
+      }
+      setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
+      toast.success('Borrador guardado exitosamente');
+    } catch (error) {
+      toast.error('Error al guardar borrador: ' + error.message);
+    }
   }
 
   const enviarPlan = () => {
     setConfirmOpen(true)
   }
 
-  const confirmarEnvio = () => {
-    setSubmitted(true)
-    setConfirmOpen(false)
+  const confirmarEnvio = async () => {
+    try {
+      await activityService.submitPlan(user.id, semestre);
+      setSubmitted(true)
+      setConfirmOpen(false)
+      toast.success('Plan enviado exitosamente');
+    } catch (error) {
+      toast.error('Error al enviar plan: ' + error.message);
+    }
   }
 
   const disabled = submitted
@@ -497,7 +573,13 @@ export default function PlannedActivities() {
             </div>
           </div>
 
-          {actividades.length === 0 ? (
+          {loading ? (
+            <Card className="bg-white border border-gray-200">
+              <CardContent className="p-8 text-center text-gray-600">
+                Cargando actividades...
+              </CardContent>
+            </Card>
+          ) : actividades.length === 0 ? (
             <Card className="bg-white border border-dashed border-gray-300">
               <CardContent className="p-8 text-center text-gray-600">
                 Aún no has agregado actividades. Usa el Catálogo de Actividades o el botón &quot;Agregar Actividad&quot;.

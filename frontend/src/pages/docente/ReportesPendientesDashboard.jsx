@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useMemo, useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Search,
   MoreVertical,
@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   X
 } from "lucide-react"
+import { useAuth } from '../../context/AuthContext'
+import reportService from '../../services/reportService';
+import { toast } from 'react-hot-toast'
 
 // Componentes reutilizables
 const Button = ({ children, className = "", variant = "default", disabled = false, ...props }) => {
@@ -546,13 +549,33 @@ function ReportDetailDialog({
 }
 
 export default function PendingReports() {
-  const semestreActual = useMemo(() => currentSemesterFor(), [])
-  const [busqueda, setBusqueda] = useState("")
-  const [tipoFiltro, setTipoFiltro] = useState("all")
-  const [estadoFiltro, setEstadoFiltro] = useState("all")
-  const [dropdownOpen, setDropdownOpen] = useState(null)
+  const { user } = useAuth();
+  const [busqueda, setBusqueda] = useState("");
+  const [tipoFiltro, setTipoFiltro] = useState("all");
+  const [estadoFiltro, setEstadoFiltro] = useState("all");
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [reportes, setReportes] = useState([]);
 
-  const [reportes, setReportes] = useState([
+  useEffect(() => {
+    loadReports();
+  }, [user]);
+
+  const loadReports = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const response = await reportService.getReportsByTeacher(user.id);
+      setReportes(response.data || []);
+    } catch (error) {
+      toast.error('Error al cargar reportes: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [mockReportes] = useState([
     {
       id: "r-1",
       titulo: "Informe de Gestión Académica",

@@ -1,7 +1,10 @@
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable no-unused-vars */
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Eye, Download, MoreVertical, Filter, Calendar, FileText, TrendingUp, Clock, X } from "lucide-react"
+import { useAuth } from '../../context/AuthContext'
+import reportService from '../../services/reportService';
+import { toast } from 'react-hot-toast'
 
 const Report = {
   id: "",
@@ -15,15 +18,36 @@ const Report = {
 }
 
 export default function HistorialReportesDashboard() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState("all")
-  const [filterStatus, setFilterStatus] = useState("all")
-  const [selectedReport, setSelectedReport] = useState(null)
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("activities")
-  const [dropdownOpen, setDropdownOpen] = useState(null)
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("activities");
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState([]);
 
-  const [reports] = useState([
+  useEffect(() => {
+    loadReports();
+  }, [user]);
+
+  const loadReports = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      const response = await reportService.getReportHistory(user.id);
+      setReports(response.data || []);
+    } catch (error) {
+      toast.error('Error al cargar historial de reportes: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [mockReports] = useState([
     {
       id: "1",
       titulo: "Reporte de Investigación Q1 2024",

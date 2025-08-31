@@ -106,7 +106,7 @@ El servidor debe estar disponible en `http://localhost:3000`
 3. **Períodos Académicos**
    - Listar períodos existentes
    - Crear un nuevo período
-   - ⚠️ **Nota**: El endpoint PUT tiene un error 400 conocido
+   - ✅ **Nota**: Todos los endpoints funcionan correctamente
    - Eliminar el período de prueba
 
 4. **Reportes**
@@ -121,12 +121,12 @@ El servidor debe estar disponible en `http://localhost:3000`
    - Descargar el archivo
    - Eliminar el archivo de prueba
 
-## ⚠️ Problemas Conocidos
+## ✅ Problemas Resueltos
 
-### Error 400 en PUT /api/v1/periodos-academicos/:id
-- **Descripción**: El endpoint de actualización de períodos académicos devuelve un error 400
-- **Estado**: Identificado durante las pruebas
-- **Workaround**: Usar DELETE y POST para "actualizar" (eliminar y recrear)
+### ~~Error 400 en PUT /api/v1/periodos-academicos/:id~~ - SOLUCIONADO
+- **Descripción**: El endpoint de actualización de períodos académicos devolvía un error 400
+- **Estado**: ✅ **RESUELTO** - Se corrigió el middleware de validación en las rutas
+- **Solución**: Se cambió `validatePeriodoAcademico` por `validateUpdatePeriodoAcademico` en la ruta PUT
 
 ## 🔧 Variables de Entorno
 

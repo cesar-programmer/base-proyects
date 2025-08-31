@@ -310,8 +310,6 @@ pm.test("Response has token", function () {
 
 **Headers:** `Authorization: Bearer {{token}}`
 
-**⚠️ Nota:** Actualmente presenta error 400 - requiere revisión
-
 **Body (JSON):**
 ```json
 {
@@ -624,11 +622,10 @@ if (pm.response.json().token) {
 ✅ **Endpoints de Autenticación** - Funcionando correctamente  
 ✅ **Endpoints de Usuarios** - Funcionando correctamente  
 ✅ **Endpoints de Reportes** - Funcionando correctamente  
-✅ **Endpoints de Períodos Académicos** - Funcionando parcialmente  
-⚠️ **PUT /api/v1/periodos-academicos/:id** - Error 400 (requiere revisión)  
+✅ **Endpoints de Períodos Académicos** - Funcionando correctamente  
 ✅ **Endpoints de Archivos** - Configurados y listos  
 
-**Estado general:** 15 de 16 endpoints funcionando correctamente (93.75% de éxito)
+**Estado general:** 16 de 16 endpoints funcionando correctamente (100% de éxito)
 
 ## 📞 Soporte
 

@@ -8,7 +8,6 @@ import GestionUsuariosDashboard from "../pages/admin/GestionUsuariosDashboard"
 import ConfiguracionFechasDashboard from "../pages/admin/ConfiguracionFechasDasboard"
 import CorreccionesDashboard from "../pages/admin/CorreccionesDashboard"
 import RevisionActividadesDashboard from "../pages/admin/RevisionActividadesDashboard"
-import Login from '../pages/admin/Login';
 const adminRoutes = (
   <Route path="/admin" element={
     <ProtectedRoute requiredRole="ADMINISTRADOR">
@@ -21,7 +20,7 @@ const adminRoutes = (
     <Route path="gestion-usuarios" element={<GestionUsuariosDashboard />} />
     <Route path="configuracion-fechas" element={<ConfiguracionFechasDashboard />} />
     <Route path="correcciones" element={<CorreccionesDashboard />} />
-    <Route path="historial-reportes" element={<RevisionActividadesDashboard />} />
+    <Route path="revision-actividades" element={<RevisionActividadesDashboard />} />
   </Route>
 );
 

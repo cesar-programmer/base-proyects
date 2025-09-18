@@ -67,6 +67,22 @@ const ActividadSchema = {
     type: DataTypes.STRING(255),
     field: 'archivoAdjunto'
   },
+  estado_realizado: {
+    allowNull: true,
+    type: DataTypes.ENUM('pendiente', 'aprobada', 'rechazada'),
+    defaultValue: 'pendiente',
+    field: 'estado_realizado'
+  },
+  comentarios_revision: {
+    allowNull: true,
+    type: DataTypes.TEXT,
+    field: 'comentarios_revision'
+  },
+  fecha_revision: {
+    allowNull: true,
+    type: DataTypes.DATE,
+    field: 'fecha_revision'
+  },
   createdAt: {
     allowNull: false,
     type: DataTypes.DATE,

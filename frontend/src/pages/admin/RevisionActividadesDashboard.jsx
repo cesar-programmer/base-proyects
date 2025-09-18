@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Eye,
   CheckCircle,
@@ -16,6 +16,9 @@ import {
   AlertCircle,
   AlertTriangle,
 } from "lucide-react"
+import { useAuth } from '../../context/AuthContext'
+import activityService from '../../services/activityService'
+import { toast } from 'react-hot-toast'
 
 // Simple Modal Component
 const Modal = ({ isOpen, onClose, children }) => {
@@ -68,7 +71,7 @@ const TabsContent = ({ value, activeTab, children }) => {
   return <div>{children}</div>;
 };
 
-export default function Component() {
+export default function RevisionActividadesDashboard() {
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [reviewComment, setReviewComment] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -82,69 +85,53 @@ export default function Component() {
   const [notificationRecipients, setNotificationRecipients] = useState("")
   const [notificationMessage, setNotificationMessage] = useState("")
 
-  const [activities, setActivities] = useState([
-    {
-      id: "1",
-      docente: "Dr. Juan Pérez",
-      actividad: "Preparación de material didáctico",
-      fecha: "2023-08-15",
-      estado: "Pendiente",
-      descripcion: "Desarrollo de material didáctico para el curso de Matemáticas Avanzadas",
-      categoria: "Docencia",
-      fechaEntrega: "2023-08-20",
-    },
-    {
-      id: "2",
-      docente: "Dra. María González",
-      actividad: "Asesoría a estudiantes",
-      fecha: "2023-08-20",
-      estado: "Pendiente",
-      descripcion: "Sesiones de asesoría académica para estudiantes de posgrado",
-      categoria: "Tutoría",
-      fechaEntrega: "2023-08-25",
-    },
-    {
-      id: "3",
-      docente: "Mtro. Carlos Rodríguez",
-      actividad: "Publicación de artículo",
-      fecha: "2023-07-01",
-      estado: "Pendiente",
-      descripcion: "Artículo de investigación sobre metodologías educativas",
-      categoria: "Investigación",
-      fechaEntrega: "2023-08-30",
-    },
-    {
-      id: "4",
-      docente: "Dr. Ana Martínez",
-      actividad: "Curso de capacitación",
-      fecha: "2023-07-15",
-      estado: "Aprobada",
-      descripcion: "Participación en curso de actualización pedagógica",
-      categoria: "Capacitación",
-      comentarios: "Excelente participación y aprovechamiento del curso",
-    },
-    {
-      id: "5",
-      docente: "Dra. Luis Hernández",
-      actividad: "Proyecto de investigación",
-      fecha: "2023-06-30",
-      estado: "Devuelta",
-      descripcion: "Propuesta de proyecto de investigación interdisciplinaria",
-      categoria: "Investigación",
-      comentarios: "Requiere mayor detalle en la metodología propuesta",
-    },
-  ])
+  const [activities, setActivities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState([])
+  const [teachers, setTeachers] = useState([])
+  const [stats, setStats] = useState({ pending: 0, approved: 0, returned: 0 })
+  
+  const { user } = useAuth()
 
-  const filteredActivities = activities.filter((activity) => {
+  // Función para cargar actividades desde la API
+  const loadActivities = async () => {
+    try {
+      setLoading(true)
+      console.log('🔄 Cargando actividades...')
+      const response = await activityService.getAllActivities()
+      console.log('📊 Respuesta completa de la API:', response)
+      console.log('📋 Datos de actividades:', response.data)
+      
+      // CORRECCIÓN: El backend retorna { message, data }, así que necesitamos response.data.data
+      const activitiesData = response.data?.data || response.data || []
+      setActivities(activitiesData)
+      console.log('✅ Actividades cargadas correctamente:', activitiesData?.length || 0)
+    } catch (error) {
+      console.error('❌ Error al cargar actividades:', error)
+      toast.error('Error al cargar actividades: ' + error.message)
+      setActivities([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    if (user) {
+      loadActivities()
+    }
+  }, [user])
+
+  const filteredActivities = (activities || []).filter((activity) => {
     const matchesSearch =
-      activity.docente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.actividad.toLowerCase().includes(searchTerm.toLowerCase())
+      (activity.usuario?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (activity.titulo?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     const matchesCategory = filterCategory === "all" || activity.categoria === filterCategory
     return matchesSearch && matchesCategory
   })
 
   const getActivitiesByStatus = (status) => {
-    return filteredActivities.filter((activity) => activity.estado === status)
+    return filteredActivities.filter((activity) => activity.estado_realizado === status)
   }
 
   const handleReviewActivity = (activity, newStatus) => {
@@ -158,25 +145,32 @@ export default function Component() {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "Pendiente":
+      case "pendiente":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
             <Clock className="w-3 h-3 mr-1" />
             Pendiente
           </span>
         )
-      case "Aprobada":
+      case "aprobada":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
             <CheckCircle className="w-3 h-3 mr-1" />
             Aprobada
           </span>
         )
-      case "Devuelta":
+      case "devuelta":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
             <XCircle className="w-3 h-3 mr-1" />
             Devuelta
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            {status || 'Sin estado'}
           </span>
         )
     }
@@ -201,27 +195,27 @@ export default function Component() {
               <td className="p-4">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-green-600" />
-                  <span className="font-medium text-gray-900">{activity.docente}</span>
+                  <span className="font-medium text-gray-900">{activity.usuario?.nombre || 'N/A'}</span>
                 </div>
               </td>
               <td className="p-4">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-700">{activity.actividad}</span>
+                  <span className="text-gray-700">{activity.titulo || 'N/A'}</span>
                 </div>
               </td>
               <td className="p-4">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-600">{activity.fecha}</span>
+                  <span className="text-gray-600">{activity.fechaInicio ? new Date(activity.fechaInicio).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </td>
               <td className="p-4">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                  {activity.categoria}
+                  {activity.categoria || 'N/A'}
                 </span>
               </td>
-              <td className="p-4">{getStatusBadge(activity.estado)}</td>
+              <td className="p-4">{getStatusBadge(activity.estado_realizado)}</td>
               <td className="p-4">
                 <div className="flex gap-2">
                   <button
@@ -235,7 +229,7 @@ export default function Component() {
                     Ver
                   </button>
 
-                  {activity.estado === "Pendiente" && (
+                  {activity.estado_realizado === "pendiente" && (
                     <button
                       onClick={() => {
                         setSelectedActivity(activity)
@@ -350,7 +344,7 @@ export default function Component() {
                     onTabChange={setActiveTab}
                     className="rounded-md"
                   >
-                    Pendientes ({getActivitiesByStatus("Pendiente").length})
+                    Pendientes ({getActivitiesByStatus("pendiente").length})
                   </TabsTrigger>
                   <TabsTrigger
                     value="aprobadas"
@@ -358,7 +352,7 @@ export default function Component() {
                     onTabChange={setActiveTab}
                     className="rounded-md"
                   >
-                    Aprobadas ({getActivitiesByStatus("Aprobada").length})
+                    Aprobadas ({getActivitiesByStatus("aprobada").length})
                   </TabsTrigger>
                   <TabsTrigger
                     value="devueltas"
@@ -366,21 +360,21 @@ export default function Component() {
                     onTabChange={setActiveTab}
                     className="rounded-md"
                   >
-                    Devueltas ({getActivitiesByStatus("Devuelta").length})
+                    Devueltas ({getActivitiesByStatus("devuelta").length})
                   </TabsTrigger>
                 </TabsList>
               </div>
 
               <TabsContent value="pendientes" activeTab={activeTab}>
-                <ActivityTable activities={getActivitiesByStatus("Pendiente")} />
+                <ActivityTable activities={getActivitiesByStatus("pendiente")} />
               </TabsContent>
 
               <TabsContent value="aprobadas" activeTab={activeTab}>
-                <ActivityTable activities={getActivitiesByStatus("Aprobada")} />
+                <ActivityTable activities={getActivitiesByStatus("aprobada")} />
               </TabsContent>
 
               <TabsContent value="devueltas" activeTab={activeTab}>
-                <ActivityTable activities={getActivitiesByStatus("Devuelta")} />
+                <ActivityTable activities={getActivitiesByStatus("devuelta")} />
               </TabsContent>
             </Tabs>
           </div>
@@ -419,13 +413,13 @@ export default function Component() {
                       <User className="w-8 h-8 text-green-700" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900">{selectedActivity.docente}</h3>
+                      <h3 className="text-xl font-bold text-gray-900">{selectedActivity?.docente || 'N/A'}</h3>
                       <p className="text-gray-600">Facultad de Ciencias</p>
                       <p className="text-sm text-gray-500">
-                        {selectedActivity.docente
-                          .toLowerCase()
-                          .replace(/\s+/g, ".")
-                          .replace(/dr\.|dra\.|mtro\./g, "")}
+                        {selectedActivity?.docente
+                          ?.toLowerCase()
+                          ?.replace(/\s+/g, ".")
+                          ?.replace(/dr\.|dra\.|mtro\./g, "") || 'usuario'}
                         @uabc.edu.mx
                       </p>
                     </div>
@@ -595,7 +589,7 @@ export default function Component() {
             <div className="border-b border-gray-200 pb-4 mb-6">
               <h2 className="text-xl font-bold text-green-800">Revisar Actividad</h2>
               <p className="text-gray-600">
-                Revisa y proporciona comentarios sobre la actividad de {selectedActivity?.docente}
+                Revisa y proporciona comentarios sobre la actividad de {selectedActivity?.usuario?.nombre || 'N/A'}
               </p>
             </div>
             <div className="space-y-4 mb-6">
@@ -612,14 +606,14 @@ export default function Component() {
             </div>
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => selectedActivity && handleReviewActivity(selectedActivity, "Devuelta")}
+                onClick={() => selectedActivity && handleReviewActivity(selectedActivity, "devuelta")}
                 className="inline-flex items-center px-4 py-2 border border-red-200 text-sm font-medium rounded-md text-red-600 bg-transparent hover:bg-red-50 transition-colors"
               >
                 <XCircle className="w-4 h-4 mr-1" />
                 Devolver
               </button>
               <button
-                onClick={() => selectedActivity && handleReviewActivity(selectedActivity, "Aprobada")}
+                onClick={() => selectedActivity && handleReviewActivity(selectedActivity, "aprobada")}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4 mr-1" />

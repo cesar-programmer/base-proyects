@@ -220,6 +220,50 @@ class ActividadService {
       throw boom.internal('Error al actualizar estado de realización');
     }
   }
+
+  // Aprobar actividad
+  async approve(id, comentarios = '') {
+    try {
+      const actividad = await this.findOne(id);
+      await actividad.update({ 
+        estado_realizado: 'aprobada',
+        comentarios_revision: comentarios,
+        fecha_revision: new Date()
+      });
+      
+      return {
+        message: 'Actividad aprobada exitosamente',
+        data: actividad
+      };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al aprobar la actividad');
+    }
+  }
+
+  // Rechazar actividad
+  async reject(id, razon) {
+    try {
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón del rechazo es requerida');
+      }
+      
+      const actividad = await this.findOne(id);
+      await actividad.update({ 
+        estado_realizado: 'rechazada',
+        comentarios_revision: razon,
+        fecha_revision: new Date()
+      });
+      
+      return {
+        message: 'Actividad rechazada exitosamente',
+        data: actividad
+      };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al rechazar la actividad');
+    }
+  }
 }
 
 export default ActividadService;

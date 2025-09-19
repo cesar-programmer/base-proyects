@@ -200,19 +200,9 @@ export const rechazarActividad = async (req, res, next) => {
 export const actualizarEstadoActividad = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { estado_realizado } = req.body;
+    const { estado } = req.body;
     
-    if (!estado_realizado) {
-      throw boom.badRequest('El estado es requerido');
-    }
-
-    // Validar que el estado sea válido
-    const estadosValidos = ['pendiente', 'aprobada', 'devuelta'];
-    if (!estadosValidos.includes(estado_realizado)) {
-      throw boom.badRequest('Estado no válido. Debe ser: pendiente, aprobada o devuelta');
-    }
-
-    const actividad = await actividadService.updateStatus(id, estado_realizado);
+    const actividad = await actividadService.updateStatus(id, estado);
     
     res.json({
       message: 'Estado de actividad actualizado exitosamente',
@@ -220,5 +210,30 @@ export const actualizarEstadoActividad = async (req, res, next) => {
     });
   } catch (error) {
     handleError(error, next);
+  }
+};
+
+// Obtener estadísticas de actividades
+export const getEstadisticasActividades = async (req, res, next) => {
+  try {
+    const estadisticas = await actividadService.getActivityStatsByStatus();
+    
+    res.json({
+      message: 'Estadísticas de actividades obtenidas exitosamente',
+      data: estadisticas
+    });
+  } catch (error) {
+    handleError(error, next);
+  }
+};
+
+// Obtener actividades pendientes de revisión para el dashboard
+export const getActividadesPendientesDashboard = async (req, res, next) => {
+  try {
+    const { limit = 5 } = req.query;
+    const actividades = await actividadService.getPendingActivitiesForDashboard(limit);
+    res.json(actividades);
+  } catch (error) {
+    next(error);
   }
 };

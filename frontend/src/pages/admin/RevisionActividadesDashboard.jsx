@@ -79,6 +79,133 @@ const TabsContent = ({ value, activeTab, children }) => {
   return <div>{children}</div>;
 };
 
+// Componente para mostrar las actividades registradas del profesor seleccionado
+const TeacherActivitiesTab = ({ selectedActivity }) => {
+  const [teacherActivities, setTeacherActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(false)
+
+  // Cargar actividades del profesor cuando se selecciona una actividad
+  useEffect(() => {
+    const loadTeacherActivities = async () => {
+      if (!selectedActivity?.usuario?.id) return
+      
+      setLoadingActivities(true)
+      try {
+          const response = await activityService.getActivitiesByTeacher(selectedActivity.usuario.id)
+        setTeacherActivities(response.data?.data || [])
+      } catch (error) {
+        console.error('Error al cargar actividades del profesor:', error)
+        toast.error('Error al cargar las actividades del profesor')
+        setTeacherActivities([])
+      } finally {
+        setLoadingActivities(false)
+      }
+    }
+
+    loadTeacherActivities()
+  }, [selectedActivity?.usuario?.id])
+
+  // Función para obtener el icono y estilo según el estado
+  const getActivityStatusIcon = (estado) => {
+    switch (estado) {
+      case 'aprobada':
+        return { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', border: 'border-l-green-500' }
+      case 'pendiente':
+        return { icon: AlertTriangle, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-l-yellow-500' }
+      case 'devuelta':
+        return { icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-l-red-500' }
+      default:
+        return { icon: Clock, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-l-gray-500' }
+    }
+  }
+
+  // Función para formatear fecha
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Sin fecha'
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+    } catch {
+      return 'Fecha inválida'
+    }
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg mt-4">
+      <div className="border-b border-gray-200 p-4">
+        <h3 className="text-lg font-semibold text-gray-900">Actividades Registradas</h3>
+        <p className="text-sm text-gray-600 mt-1">
+          {selectedActivity?.usuario?.nombre ? 
+            `Actividades de ${selectedActivity.usuario.nombre} ${selectedActivity.usuario.apellido || ''}` :
+            'Selecciona una actividad para ver las actividades del profesor'
+          }
+        </p>
+      </div>
+      <div className="p-4">
+        {loadingActivities ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <span className="ml-3 text-gray-600">Cargando actividades...</span>
+          </div>
+        ) : teacherActivities.length === 0 ? (
+          <div className="text-center py-8">
+            <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No hay actividades registradas</h4>
+            <p className="text-gray-500">
+              {selectedActivity?.usuario?.nombre ? 
+                'Este profesor no tiene actividades registradas aún.' :
+                'Selecciona una actividad para ver las actividades del profesor.'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {teacherActivities.map((activity) => {
+              const statusConfig = getActivityStatusIcon(activity.estado_realizado)
+              const StatusIcon = statusConfig.icon
+              
+              return (
+                <div 
+                  key={activity.id} 
+                  className={`flex items-center justify-between p-3 ${statusConfig.bg} rounded-lg border-l-4 ${statusConfig.border}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <StatusIcon className={`w-5 h-5 ${statusConfig.color}`} />
+                    <div>
+                      <span className="font-medium text-gray-900">{activity.titulo}</span>
+                      {activity.categoria && (
+                        <span className="ml-2 text-xs px-2 py-1 bg-white bg-opacity-50 rounded-full text-gray-700">
+                          {activity.categoria}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm text-gray-500 block">
+                      {formatDate(activity.fechaInicio || activity.createdAt)}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      activity.estado_realizado === 'aprobada' ? 'bg-green-100 text-green-800' :
+                      activity.estado_realizado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      activity.estado_realizado === 'devuelta' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {activity.estado_realizado || 'Sin estado'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+};
+
 export default function RevisionActividadesDashboard() {
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [reviewComment, setReviewComment] = useState("")
@@ -909,44 +1036,7 @@ export default function RevisionActividadesDashboard() {
                   </TabsList>
 
                   <TabsContent value="activities" activeTab={activeDetailTab}>
-                    <div className="bg-white border border-gray-200 rounded-lg mt-4">
-                      <div className="border-b border-gray-200 p-4">
-                        <h3 className="text-lg font-semibold text-gray-900">Actividades Registradas</h3>
-                      </div>
-                      <div className="p-4 space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border-l-4 border-l-green-500">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                            <span className="font-medium text-gray-900">Preparación de material didáctico</span>
-                          </div>
-                          <span className="text-sm text-gray-500">2023-05-10</span>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border-l-4 border-l-green-500">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                            <span className="font-medium text-gray-900">Asesoría a estudiantes</span>
-                          </div>
-                          <span className="text-sm text-gray-500">2023-05-12</span>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border-l-4 border-l-yellow-500">
-                          <div className="flex items-center gap-3">
-                            <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                            <span className="font-medium text-gray-900">Actualización de syllabus</span>
-                          </div>
-                          <span className="text-sm text-gray-500">2023-05-15</span>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-l-red-500">
-                          <div className="flex items-center gap-3">
-                            <XCircle className="w-5 h-5 text-red-600" />
-                            <span className="font-medium text-gray-900">Participación en comité académico</span>
-                          </div>
-                          <span className="text-sm text-gray-500">2023-05-20</span>
-                        </div>
-                      </div>
-                    </div>
+                    <TeacherActivitiesTab selectedActivity={selectedActivity} />
                   </TabsContent>
 
                   <TabsContent value="documents" activeTab={activeDetailTab}>

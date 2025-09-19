@@ -54,7 +54,7 @@ const activityService = {
   // Obtener actividades por docente
   getActivitiesByTeacher: async (docenteId) => {
     try {
-      const response = await api.get(`/actividades/docente/${docenteId}`);
+      const response = await api.get(`/actividades/usuario/${docenteId}`);
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener actividades del docente');
@@ -98,6 +98,26 @@ const activityService = {
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener estadísticas');
+    }
+  },
+
+  // Obtener estadísticas de actividades por estado para el dashboard
+  getActivityStatsByStatus: async () => {
+    try {
+      const response = await api.get('/actividades/estadisticas');
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener estadísticas por estado');
+    }
+  },
+
+  // Obtener actividades pendientes para el dashboard
+  getPendingActivitiesForDashboard: async (limit = 5) => {
+    try {
+      const response = await api.get(`/actividades/pendientes-dashboard?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener actividades pendientes');
     }
   },
 

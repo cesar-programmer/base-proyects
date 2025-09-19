@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
+import React, { useState, useEffect } from "react";
 import {
   ClipboardList,
   BarChart3,
@@ -13,6 +14,7 @@ import {
   RefreshCcw,
 } from "lucide-react"
 import { Link } from "react-router-dom"
+import activityService from "../../services/activityService"
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -34,35 +36,35 @@ const Card = ({ children, className, ...props }) => (
 );
 
 // Componente de tarjeta de sección administrativa
-const AdminSectionCard = ({ section }) => (
+const AdminSectionCard = ({ title, description, icon: Icon, buttonText, link, buttonAction }) => (
   <Card className="hover:shadow-xl transition-shadow duration-300 border-l-4 border-l-green-500">
     <div className="p-6 pb-3">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-green-100 rounded-lg">
-          <section.icon className="h-6 w-6 text-green-600" />
+          <Icon className="h-6 w-6 text-green-600" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-green-800">{section.title}</h3>
+          <h3 className="text-lg font-semibold text-green-800">{title}</h3>
         </div>
       </div>
-      <p className="text-sm text-gray-600 mt-2">{section.description}</p>
+      <p className="text-sm text-gray-600 mt-2">{description}</p>
     </div>
     
     <div className="px-6 pb-6">
-      {section.link ? (
-        <Link to={section.link}>
+      {link ? (
+        <Link to={link}>
           <Button
             className="w-full bg-green-600 hover:bg-green-700 text-white font-medium focus:ring-green-500"
           >
-            {section.buttonText}
+            {buttonText}
           </Button>
         </Link>
       ) : (
         <Button
-          onClick={section.buttonAction}
+          onClick={buttonAction}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-medium focus:ring-green-500"
         >
-          {section.buttonText}
+          {buttonText}
         </Button>
       )}
     </div>
@@ -111,7 +113,7 @@ const DashboardHeader = () => (
 );
 
 // Componente de sección de cumplimiento
-const ComplianceSection = () => (
+const ComplianceSection = ({ data = [] }) => (
   <Card>
     <div className="p-6 pb-6 border-b border-gray-200">
       <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
@@ -122,7 +124,7 @@ const ComplianceSection = () => (
     
     <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {complianceData.map((item, index) => (
+        {data.map((item, index) => (
           <ComplianceProgress key={index} item={item} />
         ))}
       </div>
@@ -131,7 +133,7 @@ const ComplianceSection = () => (
 );
 
 // Componente de sección de actividades pendientes
-const PendingActivitiesSection = () => (
+const PendingActivitiesSection = ({ activities = [] }) => (
   <Card>
     <div className="p-6 pb-6 border-b border-gray-200">
       <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
@@ -142,9 +144,15 @@ const PendingActivitiesSection = () => (
     
     <div className="p-6">
       <div className="space-y-4">
-        {pendingActivities.map((activity, index) => (
-          <PendingActivityItem key={index} activity={activity} />
-        ))}
+        {activities.length > 0 ? (
+          activities.map((activity, index) => (
+            <PendingActivityItem key={index} activity={activity} />
+          ))
+        ) : (
+          <div className="text-center text-gray-500 py-4">
+            No hay actividades pendientes de revisión
+          </div>
+        )}
       </div>
     </div>
   </Card>
@@ -158,43 +166,6 @@ const DashboardFooter = () => (
     </p>
   </div>
 );
-
-// Datos estáticos
-const complianceData = [
-  { 
-    label: "Actividades Completadas", 
-    percentage: 85, 
-    color: "bg-green-500", 
-    textColor: "text-green-600" 
-  },
-  { 
-    label: "Actividades Pendientes", 
-    percentage: 10, 
-    color: "bg-orange-500", 
-    textColor: "text-orange-600" 
-  },
-  { 
-    label: "Actividades Atrasadas", 
-    percentage: 5, 
-    color: "bg-red-500", 
-    textColor: "text-red-600" 
-  },
-];
-
-const pendingActivities = [
-  { 
-    name: "Dr. Juan Pérez", 
-    activity: "Reporte de Investigación" 
-  },
-  { 
-    name: "Dra. María González", 
-    activity: "Actividades de Tutoría" 
-  },
-  { 
-    name: "Mtro. Carlos Rodríguez", 
-    activity: "Informe de Gestión Académica" 
-  },
-];
 
 const adminSections = [
   {
@@ -249,19 +220,107 @@ const adminSections = [
 
 // Componente principal
 export default function AdminDashboard() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <DashboardHeader />
+  const [complianceData, setComplianceData] = useState([]);
+  const [pendingActivities, setPendingActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // Obtener estadísticas de actividades
+        const statsResponse = await activityService.getActivityStatsByStatus();
+        
+        // Transformar datos para el componente de compliance
+        const transformedComplianceData = [
+          { 
+            label: "Actividades Completadas", 
+            percentage: statsResponse.porcentajes?.completadas || 0, 
+            color: "bg-green-500", 
+            textColor: "text-green-600",
+            count: statsResponse.completadas || 0
+          },
+          { 
+            label: "Actividades Pendientes", 
+            percentage: statsResponse.porcentajes?.pendientes || 0, 
+            color: "bg-orange-500", 
+            textColor: "text-orange-600",
+            count: statsResponse.pendientes || 0
+          },
+          { 
+            label: "Actividades Atrasadas", 
+            percentage: statsResponse.porcentajes?.atrasadas || 0, 
+            color: "bg-red-500", 
+            textColor: "text-red-600",
+            count: statsResponse.atrasadas || 0
+          },
+        ];
+        
+        setComplianceData(transformedComplianceData);
+        
+        // Obtener actividades pendientes de revisión
+        const pendingResponse = await activityService.getPendingActivitiesForDashboard(5);
+        setPendingActivities(pendingResponse);
+        
+      } catch (err) {
+        console.error('Error al cargar datos del dashboard:', err);
+        setError('Error al cargar los datos del dashboard');
+        
+        // Datos de fallback en caso de error
+        setComplianceData([
+          { label: "Actividades Completadas", percentage: 0, color: "bg-green-500", textColor: "text-green-600", count: 0 },
+          { label: "Actividades Pendientes", percentage: 0, color: "bg-orange-500", textColor: "text-orange-600", count: 0 },
+          { label: "Actividades Atrasadas", percentage: 0, color: "bg-red-500", textColor: "text-red-600", count: 0 },
+        ]);
+        setPendingActivities([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-gray-600">Cargando dashboard...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <DashboardHeader />
+        
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <ComplianceSection data={complianceData} />
+          </div>
+          <div>
+            <PendingActivitiesSection activities={pendingActivities} />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {adminSections.map((section, index) => (
-            <AdminSectionCard key={index} section={section} />
+            <AdminSectionCard key={index} {...section} />
           ))}
         </div>
-
-        <ComplianceSection />
-        <PendingActivitiesSection />
+        
         <DashboardFooter />
       </div>
     </div>

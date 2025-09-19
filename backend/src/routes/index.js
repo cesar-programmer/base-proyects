@@ -3,6 +3,7 @@ import express from 'express';
 // Importar todas las rutas disponibles
 import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
+import roleRoutes from './role.routes.js';
 import reporteRoutes from './reporte.routes.js';
 import filesRoutes from './files.routes.js';
 import permisoRoutes from './permiso.routes.js';
@@ -22,6 +23,7 @@ function routerApi(app) {
   // Configurar todas las rutas disponibles
   router.use('/auth', authRoutes);
   router.use('/users', userRoutes);
+  router.use('/roles', roleRoutes);
   router.use('/reportes', reporteRoutes);
   router.use('/files', filesRoutes);
   router.use('/permisos', permisoRoutes);

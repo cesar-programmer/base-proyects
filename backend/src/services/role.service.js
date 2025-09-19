@@ -10,7 +10,7 @@ class RoleService {
           {
             model: models.Permiso,
             as: 'permisos',
-            attributes: ['id_permiso', 'nombre', 'descripcion']
+            attributes: ['id', 'nombre', 'descripcion']
           }
         ]
       });
@@ -28,12 +28,12 @@ class RoleService {
           {
             model: models.Permiso,
             as: 'permisos',
-            attributes: ['id_permiso', 'nombre', 'descripcion']
+            attributes: ['id', 'nombre', 'descripcion']
           },
           {
             model: models.User,
             as: 'usuarios',
-            attributes: ['id_usuario', 'nombre_completo', 'email', 'activo']
+            attributes: ['id', 'nombre', 'apellido', 'email', 'activo']
           }
         ]
       });
@@ -81,7 +81,7 @@ class RoleService {
       
       // Verificar si hay usuarios usando este rol
       const usersWithRole = await models.User.count({
-        where: { id_rol: id }
+        where: { rolId: id }
       });
 
       if (usersWithRole > 0) {

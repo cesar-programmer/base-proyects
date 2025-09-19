@@ -1,14 +1,13 @@
 import { Model, DataTypes } from 'sequelize';
 
-const PERMISOS_TABLE = 'permisos';
+const PERMISOS_TABLE = 'Permisos';
 
 const PermisoSchema = {
-  id_permiso: {
+  id: {
     allowNull: false,
     autoIncrement: true,
     primaryKey: true,
-    type: DataTypes.INTEGER,
-    field: 'id_permiso'
+    type: DataTypes.INTEGER
   },
   nombre: {
     allowNull: false,
@@ -19,6 +18,29 @@ const PermisoSchema = {
   descripcion: {
     allowNull: true,
     type: DataTypes.TEXT
+  },
+  modulo: {
+    allowNull: false,
+    type: DataTypes.STRING(50)
+  },
+  accion: {
+    allowNull: false,
+    type: DataTypes.STRING(50)
+  },
+  activo: {
+    allowNull: false,
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  createdAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    allowNull: false,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
 };
 
@@ -27,9 +49,9 @@ class Permiso extends Model {
     // Un permiso puede pertenecer a muchos roles (N:M)
     this.belongsToMany(models.Role, {
       as: 'roles',
-      through: 'rol_permiso',
-      foreignKey: 'id_permiso',
-      otherKey: 'id_rol'
+      through: 'RolPermisos',
+      foreignKey: 'permisoId',
+      otherKey: 'rolId'
     });
   }
 
@@ -38,7 +60,7 @@ class Permiso extends Model {
       sequelize,
       tableName: PERMISOS_TABLE,
       modelName: 'Permiso',
-      timestamps: false,
+      timestamps: true,
       comment: 'Catálogo de permisos específicos.'
     };
   }

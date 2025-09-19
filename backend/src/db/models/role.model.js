@@ -47,9 +47,9 @@ class Role extends Model {
     // Un rol puede tener muchos permisos (N:M)
     this.belongsToMany(models.Permiso, {
       as: 'permisos',
-      through: 'rol_permiso',
-      foreignKey: 'id_rol',
-      otherKey: 'id_permiso'
+      through: 'RolPermisos',
+      foreignKey: 'rolId',
+      otherKey: 'permisoId'
     });
   }
 

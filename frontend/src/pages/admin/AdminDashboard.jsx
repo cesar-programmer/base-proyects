@@ -105,11 +105,23 @@ const PendingActivityItem = ({ activity }) => (
 );
 
 // Componente de encabezado del dashboard
-const DashboardHeader = () => (
-  <div className="text-center">
-    <h1 className="text-3xl font-bold text-green-800 mb-2">
-      Panel de Control del Administrador
-    </h1>
+const DashboardHeader = ({ onRefresh, isRefreshing }) => (
+  <div className="flex items-center justify-between mb-6">
+    <div className="text-center flex-1">
+      <h1 className="text-3xl font-bold text-green-800 mb-2">
+        Panel de Control del Administrador
+      </h1>
+    </div>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={onRefresh}
+        disabled={isRefreshing}
+        className="bg-green-600 hover:bg-green-700 text-white font-medium focus:ring-green-500 flex items-center gap-2"
+      >
+        <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        {isRefreshing ? 'Actualizando...' : 'Refrescar Datos'}
+      </Button>
+    </div>
   </div>
 );
 
@@ -225,92 +237,93 @@ export default function AdminDashboard() {
   const [pendingActivities, setPendingActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Usar StatsContext
-  const { stats: contextStats, loading: contextLoading, error: contextError } = useStats();
+  const { stats, loading: statsLoading, error: statsError, fetchStats } = useStats();
+
+  const fetchDashboardData = async (isManualRefresh = false) => {
+    console.log('🚀 AdminDashboard: Iniciando fetchDashboardData...');
+    
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+    
+    try {
+      // Obtener estadísticas de actividades por estado
+      console.log('📊 AdminDashboard: Obteniendo estadísticas...');
+      const statsResponse = await activityService.getActivityStatsByStatus();
+      console.log('📊 AdminDashboard: statsResponse final:', statsResponse);
+      
+      // También actualizar el contexto
+      fetchStats();
+      
+      // Transformar datos para el componente de compliance
+      const statsData = statsResponse?.data || statsResponse;
+      const transformedComplianceData = [
+        { 
+          label: "Actividades Completadas", 
+          percentage: statsData?.porcentajes?.completadas || 0, 
+          color: "bg-green-500", 
+          textColor: "text-green-600",
+          count: statsData?.completadas || 0
+        },
+        { 
+          label: "Actividades Pendientes", 
+          percentage: statsData?.porcentajes?.pendientes || 0, 
+          color: "bg-orange-500", 
+          textColor: "text-orange-600",
+          count: statsData?.pendientes || 0
+        },
+        { 
+          label: "Actividades Atrasadas", 
+          percentage: statsData?.porcentajes?.atrasadas || 0, 
+          color: "bg-red-500", 
+          textColor: "text-red-600",
+          count: statsData?.atrasadas || 0
+        },
+      ];
+      
+      console.log('📈 AdminDashboard: transformedComplianceData:', transformedComplianceData);
+      setComplianceData(transformedComplianceData);
+      
+      // Obtener actividades pendientes de revisión
+      console.log('📋 AdminDashboard: Obteniendo actividades pendientes...');
+      const pendingResponse = await activityService.getPendingActivitiesForDashboard(5);
+      console.log('📋 AdminDashboard: Actividades pendientes:', pendingResponse);
+      setPendingActivities(pendingResponse);
+      
+    } catch (err) {
+      console.error('❌ AdminDashboard: Error al cargar datos del dashboard:', err);
+      setError('Error al cargar los datos del dashboard');
+      
+      // Datos de fallback en caso de error
+      setComplianceData([
+        { label: "Actividades Completadas", percentage: 0, color: "bg-green-500", textColor: "text-green-600", count: 0 },
+        { label: "Actividades Pendientes", percentage: 0, color: "bg-orange-500", textColor: "text-orange-600", count: 0 },
+        { label: "Actividades Atrasadas", percentage: 0, color: "bg-red-500", textColor: "text-red-600", count: 0 },
+      ]);
+      setPendingActivities([]);
+    } finally {
+      if (isManualRefresh) {
+        setIsRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+      console.log('🏁 AdminDashboard: fetchDashboardData completado');
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchDashboardData(true);
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        console.log('🔄 AdminDashboard: Iniciando fetchDashboardData...');
-        console.log('📊 AdminDashboard: contextStats disponible:', !!contextStats);
-        console.log('📊 AdminDashboard: contextLoading:', contextLoading);
-        console.log('📊 AdminDashboard: contextError:', contextError);
-        
-        let statsResponse;
-        
-        // Intentar usar datos del contexto primero
-        if (contextStats && !contextLoading && !contextError) {
-          console.log('✅ AdminDashboard: Usando datos del contexto');
-          console.log('📋 AdminDashboard: contextStats:', contextStats);
-          statsResponse = contextStats;
-        } else {
-          console.log('⚠️ AdminDashboard: Contexto no disponible, usando llamada directa');
-          // Fallback: llamada directa al servicio
-          const directResponse = await activityService.getActivityStatsByStatus();
-          console.log('📡 AdminDashboard: Respuesta directa:', directResponse);
-          statsResponse = directResponse.data || directResponse;
-        }
-        
-        console.log('📊 AdminDashboard: statsResponse final:', statsResponse);
-        console.log('📊 AdminDashboard: porcentajes:', statsResponse?.porcentajes);
-        console.log('📊 AdminDashboard: conteos:', statsResponse?.conteos);
-        
-        // Transformar datos para el componente de compliance
-        const transformedComplianceData = [
-          { 
-            label: "Actividades Completadas", 
-            percentage: statsResponse?.porcentajes?.completadas || 0, 
-            color: "bg-green-500", 
-            textColor: "text-green-600",
-            count: statsResponse?.conteos?.completadas || 0
-          },
-          { 
-            label: "Actividades Pendientes", 
-            percentage: statsResponse?.porcentajes?.pendientes || 0, 
-            color: "bg-orange-500", 
-            textColor: "text-orange-600",
-            count: statsResponse?.conteos?.pendientes || 0
-          },
-          { 
-            label: "Actividades Atrasadas", 
-            percentage: statsResponse?.porcentajes?.atrasadas || 0, 
-            color: "bg-red-500", 
-            textColor: "text-red-600",
-            count: statsResponse?.conteos?.atrasadas || 0
-          },
-        ];
-        
-        console.log('📈 AdminDashboard: transformedComplianceData:', transformedComplianceData);
-        setComplianceData(transformedComplianceData);
-        
-        // Obtener actividades pendientes de revisión
-        console.log('📋 AdminDashboard: Obteniendo actividades pendientes...');
-        const pendingResponse = await activityService.getPendingActivitiesForDashboard(5);
-        console.log('📋 AdminDashboard: Actividades pendientes:', pendingResponse);
-        setPendingActivities(pendingResponse);
-        
-      } catch (err) {
-        console.error('❌ AdminDashboard: Error al cargar datos del dashboard:', err);
-        setError('Error al cargar los datos del dashboard');
-        
-        // Datos de fallback en caso de error
-        setComplianceData([
-          { label: "Actividades Completadas", percentage: 0, color: "bg-green-500", textColor: "text-green-600", count: 0 },
-          { label: "Actividades Pendientes", percentage: 0, color: "bg-orange-500", textColor: "text-orange-600", count: 0 },
-          { label: "Actividades Atrasadas", percentage: 0, color: "bg-red-500", textColor: "text-red-600", count: 0 },
-        ]);
-        setPendingActivities([]);
-      } finally {
-        setLoading(false);
-        console.log('🏁 AdminDashboard: fetchDashboardData completado');
-      }
-    };
-
     fetchDashboardData();
-  }, [contextStats, contextLoading, contextError]);
+  }, []);
 
   if (loading) {
     return (
@@ -327,7 +340,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <DashboardHeader />
+        <DashboardHeader onRefresh={handleRefresh} isRefreshing={isRefreshing} />
         
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">

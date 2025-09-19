@@ -42,7 +42,7 @@ const authLimiter = rateLimit({
 // Rate limiting general
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por IP
+  max: 1000, // máximo 1000 requests por IP (aumentado para desarrollo)
   message: {
     error: 'Demasiadas solicitudes. Intenta de nuevo más tarde.'
   },

@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import activityService from "../../services/activityService"
+import { useStats } from "../../context/StatsContext"
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -224,48 +225,75 @@ export default function AdminDashboard() {
   const [pendingActivities, setPendingActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Usar StatsContext
+  const { stats: contextStats, loading: contextLoading, error: contextError } = useStats();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
-        // Obtener estadísticas de actividades
-        const statsResponse = await activityService.getActivityStatsByStatus();
+        console.log('🔄 AdminDashboard: Iniciando fetchDashboardData...');
+        console.log('📊 AdminDashboard: contextStats disponible:', !!contextStats);
+        console.log('📊 AdminDashboard: contextLoading:', contextLoading);
+        console.log('📊 AdminDashboard: contextError:', contextError);
+        
+        let statsResponse;
+        
+        // Intentar usar datos del contexto primero
+        if (contextStats && !contextLoading && !contextError) {
+          console.log('✅ AdminDashboard: Usando datos del contexto');
+          console.log('📋 AdminDashboard: contextStats:', contextStats);
+          statsResponse = contextStats;
+        } else {
+          console.log('⚠️ AdminDashboard: Contexto no disponible, usando llamada directa');
+          // Fallback: llamada directa al servicio
+          const directResponse = await activityService.getActivityStatsByStatus();
+          console.log('📡 AdminDashboard: Respuesta directa:', directResponse);
+          statsResponse = directResponse.data || directResponse;
+        }
+        
+        console.log('📊 AdminDashboard: statsResponse final:', statsResponse);
+        console.log('📊 AdminDashboard: porcentajes:', statsResponse?.porcentajes);
+        console.log('📊 AdminDashboard: conteos:', statsResponse?.conteos);
         
         // Transformar datos para el componente de compliance
         const transformedComplianceData = [
           { 
             label: "Actividades Completadas", 
-            percentage: statsResponse.porcentajes?.completadas || 0, 
+            percentage: statsResponse?.porcentajes?.completadas || 0, 
             color: "bg-green-500", 
             textColor: "text-green-600",
-            count: statsResponse.completadas || 0
+            count: statsResponse?.conteos?.completadas || 0
           },
           { 
             label: "Actividades Pendientes", 
-            percentage: statsResponse.porcentajes?.pendientes || 0, 
+            percentage: statsResponse?.porcentajes?.pendientes || 0, 
             color: "bg-orange-500", 
             textColor: "text-orange-600",
-            count: statsResponse.pendientes || 0
+            count: statsResponse?.conteos?.pendientes || 0
           },
           { 
             label: "Actividades Atrasadas", 
-            percentage: statsResponse.porcentajes?.atrasadas || 0, 
+            percentage: statsResponse?.porcentajes?.atrasadas || 0, 
             color: "bg-red-500", 
             textColor: "text-red-600",
-            count: statsResponse.atrasadas || 0
+            count: statsResponse?.conteos?.atrasadas || 0
           },
         ];
         
+        console.log('📈 AdminDashboard: transformedComplianceData:', transformedComplianceData);
         setComplianceData(transformedComplianceData);
         
         // Obtener actividades pendientes de revisión
+        console.log('📋 AdminDashboard: Obteniendo actividades pendientes...');
         const pendingResponse = await activityService.getPendingActivitiesForDashboard(5);
+        console.log('📋 AdminDashboard: Actividades pendientes:', pendingResponse);
         setPendingActivities(pendingResponse);
         
       } catch (err) {
-        console.error('Error al cargar datos del dashboard:', err);
+        console.error('❌ AdminDashboard: Error al cargar datos del dashboard:', err);
         setError('Error al cargar los datos del dashboard');
         
         // Datos de fallback en caso de error
@@ -277,11 +305,12 @@ export default function AdminDashboard() {
         setPendingActivities([]);
       } finally {
         setLoading(false);
+        console.log('🏁 AdminDashboard: fetchDashboardData completado');
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [contextStats, contextLoading, contextError]);
 
   if (loading) {
     return (

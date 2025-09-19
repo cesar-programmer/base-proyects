@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
+import path from 'path';
 import routerApi from './routes/index.js';
 import { logErrors, errorHandler, boomErrorHandler, queryErrorHandler } from './middleware/error.handler.js';
 import { generalSecurityMiddleware, securityHeaders } from './config/security.js';
@@ -18,6 +19,9 @@ app.use(securityHeaders);
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Servir archivos estáticos desde la carpeta uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Ruta de salud
 app.get('/health', (req, res) => {

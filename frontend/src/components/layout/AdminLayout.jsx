@@ -6,11 +6,11 @@ import { Outlet } from "react-router-dom";
 
 export default function AdminLayout({ children }) {
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <AdminNavbar />
-      <div className="p-4">
+      <main className="flex-1">
         <Outlet />
-      </div>
+      </main>
     </div>
   )
 }

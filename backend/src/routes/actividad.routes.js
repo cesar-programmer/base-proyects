@@ -8,7 +8,8 @@ import {
   updateActividad,
   deleteActividad,
   aprobarActividad,
-  rechazarActividad
+  rechazarActividad,
+  actualizarEstadoActividad
 } from '../controllers/actividad.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { validateActividad } from '../middleware/validation.middleware.js';
@@ -27,6 +28,7 @@ router.post('/', validateActividad, createActividad);
 router.put('/:id', validateActividad, updateActividad);
 router.patch('/:id/aprobar', aprobarActividad);
 router.patch('/:id/rechazar', rechazarActividad);
+router.patch('/:id/estado', actualizarEstadoActividad);
 router.delete('/:id', deleteActividad);
 
 export default router;

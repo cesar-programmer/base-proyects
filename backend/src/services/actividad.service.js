@@ -250,18 +250,35 @@ class ActividadService {
       
       const actividad = await this.findOne(id);
       await actividad.update({ 
-        estado_realizado: 'rechazada',
+        estado_realizado: 'devuelta',
         comentarios_revision: razon,
         fecha_revision: new Date()
       });
       
       return {
-        message: 'Actividad rechazada exitosamente',
+        message: 'Actividad devuelta exitosamente',
         data: actividad
       };
     } catch (error) {
       if (boom.isBoom(error)) throw error;
-      throw boom.internal('Error al rechazar la actividad');
+      throw boom.internal('Error al devolver la actividad');
+    }
+  }
+
+  // Actualizar estado de actividad
+  async updateStatus(id, nuevoEstado) {
+    try {
+      const actividad = await this.findOne(id);
+      
+      await actividad.update({ 
+        estado_realizado: nuevoEstado,
+        fecha_revision: new Date()
+      });
+      
+      return actividad;
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al actualizar el estado de la actividad');
     }
   }
 }

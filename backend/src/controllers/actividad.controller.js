@@ -163,11 +163,12 @@ export const deleteActividad = async (req, res, next) => {
 export const aprobarActividad = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const actividad = await actividadService.approve(id, req.user.id);
+    const { comentarios } = req.body;
+    const result = await actividadService.approve(id, comentarios || '');
     
     res.json({
       message: 'Actividad aprobada exitosamente',
-      data: actividad
+      data: result.data
     });
   } catch (error) {
     handleError(error, next);
@@ -179,10 +180,42 @@ export const rechazarActividad = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
-    const actividad = await actividadService.reject(id, req.user.id, motivo);
+    
+    if (!motivo) {
+      throw boom.badRequest('El motivo es requerido para rechazar la actividad');
+    }
+
+    const result = await actividadService.reject(id, motivo);
     
     res.json({
       message: 'Actividad rechazada exitosamente',
+      data: result.data
+    });
+  } catch (error) {
+    handleError(error, next);
+  }
+};
+
+// Actualizar estado de actividad
+export const actualizarEstadoActividad = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { estado_realizado } = req.body;
+    
+    if (!estado_realizado) {
+      throw boom.badRequest('El estado es requerido');
+    }
+
+    // Validar que el estado sea válido
+    const estadosValidos = ['pendiente', 'aprobada', 'devuelta'];
+    if (!estadosValidos.includes(estado_realizado)) {
+      throw boom.badRequest('Estado no válido. Debe ser: pendiente, aprobada o devuelta');
+    }
+
+    const actividad = await actividadService.updateStatus(id, estado_realizado);
+    
+    res.json({
+      message: 'Estado de actividad actualizado exitosamente',
       data: actividad
     });
   } catch (error) {

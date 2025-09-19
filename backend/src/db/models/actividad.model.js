@@ -69,7 +69,7 @@ const ActividadSchema = {
   },
   estado_realizado: {
     allowNull: true,
-    type: DataTypes.ENUM('pendiente', 'aprobada', 'rechazada'),
+    type: DataTypes.ENUM('pendiente', 'aprobada', 'devuelta'),
     defaultValue: 'pendiente',
     field: 'estado_realizado'
   },

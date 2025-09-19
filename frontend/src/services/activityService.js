@@ -99,6 +99,36 @@ const activityService = {
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener estadísticas');
     }
+  },
+
+  // Aprobar actividad
+  approveActivity: async (id, comentarios = '') => {
+    try {
+      const response = await api.patch(`/actividades/${id}/aprobar`, { comentarios });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al aprobar actividad');
+    }
+  },
+
+  // Rechazar actividad
+  rejectActivity: async (id, motivo) => {
+    try {
+      const response = await api.patch(`/actividades/${id}/rechazar`, { motivo });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al rechazar actividad');
+    }
+  },
+
+  // Actualizar estado de actividad
+  updateActivityStatus: async (id, nuevoEstado) => {
+    try {
+      const response = await api.patch(`/actividades/${id}/estado`, { estado_realizado: nuevoEstado });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al actualizar estado de actividad');
+    }
   }
 };
 

@@ -149,6 +149,16 @@ const activityService = {
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al actualizar estado de actividad');
     }
+  },
+
+  // Cambiar actividad a estado pendiente
+  setPendingActivity: async (id) => {
+    try {
+      const response = await api.patch(`/actividades/${id}/estado`, { estado_realizado: 'pendiente' });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al cambiar actividad a pendiente');
+    }
   }
 };
 

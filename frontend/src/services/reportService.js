@@ -86,7 +86,7 @@ const reportService = {
     try {
       const response = await api.patch(`/reportes/${id}/estado`, { 
         estado: nuevoEstado,
-        comentarios 
+        comentariosRevision: comentarios 
       });
       return response.data;
     } catch (error) {
@@ -97,7 +97,7 @@ const reportService = {
   // Aprobar reporte
   approveReport: async (id, comentarios = '') => {
     try {
-      const response = await api.patch(`/reportes/${id}/aprobar`, { comentarios });
+      const response = await api.patch(`/reportes/${id}/aprobar`, { comentariosRevision: comentarios });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al aprobar reporte');
@@ -107,7 +107,7 @@ const reportService = {
   // Rechazar reporte
   rejectReport: async (id, comentarios) => {
     try {
-      const response = await api.patch(`/reportes/${id}/rechazar`, { comentarios });
+      const response = await api.patch(`/reportes/${id}/rechazar`, { comentariosRevision: comentarios });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al rechazar reporte');

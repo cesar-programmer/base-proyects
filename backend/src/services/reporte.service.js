@@ -208,7 +208,7 @@ class ReporteService {
       // Actualizar estado
       await reporte.update({ 
         estado: newStatus,
-        observaciones_admin: observaciones || reporte.observaciones_admin
+        comentariosRevision: observaciones || reporte.comentariosRevision
       });
 
       // Registrar cambio en historial

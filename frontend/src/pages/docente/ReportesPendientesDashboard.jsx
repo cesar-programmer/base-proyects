@@ -524,9 +524,9 @@ function ReportDetailDialog({
                   <h3 className="text-lg font-semibold text-gray-900">Observaciones del Administrador</h3>
                 </div>
                 <div className="p-6">
-                  {report.observacionesAdmin ? (
+                  {report.comentariosRevision ? (
                     <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
-                      <p className="text-sm text-red-800">{report.observacionesAdmin}</p>
+                      <p className="text-sm text-red-800">{report.comentariosRevision}</p>
                     </div>
                   ) : (
                     <p className="text-gray-500">Sin observaciones del administrador.</p>
@@ -613,7 +613,7 @@ export default function PendingReports() {
       ultimaActualizacion: "18 de Junio",
       semestre: semestreActual,
       resumen: "Actividades de clase, evaluaciones y desarrollo de materiales didácticos.",
-      observacionesAdmin: "Agregar evidencias de evaluaciones de la unidad 2 y actualizar horas frente a grupo.",
+      comentariosRevision: "Agregar evidencias de evaluaciones de la unidad 2 y actualizar horas frente a grupo.",
       actividades: [
         { id: "a5", titulo: "Preparación de material didáctico", estado: "Completada", fecha: "2025-06-05" },
         { id: "a6", titulo: "Evaluación parcial", estado: "En Progreso", fecha: "2025-06-21" },
@@ -929,9 +929,9 @@ export default function PendingReports() {
           description="Atiende las observaciones del administrador, corrige y vuelve a enviar a revisión."
         >
           <div className="space-y-4">
-            {reporteSeleccionado?.observacionesAdmin && (
+            {reporteSeleccionado?.comentariosRevision && (
               <div className="p-3 bg-red-50 border border-red-100 rounded text-sm text-red-800">
-                Observaciones: {reporteSeleccionado.observacionesAdmin}
+                Observaciones: {reporteSeleccionado.comentariosRevision}
               </div>
             )}
             <div className="space-y-2">

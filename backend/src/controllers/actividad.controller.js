@@ -200,13 +200,13 @@ export const rechazarActividad = async (req, res, next) => {
 export const actualizarEstadoActividad = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body;
+    const { estado_realizado } = req.body;
     
-    const actividad = await actividadService.updateStatus(id, estado);
+    const result = await actividadService.updateRealizationStatus(id, estado_realizado);
     
     res.json({
-      message: 'Estado de actividad actualizado exitosamente',
-      data: actividad
+      message: 'Estado de realización actualizado exitosamente',
+      data: result
     });
   } catch (error) {
     handleError(error, next);

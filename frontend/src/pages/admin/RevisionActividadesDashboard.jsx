@@ -21,6 +21,7 @@ import {
   Bell,
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
+import { useStats } from '../../context/StatsContext'
 import activityService from '../../services/activityService'
 import { toast } from 'react-toastify'
 
@@ -235,6 +236,7 @@ export default function RevisionActividadesDashboard() {
   const [stats, setStats] = useState({ pending: 0, approved: 0, returned: 0 })
   
   const { user } = useAuth()
+  const { fetchStats } = useStats()
 
   // Función para calcular posición del dropdown
   const calculateDropdownPosition = (buttonElement) => {
@@ -331,8 +333,8 @@ export default function RevisionActividadesDashboard() {
     try {
       if (!selectedActivity) return
       
-      // Aquí iría la llamada a la API para aprobar el reporte
-      // await activityService.updateActivityStatus(selectedActivity.id, 'aprobada')
+      // Llamada a la API para aprobar el reporte
+      await activityService.approveActivity(selectedActivity.id, 'Reporte aprobado')
       
       // Actualizar el estado local
       setActivities(prev => prev.map(activity => 
@@ -342,6 +344,9 @@ export default function RevisionActividadesDashboard() {
       ))
       
       toast.success('Reporte aprobado exitosamente')
+      
+      // Actualizar estadísticas del dashboard principal
+      await fetchStats()
       
       // Cerrar modales después de mostrar el toast
       setTimeout(() => {
@@ -363,8 +368,8 @@ export default function RevisionActividadesDashboard() {
         return
       }
       
-      // Aquí iría la llamada a la API para solicitar revisión
-      // await activityService.requestRevision(selectedActivity.id, revisionComment)
+      // Llamada a la API para solicitar revisión (rechazar actividad)
+      await activityService.rejectActivity(selectedActivity.id, revisionComment)
       
       // Actualizar el estado local
       setActivities(prev => prev.map(activity => 
@@ -375,6 +380,9 @@ export default function RevisionActividadesDashboard() {
       
       toast.success('Solicitud de revisión enviada exitosamente')
       setRevisionComment('')
+      
+      // Actualizar estadísticas del dashboard principal
+      await fetchStats()
       
       // Cerrar modales después de mostrar el toast
       setTimeout(() => {
@@ -431,8 +439,8 @@ export default function RevisionActividadesDashboard() {
         return
       }
       
-      // Aquí iría la llamada a la API para devolver la actividad
-      // await activityService.returnActivity(selectedActivity.id, returnComment)
+      // Llamada a la API para devolver la actividad (rechazar actividad)
+      await activityService.rejectActivity(selectedActivity.id, returnComment)
       
       // Actualizar el estado local
       setActivities(prev => prev.map(activity => 
@@ -443,6 +451,9 @@ export default function RevisionActividadesDashboard() {
       
       toast.success('Actividad devuelta exitosamente')
       setReturnComment('')
+      
+      // Actualizar estadísticas del dashboard principal
+      await fetchStats()
       
       // Cerrar modales después de mostrar el toast
       setTimeout(() => {
@@ -489,6 +500,9 @@ export default function RevisionActividadesDashboard() {
       
       // Recargar actividades para obtener datos actualizados
       await loadActivities()
+      
+      // Actualizar estadísticas del dashboard principal
+      await fetchStats()
     } catch (error) {
       console.error('Error al revisar actividad:', error)
       toast.error('Error al procesar la revisión: ' + error.message)

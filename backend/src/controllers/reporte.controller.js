@@ -159,14 +159,14 @@ class ReporteController {
   async changeReporteStatus(req, res, next) {
     try {
       const { id } = req.params;
-      const { estado, observaciones_admin } = req.body;
+      const { estado, comentariosRevision } = req.body;
       
       // Solo administradores pueden cambiar el estado
       if (req.user.rol !== 'ADMINISTRADOR') {
         throw boom.forbidden('No tienes permisos para cambiar el estado del reporte');
       }
       
-      const updatedReporte = await reporteService.changeStatus(id, estado, observaciones_admin);
+      const updatedReporte = await reporteService.changeStatus(id, estado, comentariosRevision);
       
       res.json({
         message: 'Estado del reporte actualizado exitosamente',

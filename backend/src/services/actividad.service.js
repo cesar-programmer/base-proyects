@@ -316,23 +316,42 @@ class ActividadService {
   // Obtener estadísticas de actividades por estado
   async getActivityStatsByStatus() {
     try {
-      console.log('=== getActivityStatsByStatus - Usando datos estáticos ===');
+      console.log('=== getActivityStatsByStatus - Obteniendo datos reales ===');
       
-      // Datos estáticos que funcionaban correctamente
+      // Obtener estadísticas de reportes por estado
+      const reportesAprobados = await models.Reporte.count({
+        where: { estado: 'aprobado' }
+      });
+      
+      const reportesPendientes = await models.Reporte.count({
+        where: { estado: 'enviado' }
+      });
+      
+      const reportesDevueltos = await models.Reporte.count({
+        where: { estado: 'rechazado' }
+      });
+      
+      const totalReportes = await models.Reporte.count();
+      
+      // Calcular porcentajes
+      const porcentajeCompletadas = totalReportes > 0 ? Math.round((reportesAprobados / totalReportes) * 100) : 0;
+      const porcentajePendientes = totalReportes > 0 ? Math.round((reportesPendientes / totalReportes) * 100) : 0;
+      const porcentajeAtrasadas = totalReportes > 0 ? Math.round((reportesDevueltos / totalReportes) * 100) : 0;
+      
       const estadisticas = {
-        total: 150,
-        completadas: 45,
-        pendientes: 75,
-        atrasadas: 30,
-        pendientesRevision: 12,
+        total: totalReportes,
+        completadas: reportesAprobados,
+        pendientes: reportesPendientes,
+        atrasadas: reportesDevueltos,
+        pendientesRevision: reportesPendientes, // Los pendientes de revisión son los enviados
         porcentajes: {
-          completadas: 30,
-          pendientes: 50,
-          atrasadas: 20
+          completadas: porcentajeCompletadas,
+          pendientes: porcentajePendientes,
+          atrasadas: porcentajeAtrasadas
         }
       };
 
-      console.log('Estadísticas retornadas:', estadisticas);
+      console.log('Estadísticas reales obtenidas:', estadisticas);
       return estadisticas;
     } catch (error) {
       console.error('Error en getActivityStatsByStatus:', error);

@@ -142,6 +142,25 @@ const activityService = {
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al cambiar actividad a pendiente');
     }
+  },
+
+  // Obtener actividades devueltas para correcciones pendientes
+  getReturnedActivities: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.period) params.append('period', filters.period);
+      if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.append('dateTo', filters.dateTo);
+
+      const response = await api.get(`/actividades/devueltas?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener actividades devueltas');
+    }
   }
 };
 

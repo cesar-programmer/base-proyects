@@ -237,3 +237,26 @@ export const getActividadesPendientesDashboard = async (req, res, next) => {
     next(error);
   }
 };
+
+// Obtener actividades devueltas para correcciones pendientes
+export const getActividadesDevueltas = async (req, res, next) => {
+  try {
+    const filters = {
+      page: req.query.page || 1,
+      limit: req.query.limit || 10,
+      searchTerm: req.query.search || '',
+      period: req.query.period || '',
+      dateFrom: req.query.dateFrom || '',
+      dateTo: req.query.dateTo || ''
+    };
+
+    const result = await actividadService.getReturnedActivities(filters);
+    
+    res.json({
+      message: 'Actividades devueltas obtenidas exitosamente',
+      ...result
+    });
+  } catch (error) {
+    handleError(error, next);
+  }
+};

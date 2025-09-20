@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
+import React from "react"
 import { useState, useEffect } from "react"
 import {
   Search,
@@ -13,7 +14,12 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
+  Clock,
+  User,
+  Send,
+  History,
 } from "lucide-react"
+import activityService from "../../services/activityService"
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -377,6 +383,7 @@ const ReviewModal = ({
   onClose, 
   onApprove, 
   onReturn, 
+  onResendNotification,
   formatDate 
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title={`Revisar Reporte - ${selectedRecord?.teacherName}`}>
@@ -404,7 +411,62 @@ const ReviewModal = ({
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">Observaciones Originales</h3>
             <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm">
-              {selectedRecord.reportDetails.originalObservations}
+              {selectedRecord.reportDetails?.originalObservations || selectedRecord.observations}
+            </div>
+          </div>
+
+          {/* Historial de Seguimiento */}
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Historial de Seguimiento
+            </h3>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {/* Evento de devolución inicial */}
+              <div className="flex gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex-shrink-0">
+                  <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-red-800">Reporte Devuelto</span>
+                    <span className="text-xs text-red-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDate(selectedRecord.returnedDate)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-red-700">
+                    {selectedRecord.observations}
+                  </p>
+                  <div className="flex items-center gap-1 mt-2 text-xs text-red-600">
+                    <User className="w-3 h-3" />
+                    <span>Administrador</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Evento de envío original */}
+              <div className="flex gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex-shrink-0">
+                  <Send className="w-5 h-5 text-blue-600 mt-0.5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-blue-800">Reporte Enviado</span>
+                    <span className="text-xs text-blue-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDate(selectedRecord.reportDetails?.submittedDate || selectedRecord.fecha_envio)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Reporte inicial enviado para revisión
+                  </p>
+                  <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
+                    <User className="w-3 h-3" />
+                    <span>{selectedRecord.teacherName || selectedRecord.docente?.nombre}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -436,6 +498,20 @@ const ReviewModal = ({
           </div>
 
           <hr className="border-gray-200" />
+
+          {/* Quick Actions */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-gray-900 mb-3">Acciones Rápidas</h3>
+            <div className="flex gap-2">
+              <Button
+                 onClick={() => onResendNotification(selectedRecord)}
+                 className="flex items-center text-sm border border-gray-300 text-gray-700 hover:bg-gray-50"
+               >
+                <Send className="w-4 h-4 mr-2" />
+                Reenviar Notificación
+              </Button>
+            </div>
+          </div>
 
           {/* Review Actions */}
           <div className="space-y-4">
@@ -480,15 +556,40 @@ const ReviewModal = ({
             )}
 
             {reviewAction === "approve" && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="text-green-800 font-medium">
-                    El reporte será aprobado y marcado como completado
-                  </span>
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-green-800 font-medium">
+                      El reporte será aprobado y marcado como completado
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-gray-700">Comentarios de Aprobación (Opcional)</Label>
+                  <Textarea
+                    placeholder="Agregue comentarios adicionales sobre la aprobación..."
+                    value={reviewComments}
+                    onChange={(e) => setReviewComments(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
                 </div>
               </div>
             )}
+
+            {/* Comentarios Internos */}
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Notas Internas (Solo Administradores)
+              </h4>
+              <Textarea
+                placeholder="Agregue notas internas para el seguimiento administrativo..."
+                rows={2}
+                className="resize-none text-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -637,6 +738,7 @@ export default function CorreccionesDashboard() {
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   // Review modal state
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -646,16 +748,49 @@ export default function CorreccionesDashboard() {
 
   const { toast, ToastContainer } = useToast();
 
-  // Simulate loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setData(mockData);
-      setFilteredData(mockData);
-      setIsLoading(false);
-    }, 1500);
+  // Función para cargar datos reales
+  const loadReturnedActivities = async (filters = {}) => {
+    try {
+      setIsLoading(true);
+      const response = await activityService.getReturnedActivities({
+        page: currentPage,
+        limit: pageSize,
+        search: searchTerm,
+        period: selectedPeriod !== "all" ? selectedPeriod : undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        ...filters
+      });
 
-    return () => clearTimeout(timer);
-  }, []);
+      // El backend devuelve { message, data, pagination }
+      if (response.data && Array.isArray(response.data)) {
+        setData(response.data);
+        setFilteredData(response.data);
+        setTotalRecords(response.pagination?.totalItems || 0);
+      } else {
+        // Si no hay datos, establecer arrays vacíos
+        setData([]);
+        setFilteredData([]);
+        setTotalRecords(0);
+      }
+    } catch (error) {
+      console.error("Error loading returned activities:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las actividades devueltas",
+        type: "error"
+      });
+      setData([]);
+      setFilteredData([]);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReturnedActivities();
+  }, [currentPage, pageSize]);
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('es-ES', {
@@ -670,32 +805,8 @@ export default function CorreccionesDashboard() {
   };
 
   const handleApplyFilters = () => {
-    let filtered = data;
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (item) =>
-          item.teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.email.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-
-    if (selectedPeriod !== "all") {
-      filtered = filtered.filter((item) => item.period === selectedPeriod);
-    }
-
-    if (dateFrom) {
-      const fromDate = new Date(dateFrom);
-      filtered = filtered.filter((item) => item.returnedDate >= fromDate);
-    }
-
-    if (dateTo) {
-      const toDate = new Date(dateTo);
-      filtered = filtered.filter((item) => item.returnedDate <= toDate);
-    }
-
-    setFilteredData(filtered);
     setCurrentPage(1);
+    loadReturnedActivities();
   };
 
   const handleClearFilters = () => {
@@ -703,17 +814,31 @@ export default function CorreccionesDashboard() {
     setSelectedPeriod("all");
     setDateFrom("");
     setDateTo("");
-    setFilteredData(data);
     setCurrentPage(1);
+    loadReturnedActivities();
   };
 
   const handleRefresh = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setData(mockData);
-      setFilteredData(mockData);
-      setIsLoading(false);
-    }, 1000);
+    loadReturnedActivities();
+  };
+
+  const handleResendNotification = async (record) => {
+    try {
+      // Aquí se implementaría la lógica para reenviar notificación
+      // Por ahora simularemos el envío
+      toast({
+        title: "Notificación reenviada",
+        description: `Se ha reenviado la notificación a ${record.teacherName || record.docente?.nombre}`,
+        type: "success"
+      });
+    } catch (error) {
+      console.error("Error resending notification:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo reenviar la notificación",
+        type: "error"
+      });
+    }
   };
 
   const handleReviewClick = (record) => {
@@ -723,25 +848,47 @@ export default function CorreccionesDashboard() {
     setReviewComments("");
   };
 
-  const handleApproveReport = () => {
+  const handleApproveReport = async () => {
     if (!selectedRecord) return;
 
-    const updatedData = data.filter((item) => item.id !== selectedRecord.id);
-    setData(updatedData);
-    setFilteredData(filteredData.filter((item) => item.id !== selectedRecord.id));
-
-    setIsReviewModalOpen(false);
-    setSelectedRecord(null);
-    setReviewComments("");
-
-    toast({
-      title: "Reporte aprobado",
-      description: `El reporte de ${selectedRecord.teacherName} ha sido aprobado exitosamente.`,
-      type: "success"
-    });
+    try {
+      setIsLoading(true);
+      const response = await activityService.approveActivity(selectedRecord.id, reviewComments);
+      
+      // El backend devuelve { message, data }
+      if (response.message && response.data) {
+        setIsReviewModalOpen(false);
+        setSelectedRecord(null);
+        setReviewComments("");
+        
+        toast({
+          title: "Reporte aprobado",
+          description: `El reporte de ${selectedRecord.teacherName || selectedRecord.docente?.nombre} ha sido aprobado exitosamente.`,
+          type: "success"
+        });
+        
+        // Recargar datos
+        loadReturnedActivities();
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo aprobar el reporte",
+          type: "error"
+        });
+      }
+    } catch (error) {
+      console.error("Error approving report:", error);
+      toast({
+        title: "Error",
+        description: "Error al aprobar el reporte",
+        type: "error"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReturnReport = () => {
+  const handleReturnReport = async () => {
     if (!selectedRecord || !reviewComments.trim()) {
       toast({
         title: "Error",
@@ -751,29 +898,41 @@ export default function CorreccionesDashboard() {
       return;
     }
 
-    const updatedData = data.map((item) =>
-      item.id === selectedRecord.id
-        ? { ...item, observations: reviewComments, returnedDate: new Date() }
-        : item,
-    );
-    setData(updatedData);
-    setFilteredData(
-      filteredData.map((item) =>
-        item.id === selectedRecord.id
-          ? { ...item, observations: reviewComments, returnedDate: new Date() }
-          : item,
-      ),
-    );
-
-    setIsReviewModalOpen(false);
-    setSelectedRecord(null);
-    setReviewComments("");
-
-    toast({
-      title: "Reporte devuelto",
-      description: `El reporte de ${selectedRecord.teacherName} ha sido devuelto con nuevas observaciones.`,
-      type: "info"
-    });
+    try {
+      setIsLoading(true);
+      const response = await activityService.rejectActivity(selectedRecord.id, reviewComments);
+      
+      // El backend devuelve { message, data }
+      if (response.message && response.data) {
+        setIsReviewModalOpen(false);
+        setSelectedRecord(null);
+        setReviewComments("");
+        
+        toast({
+          title: "Reporte devuelto",
+          description: `El reporte de ${selectedRecord.teacherName || selectedRecord.docente?.nombre} ha sido devuelto con nuevas observaciones.`,
+          type: "info"
+        });
+        
+        // Recargar datos
+        loadReturnedActivities();
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo devolver el reporte",
+          type: "error"
+        });
+      }
+    } catch (error) {
+      console.error("Error returning report:", error);
+      toast({
+        title: "Error",
+        description: "Error al devolver el reporte",
+        type: "error"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleModalClose = () => {
@@ -782,10 +941,8 @@ export default function CorreccionesDashboard() {
     setReviewComments("");
   };
 
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const currentData = filteredData.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(totalRecords / pageSize);
+  const currentData = filteredData;
 
   return (
     <div className="container mx-auto p-6 space-y-6 max-w-7xl">
@@ -826,8 +983,11 @@ export default function CorreccionesDashboard() {
               currentPage={currentPage}
               totalPages={totalPages}
               pageSize={pageSize}
-              setPageSize={setPageSize}
-              filteredDataLength={filteredData.length}
+              setPageSize={(newSize) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+              filteredDataLength={totalRecords}
               onPrevPage={() => setCurrentPage(Math.max(1, currentPage - 1))}
               onNextPage={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             />
@@ -845,6 +1005,7 @@ export default function CorreccionesDashboard() {
         onClose={handleModalClose}
         onApprove={handleApproveReport}
         onReturn={handleReturnReport}
+        onResendNotification={handleResendNotification}
         formatDate={formatDate}
       />
     </div>

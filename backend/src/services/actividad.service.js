@@ -386,6 +386,110 @@ class ActividadService {
       throw boom.internal('Error al obtener actividades pendientes para el dashboard');
     }
   }
+
+  // Obtener actividades devueltas para correcciones pendientes
+  async getReturnedActivities(filters = {}) {
+    try {
+      const { 
+        page = 1, 
+        limit = 10, 
+        searchTerm = '', 
+        period = '', 
+        dateFrom = '', 
+        dateTo = '' 
+      } = filters;
+
+      const whereConditions = {
+        estado_realizado: 'devuelta'
+      };
+
+      // Construir condiciones de búsqueda
+      const includeConditions = [
+        {
+          model: models.User,
+          as: 'usuario',
+          attributes: ['id', 'nombre', 'apellido', 'email'],
+          where: searchTerm ? {
+            [models.Sequelize.Op.or]: [
+              { nombre: { [models.Sequelize.Op.like]: `%${searchTerm}%` } },
+              { apellido: { [models.Sequelize.Op.like]: `%${searchTerm}%` } },
+              { email: { [models.Sequelize.Op.like]: `%${searchTerm}%` } }
+            ]
+          } : {}
+        },
+        {
+          model: models.Reporte,
+          as: 'reportes',
+          attributes: ['id', 'titulo', 'estado', 'fechaEnvio', 'fechaRevision'],
+          required: false // LEFT JOIN para incluir actividades sin reportes
+        }
+      ];
+
+      // Filtros de fecha
+      if (dateFrom || dateTo) {
+        const dateConditions = {};
+        if (dateFrom) dateConditions[models.Sequelize.Op.gte] = new Date(dateFrom);
+        if (dateTo) dateConditions[models.Sequelize.Op.lte] = new Date(dateTo + ' 23:59:59');
+        
+        if (Object.keys(dateConditions).length > 0) {
+          whereConditions.fecha_revision = dateConditions;
+        }
+      }
+
+      // Calcular offset para paginación
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+
+      // Obtener actividades devueltas
+      const { count, rows: actividades } = await models.Actividad.findAndCountAll({
+        where: whereConditions,
+        include: includeConditions,
+        order: [['fecha_revision', 'DESC']],
+        limit: parseInt(limit),
+        offset: offset,
+        distinct: true
+      });
+
+      // Formatear datos para el frontend
+      const formattedActivities = actividades.map(actividad => {
+        const primerReporte = actividad.reportes && actividad.reportes.length > 0 ? actividad.reportes[0] : null;
+        
+        return {
+          id: actividad.id,
+          teacherName: `${actividad.usuario.nombre} ${actividad.usuario.apellido}`,
+          email: actividad.usuario.email,
+          period: 'N/A', // No hay campo semestre en el modelo actual
+          observations: actividad.comentarios_revision || 'Sin observaciones',
+          returnedDate: actividad.fecha_revision,
+          status: 'devuelto',
+          reportDetails: {
+            title: actividad.titulo,
+            submittedDate: primerReporte?.fechaEnvio || actividad.createdAt,
+            activities: [{
+              id: actividad.id,
+              name: actividad.titulo,
+              description: actividad.descripcion || 'Sin descripción',
+              status: actividad.estado_realizado === 'aprobada' ? 'completed' : 'incomplete',
+              evidence: actividad.evidencias || null
+            }],
+            originalObservations: actividad.comentarios_revision || 'Sin observaciones'
+          }
+        };
+      });
+
+      return {
+        data: formattedActivities,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(count / parseInt(limit)),
+          totalItems: count,
+          itemsPerPage: parseInt(limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error en getReturnedActivities:', error);
+      throw boom.internal('Error al obtener actividades devueltas');
+    }
+  }
 }
 
 export default ActividadService;

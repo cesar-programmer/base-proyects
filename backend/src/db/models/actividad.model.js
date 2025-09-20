@@ -110,6 +110,18 @@ class Actividad extends Model {
       as: 'periodoAcademico',
       foreignKey: 'periodoAcademicoId'
     });
+    
+    // Una actividad puede tener muchos reportes
+    this.hasMany(models.Reporte, {
+      as: 'reportes',
+      foreignKey: 'actividadId'
+    });
+    
+    // Una actividad puede tener muchos archivos
+    this.hasMany(models.Archivo, {
+      as: 'archivos',
+      foreignKey: 'actividadId'
+    });
   }
 
   static config(sequelize) {

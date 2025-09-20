@@ -11,7 +11,8 @@ import {
   rechazarActividad,
   actualizarEstadoActividad,
   getEstadisticasActividades,
-  getActividadesPendientesDashboard
+  getActividadesPendientesDashboard,
+  getActividadesDevueltas
 } from '../controllers/actividad.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { validateActividad } from '../middleware/validation.middleware.js';
@@ -25,6 +26,7 @@ router.use(verifyToken);
 router.get('/', getActividades);
 router.get('/estadisticas', getEstadisticasActividades);
 router.get('/pendientes-dashboard', getActividadesPendientesDashboard);
+router.get('/devueltas', getActividadesDevueltas);
 router.get('/usuario/:id_usuario', getActividadesByUsuario);
 router.get('/reporte/:id_reporte', getActividadesByReporte);
 router.get('/:id', getActividadById);

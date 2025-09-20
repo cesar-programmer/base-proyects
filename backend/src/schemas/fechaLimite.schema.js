@@ -7,34 +7,36 @@ const getFechaLimiteSchema = Joi.object({
 
 // Schema para crear fecha límite
 const createFechaLimiteSchema = Joi.object({
-  nombre: Joi.string().min(3).max(200).required(),
+  nombre: Joi.string().min(3).max(255).required(),
   descripcion: Joi.string().max(1000).allow('', null),
   fecha_limite: Joi.date().iso().required(),
-  tipo: Joi.string().valid(
-    'ENTREGA_REPORTE',
+  categoria: Joi.string().valid(
+    'REGISTRO',
+    'ENTREGA',
     'REVISION',
-    'APROBACION',
-    'PUBLICACION',
-    'OTRO'
+    'EVALUACION'
   ).required(),
-  activo: Joi.boolean().default(true),
-  notificar_dias_antes: Joi.number().integer().min(0).max(365).default(7)
+  id_periodo: Joi.number().integer().positive().required(),
+  semestre: Joi.string().max(10).allow('', null),
+  dias_recordatorio: Joi.number().integer().min(0).max(365).default(7),
+  activo: Joi.boolean().default(true)
 });
 
 // Schema para actualizar fecha límite
 const updateFechaLimiteSchema = Joi.object({
-  nombre: Joi.string().min(3).max(200),
+  nombre: Joi.string().min(3).max(255),
   descripcion: Joi.string().max(1000).allow('', null),
   fecha_limite: Joi.date().iso(),
-  tipo: Joi.string().valid(
-    'ENTREGA_REPORTE',
+  categoria: Joi.string().valid(
+    'REGISTRO',
+    'ENTREGA',
     'REVISION',
-    'APROBACION',
-    'PUBLICACION',
-    'OTRO'
+    'EVALUACION'
   ),
-  activo: Joi.boolean(),
-  notificar_dias_antes: Joi.number().integer().min(0).max(365)
+  id_periodo: Joi.number().integer().positive(),
+  semestre: Joi.string().max(10).allow('', null),
+  dias_recordatorio: Joi.number().integer().min(0).max(365),
+  activo: Joi.boolean()
 }).min(1); // Al menos un campo debe estar presente
 
 export {

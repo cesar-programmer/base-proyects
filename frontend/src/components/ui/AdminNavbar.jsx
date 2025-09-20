@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, User, LogOut } from "lucide-react";
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import NotificacionesPanel from '../NotificacionesPanel';
 
 export default function AdminNavbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -73,6 +74,7 @@ export default function AdminNavbar() {
             >
               Correcciones
             </NavLink>
+            <NotificacionesPanel />
             <div className="flex items-center space-x-2 text-sm font-medium">
               <User className="w-4 h-4" />
               <span>{user?.nombre || 'Administrador'}</span>

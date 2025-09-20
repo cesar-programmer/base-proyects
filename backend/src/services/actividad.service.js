@@ -316,34 +316,34 @@ class ActividadService {
   // Obtener estadísticas de actividades por estado
   async getActivityStatsByStatus() {
     try {
-      console.log('=== getActivityStatsByStatus - Obteniendo datos reales ===');
+      console.log('=== getActivityStatsByStatus - Obteniendo datos reales de actividades ===');
       
-      // Obtener estadísticas de reportes por estado
-      const reportesAprobados = await models.Reporte.count({
-        where: { estado: 'aprobado' }
+      // Obtener estadísticas de actividades por estado_realizado
+      const actividadesAprobadas = await models.Actividad.count({
+        where: { estado_realizado: 'aprobada' }
       });
       
-      const reportesPendientes = await models.Reporte.count({
-        where: { estado: 'enviado' }
+      const actividadesPendientes = await models.Actividad.count({
+        where: { estado_realizado: 'pendiente' }
       });
       
-      const reportesDevueltos = await models.Reporte.count({
-        where: { estado: 'rechazado' }
+      const actividadesDevueltas = await models.Actividad.count({
+        where: { estado_realizado: 'devuelta' }
       });
       
-      const totalReportes = await models.Reporte.count();
+      const totalActividades = await models.Actividad.count();
       
       // Calcular porcentajes
-      const porcentajeCompletadas = totalReportes > 0 ? Math.round((reportesAprobados / totalReportes) * 100) : 0;
-      const porcentajePendientes = totalReportes > 0 ? Math.round((reportesPendientes / totalReportes) * 100) : 0;
-      const porcentajeAtrasadas = totalReportes > 0 ? Math.round((reportesDevueltos / totalReportes) * 100) : 0;
+      const porcentajeCompletadas = totalActividades > 0 ? Math.round((actividadesAprobadas / totalActividades) * 100) : 0;
+      const porcentajePendientes = totalActividades > 0 ? Math.round((actividadesPendientes / totalActividades) * 100) : 0;
+      const porcentajeAtrasadas = totalActividades > 0 ? Math.round((actividadesDevueltas / totalActividades) * 100) : 0;
       
       const estadisticas = {
-        total: totalReportes,
-        completadas: reportesAprobados,
-        pendientes: reportesPendientes,
-        atrasadas: reportesDevueltos,
-        pendientesRevision: reportesPendientes, // Los pendientes de revisión son los enviados
+        total: totalActividades,
+        completadas: actividadesAprobadas,
+        pendientes: actividadesPendientes,
+        atrasadas: actividadesDevueltas,
+        pendientesRevision: actividadesPendientes, // Los pendientes de revisión son los pendientes
         porcentajes: {
           completadas: porcentajeCompletadas,
           pendientes: porcentajePendientes,
@@ -351,7 +351,7 @@ class ActividadService {
         }
       };
 
-      console.log('Estadísticas reales obtenidas:', estadisticas);
+      console.log('Estadísticas reales de actividades obtenidas:', estadisticas);
       return estadisticas;
     } catch (error) {
       console.error('Error en getActivityStatsByStatus:', error);
@@ -362,30 +362,25 @@ class ActividadService {
   // Obtener actividades pendientes de revisión para el dashboard
   async getPendingActivitiesForDashboard(limit = 5) {
     try {
-      const reportesPendientes = await models.Reporte.findAll({
-        where: { estado: 'enviado' },
+      const actividadesPendientes = await models.Actividad.findAll({
+        where: { estado_realizado: 'pendiente' },
         include: [
           {
             model: models.User,
             as: 'usuario',
             attributes: ['id', 'nombre', 'apellido']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'titulo', 'categoria']
           }
         ],
-        order: [['fechaEnvio', 'ASC']],
+        order: [['createdAt', 'ASC']],
         limit: parseInt(limit)
       });
 
-      return reportesPendientes.map(reporte => ({
-        name: `${reporte.usuario.nombre} ${reporte.usuario.apellido}`,
-        activity: reporte.actividad ? reporte.actividad.titulo : reporte.titulo,
-        categoria: reporte.actividad ? reporte.actividad.categoria : 'GENERAL',
-        fechaEnvio: reporte.fechaEnvio,
-        reporteId: reporte.id
+      return actividadesPendientes.map(actividad => ({
+        name: `${actividad.usuario.nombre} ${actividad.usuario.apellido}`,
+        activity: actividad.titulo,
+        categoria: actividad.categoria || 'GENERAL',
+        fechaEnvio: actividad.createdAt,
+        actividadId: actividad.id
       }));
     } catch (error) {
       throw boom.internal('Error al obtener actividades pendientes para el dashboard');

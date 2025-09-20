@@ -18,7 +18,7 @@ const NotificacionSchema = {
     field: 'id_usuario_destino',
     references: {
       model: USUARIOS_TABLE,
-      key: 'id_usuario'
+      key: 'id'
     },
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE'

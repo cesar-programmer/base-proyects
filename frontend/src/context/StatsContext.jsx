@@ -2,7 +2,7 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable no-unused-vars */
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import activityService from '../services/activityService';
+import estadisticaService from '../services/estadisticaService';
 
 const StatsContext = createContext();
 
@@ -20,37 +20,26 @@ export const StatsProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   const fetchStats = useCallback(async () => {
-    console.log('🔄 StatsContext: Iniciando fetchStats...');
-    
     setLoading(true);
     setError(null);
     
     try {
-      console.log('📡 StatsContext: Llamando a activityService.getActivityStatsByStatus()...');
-      const response = await activityService.getActivityStatsByStatus();
+      // ⭐ Ahora obtenemos TODAS las estadísticas de una vez
+      const dashboardData = await estadisticaService.getDashboardStats();
       
-      console.log('📊 StatsContext: Respuesta recibida:', response);
+      // Transformamos para mantener compatibilidad con el código existente
+      const transformedStats = estadisticaService.transformActivityStatsForDashboard(dashboardData);
       
-      if (response && response.data) {
-        console.log('✅ StatsContext: Usando response.data');
-        setStats(response.data);
-      } else if (response) {
-        console.log('✅ StatsContext: Usando response directo');
-        setStats(response);
-      } else {
-        console.log('❌ StatsContext: Respuesta vacía');
-        setStats(null);
-      }
-      
-      console.log('✅ StatsContext: Stats actualizados exitosamente');
-      
+      // Guardamos tanto los datos transformados como los completos
+      setStats({
+        ...transformedStats,
+        _fullDashboardData: dashboardData // Datos completos disponibles si se necesitan
+      });
     } catch (err) {
-      console.error('❌ StatsContext: Error:', err.message);
-      setError(err.message || 'Error al cargar estadísticas');
-      setStats(null);
+      console.error('Error fetching dashboard stats:', err);
+      setError('Error al cargar las estadísticas del dashboard');
     } finally {
       setLoading(false);
-      console.log('🏁 StatsContext: fetchStats completado');
     }
   }, []);
 

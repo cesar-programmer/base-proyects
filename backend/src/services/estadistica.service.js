@@ -36,20 +36,30 @@ class EstadisticaService {
     try {
       const totalUsuarios = await models.User.count();
       const usuariosActivos = await models.User.count({ where: { activo: true } });
-      const usuariosPorRol = await models.User.findAll({
-        attributes: [
-          'id_rol',
-          [models.sequelize.fn('COUNT', models.sequelize.col('id_rol')), 'count']
-        ],
+
+      // Simplificar la consulta de usuarios por rol
+      const usuarios = await models.User.findAll({
+        attributes: ['rolId'],
         include: [
           {
             model: models.Role,
             as: 'rol',
             attributes: ['nombre']
           }
-        ],
-        group: ['id_rol']
+        ]
       });
+
+      // Contar manualmente por rol
+      const roleCount = {};
+      usuarios.forEach(user => {
+        const roleName = user.rol ? user.rol.nombre : 'Sin rol';
+        roleCount[roleName] = (roleCount[roleName] || 0) + 1;
+      });
+
+      const usuariosPorRol = Object.entries(roleCount).map(([nombre, count]) => ({
+        rol: { nombre },
+        count
+      }));
 
       return {
         total: totalUsuarios,
@@ -58,6 +68,7 @@ class EstadisticaService {
         porRol: usuariosPorRol
       };
     } catch (error) {
+      console.error('Error en getUserStats:', error);
       throw boom.internal('Error al obtener estadísticas de usuarios');
     }
   }
@@ -66,44 +77,30 @@ class EstadisticaService {
   async getReportStats() {
     try {
       const totalReportes = await models.Reporte.count();
-      const reportesPorEstado = await models.Reporte.findAll({
-        attributes: [
-          'estado',
-          [models.sequelize.fn('COUNT', models.sequelize.col('estado')), 'count']
-        ],
-        group: ['estado']
+      
+      // Simplificar las consultas para evitar problemas con GROUP BY
+      const reportes = await models.Reporte.findAll({
+        attributes: ['estado']
       });
 
-      const reportesPorTipo = await models.Reporte.findAll({
-        attributes: [
-          'tipo',
-          [models.sequelize.fn('COUNT', models.sequelize.col('tipo')), 'count']
-        ],
-        group: ['tipo']
+      // Contar manualmente por estado
+      const estadoCount = {};
+      reportes.forEach(reporte => {
+        const estado = reporte.estado || 'Sin estado';
+        estadoCount[estado] = (estadoCount[estado] || 0) + 1;
       });
 
-      const reportesPorPeriodo = await models.Reporte.findAll({
-        attributes: [
-          'id_periodo',
-          [models.sequelize.fn('COUNT', models.sequelize.col('id_periodo')), 'count']
-        ],
-        include: [
-          {
-            model: models.PeriodoAcademico,
-            as: 'periodo',
-            attributes: ['nombre']
-          }
-        ],
-        group: ['id_periodo']
-      });
+      const reportesPorEstado = Object.entries(estadoCount).map(([estado, count]) => ({
+        estado,
+        count
+      }));
 
       return {
         total: totalReportes,
-        porEstado: reportesPorEstado,
-        porTipo: reportesPorTipo,
-        porPeriodo: reportesPorPeriodo
+        porEstado: reportesPorEstado
       };
     } catch (error) {
+      console.error('Error en getReportStats:', error);
       throw boom.internal('Error al obtener estadísticas de reportes');
     }
   }
@@ -112,6 +109,18 @@ class EstadisticaService {
   async getActivityStats() {
     try {
       const totalActividades = await models.Actividad.count();
+      
+      // ⭐ Estadísticas por estado_realizado (lo que realmente necesitamos)
+      const actividadesPorEstado = await models.Actividad.findAll({
+        attributes: [
+          'estado_realizado',
+          [models.sequelize.fn('COUNT', models.sequelize.col('estado_realizado')), 'count'],
+          [models.sequelize.fn('SUM', models.sequelize.col('horas_estimadas')), 'total_horas']
+        ],
+        group: ['estado_realizado']
+      });
+
+      // Estadísticas por categoría (mantenemos para compatibilidad)
       const actividadesPorCategoria = await models.Actividad.findAll({
         attributes: [
           'categoria',
@@ -129,11 +138,29 @@ class EstadisticaService {
         where: { es_personalizada: false }
       });
 
+      // Conteos específicos por estado
+      const aprobadas = await models.Actividad.count({
+        where: { estado_realizado: 'aprobada' }
+      });
+
+      const pendientes = await models.Actividad.count({
+        where: { estado_realizado: 'pendiente' }
+      });
+
+      const devueltas = await models.Actividad.count({
+        where: { estado_realizado: 'devuelta' }
+      });
+
       return {
         total: totalActividades,
         personalizadas: actividadesPersonalizadas,
         delCatalogo: actividadesDelCatalogo,
-        porCategoria: actividadesPorCategoria
+        porCategoria: actividadesPorCategoria,
+        // ⭐ Nuevos datos por estado
+        porEstado: actividadesPorEstado,
+        aprobadas,
+        pendientes,
+        devueltas
       };
     } catch (error) {
       throw boom.internal('Error al obtener estadísticas de actividades');
@@ -193,44 +220,40 @@ class EstadisticaService {
   // Obtener estadísticas de notificaciones
   async getNotificationStats() {
     try {
+      // Consultas básicas sin agregaciones complejas
       const totalNotificaciones = await models.Notificacion.count();
       const notificacionesLeidas = await models.Notificacion.count({
         where: { leido: true }
       });
 
+      // Obtener tipos de notificaciones de forma simple
       const notificacionesPorTipo = await models.Notificacion.findAll({
-        attributes: [
-          'tipo',
-          [models.sequelize.fn('COUNT', models.sequelize.col('tipo')), 'count']
-        ],
-        group: ['tipo']
+        attributes: ['tipo'],
+        group: ['tipo'],
+        raw: true
       });
 
-      const notificacionesPorUsuario = await models.Notificacion.findAll({
-        attributes: [
-          'id_usuario_destino',
-          [models.sequelize.fn('COUNT', models.sequelize.col('id_usuario_destino')), 'count']
-        ],
-        include: [
-          {
-            model: models.User,
-            as: 'usuario_destino',
-            attributes: ['nombre_completo']
-          }
-        ],
-        group: ['id_usuario_destino'],
-        order: [[models.sequelize.literal('count'), 'DESC']],
-        limit: 10
-      });
+      // Contar manualmente cada tipo
+      const tiposCount = {};
+      for (const tipo of notificacionesPorTipo) {
+        const count = await models.Notificacion.count({
+          where: { tipo: tipo.tipo }
+        });
+        tiposCount[tipo.tipo] = count;
+      }
 
       return {
         total: totalNotificaciones,
         leidas: notificacionesLeidas,
         noLeidas: totalNotificaciones - notificacionesLeidas,
-        porTipo: notificacionesPorTipo,
-        porUsuario: notificacionesPorUsuario
+        porTipo: Object.entries(tiposCount).map(([tipo, count]) => ({
+          tipo,
+          count
+        })),
+        porUsuario: [] // Simplificado por ahora
       };
     } catch (error) {
+      console.error('Error en getNotificationStats:', error);
       throw boom.internal('Error al obtener estadísticas de notificaciones');
     }
   }
@@ -328,31 +351,71 @@ class EstadisticaService {
   // Obtener dashboard completo de estadísticas
   async getDashboardStats() {
     try {
-      const [
-        generalStats,
-        userStats,
-        reportStats,
-        activityStats,
-        deadlineStats,
-        notificationStats
-      ] = await Promise.all([
-        this.getGeneralStats(),
-        this.getUserStats(),
-        this.getReportStats(),
-        this.getActivityStats(),
-        this.getDeadlineStats(),
-        this.getNotificationStats()
-      ]);
+      console.log('Obteniendo estadísticas completas del dashboard...');
+      
+      // Estadísticas básicas
+      const totalUsuarios = await models.User.count();
+      console.log('Total usuarios:', totalUsuarios);
+      
+      const usuariosActivos = await models.User.count({ where: { activo: true } });
+      console.log('Usuarios activos:', usuariosActivos);
+      
+      const totalReportes = await models.Reporte.count();
+      console.log('Total reportes:', totalReportes);
+      
+      const totalActividades = await models.Actividad.count();
+      console.log('Total actividades:', totalActividades);
+      
+      const totalNotificaciones = await models.Notificacion.count();
+      console.log('Total notificaciones:', totalNotificaciones);
 
-      return {
-        general: generalStats,
-        usuarios: userStats,
-        reportes: reportStats,
-        actividades: activityStats,
-        fechasLimite: deadlineStats,
-        notificaciones: notificationStats
+      // ⭐ Estadísticas detalladas de actividades por estado
+      const aprobadas = await models.Actividad.count({
+        where: { estado_realizado: 'aprobada' }
+      });
+      console.log('Actividades aprobadas:', aprobadas);
+
+      const pendientes = await models.Actividad.count({
+        where: { estado_realizado: 'pendiente' }
+      });
+      console.log('Actividades pendientes:', pendientes);
+
+      const devueltas = await models.Actividad.count({
+        where: { estado_realizado: 'devuelta' }
+      });
+      console.log('Actividades devueltas:', devueltas);
+
+      const result = {
+        general: {
+          totalUsuarios,
+          usuariosActivos,
+          totalReportes,
+          totalActividades,
+          totalNotificaciones
+        },
+        usuarios: {
+          total: totalUsuarios,
+          activos: usuariosActivos,
+          inactivos: totalUsuarios - usuariosActivos
+        },
+        reportes: {
+          total: totalReportes
+        },
+        actividades: {
+          total: totalActividades,
+          aprobadas,
+          pendientes,
+          devueltas
+        },
+        notificaciones: {
+          total: totalNotificaciones
+        }
       };
+
+      console.log('Resultado final:', JSON.stringify(result, null, 2));
+      return result;
     } catch (error) {
+      console.error('Error específico en getDashboardStats:', error);
       throw boom.internal('Error al obtener estadísticas del dashboard');
     }
   }

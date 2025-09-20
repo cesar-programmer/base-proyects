@@ -91,25 +91,8 @@ const activityService = {
     }
   },
 
-  // Obtener estadísticas de actividades
-  getActivityStats: async () => {
-    try {
-      const response = await api.get('/actividades/estadisticas');
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Error al obtener estadísticas');
-    }
-  },
-
-  // Obtener estadísticas de actividades por estado para el dashboard
-  getActivityStatsByStatus: async () => {
-    try {
-      const response = await api.get('/actividades/estadisticas');
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Error al obtener estadísticas por estado');
-    }
-  },
+  // ⚠️ MÉTODOS DE ESTADÍSTICAS ELIMINADOS
+  // Ahora se usan desde estadisticaService.js para evitar duplicación
 
   // Obtener actividades pendientes para el dashboard
   getPendingActivitiesForDashboard: async (limit = 5) => {

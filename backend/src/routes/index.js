@@ -15,6 +15,7 @@ import archivoRoutes from './archivo.routes.js';
 import notificacionRoutes from './notificacion.routes.js';
 import historialCambioRoutes from './historialCambio.routes.js';
 import configuracionRoutes from './configuracion.routes.js';
+import estadisticaRoutes from './estadistica.routes.js';
 
 function routerApi(app) {
   const router = express.Router();
@@ -35,6 +36,7 @@ function routerApi(app) {
   router.use('/notificaciones', notificacionRoutes);
   router.use('/historial-cambios', historialCambioRoutes);
   router.use('/configuraciones', configuracionRoutes);
+  router.use('/estadisticas', estadisticaRoutes);
 
   // Ruta de prueba para verificar que la API está funcionando
   router.get('/health', (req, res) => {

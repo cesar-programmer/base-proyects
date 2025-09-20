@@ -94,19 +94,47 @@ const createUserSchema = Joi.object({
 
 // Esquema para actualizar usuario (admin)
 const updateUserSchema = Joi.object({
-  nombre_completo: Joi.string()
+  nombre: Joi.string()
     .min(2)
-    .max(255)
+    .max(100)
     .messages({
       'string.min': 'El nombre debe tener al menos 2 caracteres',
-      'string.max': 'El nombre no puede exceder 255 caracteres'
+      'string.max': 'El nombre no puede exceder 100 caracteres'
+    }),
+  apellido: Joi.string()
+    .min(2)
+    .max(100)
+    .messages({
+      'string.min': 'El apellido debe tener al menos 2 caracteres',
+      'string.max': 'El apellido no puede exceder 100 caracteres'
     }),
   email: Joi.string()
     .email()
+    .max(150)
     .messages({
-      'string.email': 'El email debe tener un formato válido'
+      'string.email': 'El email debe tener un formato válido',
+      'string.max': 'El email no puede exceder 150 caracteres'
     }),
-  id_rol: Joi.number()
+  cedula: Joi.string()
+    .max(20)
+    .messages({
+      'string.max': 'La cédula no puede exceder 20 caracteres'
+    }),
+  telefono: Joi.string()
+    .max(20)
+    .optional()
+    .messages({
+      'string.max': 'El teléfono no puede exceder 20 caracteres'
+    }),
+  password: Joi.string()
+    .min(8)
+    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)'))
+    .optional()
+    .messages({
+      'string.min': 'La contraseña debe tener al menos 8 caracteres',
+      'string.pattern.base': 'La contraseña debe contener al menos una mayúscula, una minúscula y un número'
+    }),
+  rolId: Joi.number()
     .integer()
     .positive()
     .messages({

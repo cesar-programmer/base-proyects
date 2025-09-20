@@ -76,8 +76,11 @@ export default function GestionUsuariosDashboard() {
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
+    apellido: '',
     email: '',
     password: '',
+    cedula: '',
+    telefono: '',
     rolId: ''
   });
 
@@ -113,7 +116,7 @@ export default function GestionUsuariosDashboard() {
       await userService.createUser(formData);
       toast.success('Usuario creado exitosamente');
       setShowCreateModal(false);
-      setFormData({ nombre: '', email: '', password: '', rolId: '' });
+      setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
       loadUsers();
     } catch (error) {
       toast.error('Error al crear usuario: ' + error.message);
@@ -130,7 +133,7 @@ export default function GestionUsuariosDashboard() {
       await userService.updateUser(editingUser.id, updateData);
       toast.success('Usuario actualizado exitosamente');
       setEditingUser(null);
-      setFormData({ nombre: '', email: '', password: '', rolId: '' });
+      setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
       loadUsers();
     } catch (error) {
       toast.error('Error al actualizar usuario: ' + error.message);
@@ -161,7 +164,9 @@ export default function GestionUsuariosDashboard() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+                         user.apellido?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.cedula?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || user.rol?.id?.toString() === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -170,8 +175,11 @@ export default function GestionUsuariosDashboard() {
     setEditingUser(user);
     setFormData({
       nombre: user.nombre || '',
+      apellido: user.apellido || '',
       email: user.email || '',
       password: '',
+      cedula: user.cedula || '',
+      telefono: user.telefono || '',
       rolId: user.rol?.id?.toString() || ''
     });
   };
@@ -179,7 +187,7 @@ export default function GestionUsuariosDashboard() {
   const closeModals = () => {
     setShowCreateModal(false);
     setEditingUser(null);
-    setFormData({ nombre: '', email: '', password: '', rolId: '' });
+    setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
   };
 
   if (loading) {
@@ -252,7 +260,7 @@ export default function GestionUsuariosDashboard() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <User className="w-5 h-5 text-gray-400 mr-3" />
-                      <span className="text-sm font-medium text-gray-900">{user.nombre}</span>
+                      <span className="text-sm font-medium text-gray-900">{user.nombre} {user.apellido}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
@@ -324,6 +332,16 @@ export default function GestionUsuariosDashboard() {
                 />
               </div>
               <div className="mb-4">
+                <Label htmlFor="apellido">Apellido</Label>
+                <Input
+                  id="apellido"
+                  type="text"
+                  value={formData.apellido}
+                  onChange={(e) => setFormData({...formData, apellido: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -334,6 +352,25 @@ export default function GestionUsuariosDashboard() {
                 />
               </div>
               <div className="mb-4">
+                <Label htmlFor="cedula">Cédula</Label>
+                <Input
+                  id="cedula"
+                  type="text"
+                  value={formData.cedula}
+                  onChange={(e) => setFormData({...formData, cedula: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="telefono">Teléfono (opcional)</Label>
+                <Input
+                  id="telefono"
+                  type="text"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
+                />
+              </div>
+              <div className="mb-4">
                 <Label htmlFor="password">Contraseña</Label>
                 <Input
                   id="password"
@@ -341,6 +378,7 @@ export default function GestionUsuariosDashboard() {
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   required
+                  placeholder="Mín. 8 caracteres, 1 mayúscula, 1 minúscula, 1 número"
                 />
               </div>
               <div className="mb-4">
@@ -387,6 +425,16 @@ export default function GestionUsuariosDashboard() {
                 />
               </div>
               <div className="mb-4">
+                <Label htmlFor="edit-apellido">Apellido</Label>
+                <Input
+                  id="edit-apellido"
+                  type="text"
+                  value={formData.apellido}
+                  onChange={(e) => setFormData({...formData, apellido: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
                 <Label htmlFor="edit-email">Email</Label>
                 <Input
                   id="edit-email"
@@ -394,6 +442,25 @@ export default function GestionUsuariosDashboard() {
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="edit-cedula">Cédula</Label>
+                <Input
+                  id="edit-cedula"
+                  type="text"
+                  value={formData.cedula}
+                  onChange={(e) => setFormData({...formData, cedula: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="edit-telefono">Teléfono (opcional)</Label>
+                <Input
+                  id="edit-telefono"
+                  type="text"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
                 />
               </div>
               <div className="mb-4">

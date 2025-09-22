@@ -236,6 +236,34 @@ class ReporteController {
       next(error);
     }
   }
+
+  // Obtener historial de reportes de un docente
+  async getReportHistory(req, res, next) {
+    try {
+      const { docenteId } = req.query;
+      
+      if (!docenteId) {
+        throw boom.badRequest('El parámetro docenteId es requerido');
+      }
+      
+      const { estado, tipo, fechaInicio, fechaFin } = req.query;
+      
+      const filters = {};
+      if (estado) filters.estado = estado;
+      if (tipo) filters.tipo = tipo;
+      if (fechaInicio) filters.fechaInicio = fechaInicio;
+      if (fechaFin) filters.fechaFin = fechaFin;
+      
+      const reportes = await reporteService.getReportHistory(parseInt(docenteId), filters);
+      
+      res.json({
+        message: 'Historial de reportes obtenido exitosamente',
+        data: reportes
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default ReporteController;

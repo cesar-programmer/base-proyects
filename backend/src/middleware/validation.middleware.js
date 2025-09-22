@@ -1,6 +1,7 @@
 import { validatorHandler } from './validation_handler.js';
 import {
   createActividadSchema,
+  createActividadPlanificadaSchema,
   updateActividadSchema,
   getActividadSchema
 } from '../schemas/actividad.schema.js';
@@ -50,6 +51,7 @@ import {
 
 // Validaciones para actividades
 export const validateActividad = validatorHandler(createActividadSchema, 'body');
+export const validateActividadPlanificada = validatorHandler(createActividadPlanificadaSchema, 'body');
 export const validateUpdateActividad = validatorHandler(updateActividadSchema, 'body');
 export const validateGetActividad = validatorHandler(getActividadSchema, 'params');
 

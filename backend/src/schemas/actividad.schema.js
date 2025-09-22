@@ -5,7 +5,29 @@ const getActividadSchema = Joi.object({
   id: Joi.number().integer().positive().required()
 });
 
-// Schema para crear actividad
+// Schema para crear actividad planificada (sin reporte)
+const createActividadPlanificadaSchema = Joi.object({
+  nombre: Joi.string().min(3).max(255).required(),
+  descripcion: Joi.string().max(1000).allow('', null),
+  categoria: Joi.string().valid(
+    'DOCENCIA',
+    'INVESTIGACION',
+    'EXTENSION',
+    'ADMINISTRATIVA',
+    'CAPACITACION',
+    'CAPACITACIÓN',
+    'TUTORIAS',
+    'GESTION_ACADEMICA',
+    'POSGRADO',
+    'OTRA'
+  ).required(),
+  fecha_inicio: Joi.date().iso().required(),
+  fecha_fin: Joi.date().iso().min(Joi.ref('fecha_inicio')).required(),
+  horas_dedicadas: Joi.number().min(0).max(168).allow(null),
+  observaciones: Joi.string().max(1000).allow('', null)
+});
+
+// Schema para crear actividad (con reporte - mantener compatibilidad)
 const createActividadSchema = Joi.object({
   id_reporte: Joi.number().integer().positive().required(),
   nombre: Joi.string().min(3).max(200).required(),
@@ -15,6 +37,11 @@ const createActividadSchema = Joi.object({
     'INVESTIGACION',
     'EXTENSION',
     'ADMINISTRATIVA',
+    'CAPACITACION',
+    'CAPACITACIÓN',
+    'TUTORIAS',
+    'GESTION_ACADEMICA',
+    'POSGRADO',
     'OTRA'
   ).required(),
   fecha_inicio: Joi.date().iso().required(),
@@ -34,6 +61,11 @@ const updateActividadSchema = Joi.object({
     'INVESTIGACION',
     'EXTENSION',
     'ADMINISTRATIVA',
+    'CAPACITACION',
+    'CAPACITACIÓN',
+    'TUTORIAS',
+    'GESTION_ACADEMICA',
+    'POSGRADO',
     'OTRA'
   ),
   fecha_inicio: Joi.date().iso(),
@@ -56,6 +88,11 @@ const getActividadesByReporteSchema = Joi.object({
     'INVESTIGACION',
     'EXTENSION',
     'ADMINISTRATIVA',
+    'CAPACITACION',
+    'CAPACITACIÓN',
+    'TUTORIAS',
+    'GESTION_ACADEMICA',
+    'POSGRADO',
     'OTRA'
   ).optional(),
   realizada: Joi.boolean().optional(),
@@ -70,6 +107,11 @@ const getActividadesByCategoriaSchema = Joi.object({
     'INVESTIGACION',
     'EXTENSION',
     'ADMINISTRATIVA',
+    'CAPACITACION',
+    'CAPACITACIÓN',
+    'TUTORIAS',
+    'GESTION_ACADEMICA',
+    'POSGRADO',
     'OTRA'
   ).required(),
   realizada: Joi.boolean().optional(),
@@ -86,6 +128,11 @@ const queryActividadesSchema = Joi.object({
     'INVESTIGACION',
     'EXTENSION',
     'ADMINISTRATIVA',
+    'CAPACITACION',
+    'CAPACITACIÓN',
+    'TUTORIAS',
+    'GESTION_ACADEMICA',
+    'POSGRADO',
     'OTRA'
   ).optional(),
   realizada: Joi.boolean().optional(),
@@ -118,6 +165,7 @@ const addFromCatalogoSchema = Joi.object({
 export {
   getActividadSchema,
   createActividadSchema,
+  createActividadPlanificadaSchema,
   updateActividadSchema,
   getActividadesByReporteSchema,
   getActividadesByCategoriaSchema,

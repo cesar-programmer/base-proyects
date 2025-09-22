@@ -83,6 +83,27 @@ const ActividadSchema = {
     type: DataTypes.DATE,
     field: 'fecha_revision'
   },
+  estado_planificacion: {
+    allowNull: true,
+    type: DataTypes.ENUM('borrador', 'enviada', 'aprobada', 'rechazada'),
+    defaultValue: 'borrador',
+    field: 'estado_planificacion'
+  },
+  periodo_planificacion: {
+    allowNull: true,
+    type: DataTypes.STRING(50),
+    field: 'periodo_planificacion'
+  },
+  observaciones_planificacion: {
+    allowNull: true,
+    type: DataTypes.TEXT,
+    field: 'observaciones_planificacion'
+  },
+  fecha_envio_planificacion: {
+    allowNull: true,
+    type: DataTypes.DATE,
+    field: 'fecha_envio_planificacion'
+  },
   createdAt: {
     allowNull: false,
     type: DataTypes.DATE,

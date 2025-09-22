@@ -13,9 +13,9 @@ export const notificacionService = {
   },
 
   // Obtener notificaciones por usuario
-  async getByUsuario(idUsuario, params = {}) {
+  async getByUsuario(usuarioId, params = {}) {
     try {
-      const response = await api.get(`/notificaciones/usuario/${idUsuario}`, { params });
+      const response = await api.get(`/notificaciones/usuario/${usuarioId}`, { params });
       return response.data;
     } catch (error) {
       console.error('Error al obtener notificaciones del usuario:', error);
@@ -24,9 +24,9 @@ export const notificacionService = {
   },
 
   // Obtener notificaciones no leídas por usuario
-  async getNoLeidasByUsuario(idUsuario) {
+  async getNoLeidasByUsuario(usuarioId) {
     try {
-      const response = await api.get(`/notificaciones/usuario/${idUsuario}/no-leidas`);
+      const response = await api.get(`/notificaciones/usuario/${usuarioId}/no-leidas`);
       return response.data;
     } catch (error) {
       console.error('Error al obtener notificaciones no leídas:', error);
@@ -68,9 +68,9 @@ export const notificacionService = {
   },
 
   // Marcar todas las notificaciones de un usuario como leídas
-  async marcarTodasComoLeidas(idUsuario) {
+  async marcarTodasComoLeidas(usuarioId) {
     try {
-      const response = await api.patch(`/notificaciones/usuario/${idUsuario}/leer-todas`);
+      const response = await api.patch(`/notificaciones/usuario/${usuarioId}/leer-todas`);
       return response.data;
     } catch (error) {
       console.error('Error al marcar todas las notificaciones como leídas:', error);
@@ -90,9 +90,9 @@ export const notificacionService = {
   },
 
   // Obtener estadísticas de notificaciones
-  async getEstadisticas(idUsuario) {
+  async getEstadisticas(usuarioId) {
     try {
-      const response = await api.get(`/notificaciones/usuario/${idUsuario}/estadisticas`);
+      const response = await api.get(`/notificaciones/usuario/${usuarioId}/estadisticas`);
       return response.data;
     } catch (error) {
       console.error('Error al obtener estadísticas de notificaciones:', error);

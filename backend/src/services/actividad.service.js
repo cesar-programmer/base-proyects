@@ -1,5 +1,5 @@
 import boom from '@hapi/boom';
-import { models } from '../db/models/index.js';
+import { models, sequelize } from '../db/models/index.js';
 
 class ActividadService {
   // Obtener todas las actividades
@@ -502,6 +502,102 @@ class ActividadService {
     } catch (error) {
       console.error('Error en getReturnedActivities:', error);
       throw boom.internal('Error al obtener actividades devueltas');
+    }
+  }
+
+  // Enviar planificación de actividades
+  async submitPlanification({ usuarioId, actividades, periodo, observaciones }) {
+    console.log('🔍 [submitPlanification] Iniciando función con parámetros:', {
+      usuarioId,
+      actividades,
+      periodo,
+      observaciones
+    });
+
+    const transaction = await sequelize.transaction();
+    
+    try {
+      console.log('🔍 [submitPlanification] Transacción creada exitosamente');
+
+      // Verificar que el usuario existe
+      console.log('🔍 [submitPlanification] Verificando usuario con ID:', usuarioId);
+      const usuario = await models.User.findByPk(usuarioId);
+      if (!usuario) {
+        console.log('❌ [submitPlanification] Usuario no encontrado:', usuarioId);
+        throw boom.notFound('Usuario no encontrado');
+      }
+      console.log('✅ [submitPlanification] Usuario encontrado:', usuario.nombre);
+
+      // Verificar que todas las actividades existen y pertenecen al usuario
+    const actividadesExistentes = await models.Actividad.findAll({
+      where: {
+        id: actividades,
+        usuarioId: usuarioId
+      },
+      transaction
+    });
+
+      if (actividadesExistentes.length !== actividades.length) {
+        console.log('❌ [submitPlanification] Mismatch en cantidad de actividades');
+        throw boom.badRequest('Algunas actividades no existen o no pertenecen al usuario');
+      }
+
+      // Actualizar el estado de las actividades a "enviada" y agregar información de planificación
+      console.log('🔍 [submitPlanification] Actualizando actividades con datos:', {
+        estado_planificacion: 'enviada',
+        periodo_planificacion: periodo,
+        observaciones_planificacion: observaciones,
+        fecha_envio_planificacion: new Date()
+      });
+
+      const updateResult = await models.Actividad.update(
+        {
+          estado_planificacion: 'enviada',
+          periodo_planificacion: periodo,
+          observaciones_planificacion: observaciones,
+          fecha_envio_planificacion: new Date()
+        },
+        {
+          where: {
+            id: actividades,
+            usuarioId: usuarioId
+          },
+          transaction
+        }
+      );
+
+      console.log('✅ [submitPlanification] Actividades actualizadas:', updateResult);
+
+      console.log('🔍 [submitPlanification] Haciendo commit de la transacción...');
+      await transaction.commit();
+      console.log('✅ [submitPlanification] Transacción confirmada exitosamente');
+
+      const response = {
+        message: 'Planificación enviada exitosamente',
+        actividades_enviadas: actividades.length,
+        periodo: periodo,
+        fecha_envio: new Date()
+      };
+
+      console.log('✅ [submitPlanification] Función completada exitosamente:', response);
+      return response;
+    } catch (error) {
+      console.log('❌ [submitPlanification] Error capturado, haciendo rollback...');
+      await transaction.rollback();
+      console.log('✅ [submitPlanification] Rollback completado');
+      
+      console.error('❌ [submitPlanification] Error completo:', error);
+      console.error('❌ [submitPlanification] Error message:', error.message);
+      console.error('❌ [submitPlanification] Error stack:', error.stack);
+      console.error('❌ [submitPlanification] Error isBoom:', error.isBoom);
+      
+      if (error.isBoom) {
+        console.log('❌ [submitPlanification] Relanzando error Boom:', error.output);
+        throw error;
+      }
+      
+      console.log('❌ [submitPlanification] Lanzando error interno genérico');
+      throw boom.internal('Error al enviar la planificación');
     }
   }
 }

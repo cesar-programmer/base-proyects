@@ -61,6 +61,12 @@ class AuthService {
     const user = this.getCurrentUser();
     return user?.rol?.nombre === 'COORDINADOR';
   }
+
+  // Verificar si el usuario puede acceder como docente (incluye coordinadores temporalmente)
+  canAccessAsDocente() {
+    const user = this.getCurrentUser();
+    return user?.rol?.nombre === 'DOCENTE' || user?.rol?.nombre === 'COORDINADOR';
+  }
 }
 
 export default new AuthService();

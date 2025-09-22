@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     isAdmin: () => authService.isAdmin(),
-    isDocente: () => authService.isDocente(),
+    isDocente: () => authService.isDocente() || authService.isCoordinador(), // Coordinadores cuentan como docentes temporalmente
     isCoordinador: () => authService.isCoordinador(),
   };
 

@@ -58,13 +58,14 @@ export default function LoginPageDocente() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        // Verificar que el usuario sea docente
-        if (result.user.rol?.nombre === 'DOCENTE') {
-          toast.success('¡Bienvenido, Docente!');
+        // Verificar que el usuario sea docente o coordinador (temporalmente)
+        if (result.user.rol?.nombre === 'DOCENTE' || result.user.rol?.nombre === 'COORDINADOR') {
+          const rolDisplay = result.user.rol?.nombre === 'COORDINADOR' ? 'Coordinador' : 'Docente';
+          toast.success(`¡Bienvenido, ${rolDisplay}!`);
           navigate('/docente/dashboard');
         } else {
-          setError('No tienes permisos de docente');
-          toast.error('Acceso denegado: Se requieren permisos de docente');
+          setError('No tienes permisos de docente o coordinador');
+          toast.error('Acceso denegado: Se requieren permisos de docente o coordinador');
         }
       } else {
         setError(result.error);
@@ -95,6 +96,32 @@ export default function LoginPageDocente() {
         <h2 className="text-xl font-bold mb-6 text-center text-green-700">
           Docentes
         </h2>
+        
+        {/* Anuncio de datos de prueba */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800">
+                Datos de Prueba Disponibles
+              </h3>
+              <div className="mt-2 text-sm text-blue-700">
+                  <p className="mb-2">Puedes usar estas credenciales para probar el sistema:</p>
+                  <div className="space-y-1">
+                    <p><strong>Docente:</strong> carlos.rodriguez@universidad.edu / docente123</p>
+                    <p><strong>Coordinador:</strong> maria.gonzalez@universidad.edu / coord123</p>
+                  </div>
+                  <p className="mt-2 text-xs">
+                    * Los coordinadores tienen acceso temporal al portal docente
+                  </p>
+                </div>
+            </div>
+          </div>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div className="space-y-2">

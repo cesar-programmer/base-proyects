@@ -153,11 +153,11 @@ export default function DocenteDashboard() {
       
       // Cargar actividades del docente
       const activitiesResponse = await activityService.getActivitiesByTeacher(user.id);
-      const activities = activitiesResponse.data || [];
+      const activities = Array.isArray(activitiesResponse?.data) ? activitiesResponse.data : [];
       
       // Cargar reportes del docente
       const reportsResponse = await reportService.getReportsByTeacher(user.id);
-      const reports = reportsResponse.data || [];
+      const reports = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
       
       // Calcular estadísticas
       const actividadesPlanificadas = activities.filter(a => a.estado === 'planificada').length;
@@ -172,7 +172,15 @@ export default function DocenteDashboard() {
         progresoGeneral
       });
     } catch (error) {
-      toast.error('Error al cargar datos del dashboard: ' + error.message);
+      console.error('Error al cargar datos del dashboard:', error);
+      toast.error('Error al cargar datos del dashboard');
+      // Establecer valores por defecto en caso de error
+      setStats({
+        actividadesPlanificadas: 0,
+        reportesCompletados: 0,
+        reportesPendientes: 0,
+        progresoGeneral: 0
+      });
     } finally {
       setLoading(false);
     }

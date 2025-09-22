@@ -1,5 +1,6 @@
 import boom from '@hapi/boom';
 import { ActividadService, ReporteService } from '../services/index.js';
+import { PeriodoAcademico } from '../models/index.js';
 import { handleError } from '../utils/errorHandler.js';
 
 const actividadService = new ActividadService();
@@ -48,10 +49,10 @@ export const getActividadById = async (req, res, next) => {
 // Obtener actividades por usuario
 export const getActividadesByUsuario = async (req, res, next) => {
   try {
-    const { id_usuario } = req.params;
+    const { usuarioId } = req.params;
     const { page = 1, limit = 10 } = req.query;
     
-    const actividades = await actividadService.findByUsuario(id_usuario, {
+    const actividades = await actividadService.findByUsuario(usuarioId, {
       page: parseInt(page),
       limit: parseInt(limit)
     });
@@ -101,11 +102,51 @@ export const createActividad = async (req, res, next) => {
     
     const newActividad = await actividadService.create({
       ...actividadData,
-      id_usuario: req.user.id
+      usuarioId: req.user.id
     });
     
     res.status(201).json({
       message: 'Actividad creada exitosamente',
+      data: newActividad
+    });
+  } catch (error) {
+    handleError(error, next);
+  }
+};
+
+// Crear nueva actividad planificada (sin reporte)
+export const createActividadPlanificada = async (req, res, next) => {
+  try {
+    const { nombre, descripcion, categoria, fecha_inicio, fecha_fin, horas_dedicadas, observaciones } = req.body;
+    
+    // Obtener el período académico activo
+    const periodoActivo = await PeriodoAcademico.findOne({
+      where: { activo: true }
+    });
+
+    if (!periodoActivo) {
+      return res.status(400).json({
+        message: 'No hay un período académico activo configurado'
+      });
+    }
+    
+    // Mapear los campos del frontend al modelo de base de datos
+    const actividadData = {
+      titulo: nombre,
+      descripcion,
+      categoria,
+      fechaInicio: fecha_inicio,
+      fechaFin: fecha_fin,
+      observaciones_planificacion: observaciones,
+      usuarioId: req.user.id,
+      periodoAcademicoId: periodoActivo.id,
+      estado_planificacion: 'borrador'
+    };
+    
+    const newActividad = await actividadService.create(actividadData);
+    
+    res.status(201).json({
+      message: 'Actividad planificada creada exitosamente',
       data: newActividad
     });
   } catch (error) {
@@ -122,7 +163,7 @@ export const updateActividad = async (req, res, next) => {
     // Verificar que la actividad existe y el usuario tiene permisos
     const actividad = await actividadService.findOne(id);
     
-    if (actividad.id_usuario !== req.user.id && req.user.rol !== 'admin') {
+    if (actividad.usuarioId !== req.user.id && req.user.rol !== 'admin') {
       throw boom.forbidden('No tienes permisos para actualizar esta actividad');
     }
     
@@ -145,7 +186,7 @@ export const deleteActividad = async (req, res, next) => {
     // Verificar que la actividad existe y el usuario tiene permisos
     const actividad = await actividadService.findOne(id);
     
-    if (actividad.id_usuario !== req.user.id && req.user.rol !== 'admin') {
+    if (actividad.usuarioId !== req.user.id && req.user.rol !== 'admin') {
       throw boom.forbidden('No tienes permisos para eliminar esta actividad');
     }
     
@@ -257,6 +298,61 @@ export const getActividadesDevueltas = async (req, res, next) => {
       ...result
     });
   } catch (error) {
+    handleError(error, next);
+  }
+};
+
+// Enviar planificación de actividades
+export const enviarPlanificacion = async (req, res, next) => {
+  try {
+    console.log('🔍 [enviarPlanificacion] Request body recibido:', req.body);
+    console.log('🔍 [enviarPlanificacion] Request headers:', req.headers);
+    console.log('🔍 [enviarPlanificacion] Request params:', req.params);
+    console.log('🔍 [enviarPlanificacion] Request query:', req.query);
+
+    const { actividades, periodo, observaciones } = req.body;
+    const usuarioId = req.user.id;
+
+    console.log('🔍 [enviarPlanificacion] Datos extraídos:', {
+      usuarioId,
+      actividades,
+      periodo,
+      observaciones
+    });
+
+    // Validar que se envíen actividades
+    if (!actividades || !Array.isArray(actividades) || actividades.length === 0) {
+      return res.status(400).json({
+        message: 'Debe incluir al menos una actividad en la planificación'
+      });
+    }
+
+    // Validar que se especifique el período
+    if (!periodo) {
+      return res.status(400).json({
+        message: 'Debe especificar el período de la planificación'
+      });
+    }
+
+    console.log('🔍 [enviarPlanificacion] Llamando al servicio submitPlanification...');
+
+    // Enviar la planificación usando el servicio
+    const result = await actividadService.submitPlanification({
+      usuarioId,
+      actividades,
+      periodo,
+      observaciones: observaciones || ''
+    });
+
+    console.log('✅ [enviarPlanificacion] Servicio ejecutado exitosamente:', result);
+
+    res.status(201).json({
+      message: 'Planificación enviada exitosamente',
+      data: result
+    });
+  } catch (error) {
+    console.log('❌ [enviarPlanificacion] Error capturado:', error);
+    console.log('❌ [enviarPlanificacion] Error stack:', error.stack);
     handleError(error, next);
   }
 };

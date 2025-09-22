@@ -287,6 +287,50 @@ class ReporteService {
       throw boom.internal('Error al obtener reportes pendientes de revisión');
     }
   }
+
+  // Obtener historial de reportes de un docente
+  async getReportHistory(docenteId, filters = {}) {
+    try {
+      const whereClause = { usuarioId: docenteId };
+      
+      // Aplicar filtros adicionales si se proporcionan
+      if (filters.estado) whereClause.estado = filters.estado;
+      if (filters.tipo) whereClause.tipo = filters.tipo;
+      if (filters.fechaInicio) {
+        whereClause.createdAt = {
+          ...whereClause.createdAt,
+          [models.sequelize.Op.gte]: filters.fechaInicio
+        };
+      }
+      if (filters.fechaFin) {
+        whereClause.createdAt = {
+          ...whereClause.createdAt,
+          [models.sequelize.Op.lte]: filters.fechaFin
+        };
+      }
+      
+      const reportes = await models.Reporte.findAll({
+        where: whereClause,
+        include: [
+          {
+            model: models.User,
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
+          },
+          {
+            model: models.Actividad,
+            as: 'actividad',
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+      return reportes;
+    } catch (error) {
+      console.error('Error detallado en getReportHistory:', error);
+      throw boom.internal(`Error al obtener el historial de reportes: ${error.message}`);
+    }
+  }
 }
 
 export default ReporteService;

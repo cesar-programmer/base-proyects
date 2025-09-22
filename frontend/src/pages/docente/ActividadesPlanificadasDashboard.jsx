@@ -19,47 +19,66 @@ import {
   Send,
   ChevronDown,
   Edit,
-  Eye
+  Eye,
+  Download,
+  Upload,
+  HardDrive
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import activityService from '../../services/activityService';
-import { toast } from 'react-hot-toast'
+import reportService from '../../services/reportService';
+import { toast } from 'react-toastify'
 
 const CATEGORIAS = [
-  { label: "Docencia", icon: BookOpen },
-  { label: "Investigación", icon: FlaskConical },
-  { label: "Gestión", icon: ClipboardList },
-  { label: "Tutoría", icon: Users2 },
-  { label: "Extensión", icon: Megaphone },
-  { label: "Capacitación", icon: GraduationCap },
+  { label: "DOCENCIA", icon: BookOpen },
+  { label: "INVESTIGACION", icon: FlaskConical },
+  { label: "GESTION_ACADEMICA", icon: ClipboardList },
+  { label: "TUTORIAS", icon: Users2 },
+  { label: "EXTENSION", icon: Megaphone },
+  { label: "CAPACITACION", icon: GraduationCap },
+  { label: "ADMINISTRATIVA", icon: ClipboardList },
+  { label: "POSGRADO", icon: GraduationCap },
+  { label: "OTRA", icon: ClipboardList },
 ]
 
 const CATALOGO = {
-  Docencia: [
+  DOCENCIA: [
     { id: "doc-1", titulo: "Preparación de clases", horas: 8, descripcion: "Diseño y actualización de materiales" },
     { id: "doc-2", titulo: "Aplicación de exámenes", horas: 6 },
     { id: "doc-3", titulo: "Evaluación de trabajos", horas: 10 },
   ],
-  Investigación: [
+  INVESTIGACION: [
     { id: "inv-1", titulo: "Revisión bibliográfica", horas: 12 },
     { id: "inv-2", titulo: "Diseño metodológico", horas: 10 },
     { id: "inv-3", titulo: "Redacción de artículo", horas: 16 },
   ],
-  Gestión: [
+  GESTION_ACADEMICA: [
     { id: "ges-1", titulo: "Coordinación de programa", horas: 10 },
     { id: "ges-2", titulo: "Comité académico", horas: 6 },
   ],
-  Tutoría: [
+  TUTORIAS: [
     { id: "tut-1", titulo: "Asesoría a estudiantes", horas: 8 },
     { id: "tut-2", titulo: "Seguimiento de casos", horas: 6 },
   ],
-  Extensión: [
+  EXTENSION: [
     { id: "ext-1", titulo: "Vinculación con empresas", horas: 6 },
     { id: "ext-2", titulo: "Organización de evento", horas: 8 },
   ],
-  Capacitación: [
+  CAPACITACION: [
     { id: "cap-1", titulo: "Curso de actualización docente", horas: 12 },
     { id: "cap-2", titulo: "Taller de tecnologías educativas", horas: 8 },
+  ],
+  ADMINISTRATIVA: [
+    { id: "adm-1", titulo: "Gestión administrativa", horas: 6 },
+    { id: "adm-2", titulo: "Coordinación institucional", horas: 8 },
+  ],
+  POSGRADO: [
+    { id: "pos-1", titulo: "Dirección de tesis de posgrado", horas: 10 },
+    { id: "pos-2", titulo: "Docencia en posgrado", horas: 8 },
+  ],
+  OTRA: [
+    { id: "otr-1", titulo: "Actividad especial", horas: 4 },
+    { id: "otr-2", titulo: "Proyecto específico", horas: 6 },
   ],
 }
 
@@ -309,11 +328,17 @@ function currentSemesterFor(date = new Date()) {
   return `${y}-${half}`
 }
 
+function getCurrentSemesterNumber(date = new Date()) {
+  return date.getMonth() + 1 <= 6 ? 1 : 2
+}
+
 export default function PlannedActivities() {
   const { user } = useAuth();
   const semestre = useMemo(() => currentSemesterFor(), [])
   const [actividades, setActividades] = useState([])
   const [lastSavedAt, setLastSavedAt] = useState(null)
+  const [autoSaveTimeouts, setAutoSaveTimeouts] = useState({})
+  const [draftSavedAt, setDraftSavedAt] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -321,6 +346,69 @@ export default function PlannedActivities() {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [editingActivity, setEditingActivity] = useState(null)
+
+
+  // Funciones para manejar borradores en localStorage
+  const getDraftKey = () => `actividades_borrador_${user?.id}_${semestre}`
+  
+  const saveDraftToLocalStorage = () => {
+    try {
+      const draftKey = getDraftKey();
+      const draftData = {
+        actividades: actividadesArray,
+        timestamp: new Date().toISOString(),
+        semestre: semestre
+      };
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+      setDraftSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }));
+      toast.success('Borrador guardado en el dispositivo');
+    } catch (error) {
+      console.error('Error al guardar borrador:', error);
+      toast.error('Error al guardar borrador');
+    }
+  }
+  
+  const loadDraftFromLocalStorage = () => {
+    try {
+      const draftKey = getDraftKey();
+      const draftData = localStorage.getItem(draftKey);
+      if (draftData) {
+        const parsed = JSON.parse(draftData);
+        if (parsed.actividades && Array.isArray(parsed.actividades)) {
+          setActividades(parsed.actividades);
+          setDraftSavedAt(new Date(parsed.timestamp).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }));
+          toast.success('Borrador cargado desde el dispositivo');
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error al cargar borrador:', error);
+      toast.error('Error al cargar borrador');
+      return false;
+    }
+  }
+  
+  const clearDraftFromLocalStorage = () => {
+    try {
+      const draftKey = getDraftKey();
+      localStorage.removeItem(draftKey);
+      setDraftSavedAt(null);
+      toast.success('Borrador eliminado del dispositivo');
+    } catch (error) {
+      console.error('Error al eliminar borrador:', error);
+      toast.error('Error al eliminar borrador');
+    }
+  }
+  
+  const hasDraftInLocalStorage = () => {
+    try {
+      const draftKey = getDraftKey();
+      return localStorage.getItem(draftKey) !== null;
+    } catch (error) {
+      return false;
+    }
+  }
 
   useEffect(() => {
     loadActivities();
@@ -331,73 +419,210 @@ export default function PlannedActivities() {
     
     try {
       setLoading(true);
+      
       const response = await activityService.getActivitiesByTeacher(user.id);
-      setActividades(response.data || []);
+      // Asegurar que siempre sea un array
+      const activitiesData = response?.data || response || [];
+      setActividades(Array.isArray(activitiesData) ? activitiesData : []);
     } catch (error) {
+      console.error('Error al cargar actividades:', error);
       toast.error('Error al cargar actividades: ' + error.message);
+      setActividades([]); // Asegurar que sea un array vacío en caso de error
     } finally {
       setLoading(false);
     }
   };
 
-  const totalActividades = actividades.length
-  const totalHoras = actividades.reduce((sum, a) => sum + (Number(a.horas) || 0), 0)
+  const actividadesArray = Array.isArray(actividades) ? actividades : []
+  const totalActividades = actividadesArray.length
+  const totalHoras = actividadesArray.reduce((sum, a) => sum + (Number(a.horas) || 0), 0)
+
+  // Función para limpiar localStorage
+  const clearLocalStorage = () => {
+    try {
+      // Limpiar todos los datos relacionados con actividades
+      localStorage.removeItem('actividades_draft');
+      localStorage.removeItem('actividades_planificadas');
+      localStorage.removeItem('last_saved_at');
+      localStorage.removeItem('current_semester');
+      localStorage.removeItem('submitted_plan');
+      
+      // Recargar la página para empezar de cero
+      toast.success('Datos locales limpiados exitosamente');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error al limpiar localStorage:', error);
+      toast.error('Error al limpiar datos locales');
+    }
+  };
 
   const alreadyAdded = (cat, titulo) =>
-    actividades.some((a) => a.titulo === titulo && a.categoria === cat)
+    actividadesArray.some((a) => a.titulo === titulo && a.categoria === cat)
 
   const addFromCatalog = (cat, presetId) => {
     const preset = CATALOGO[cat].find((p) => p.id === presetId)
     if (!preset || alreadyAdded(cat, preset.titulo)) return
-    setActividades((prev) => [
-      ...prev,
-      {
-        id: `${cat}-${preset.id}`,
-        titulo: preset.titulo,
-        categoria: cat,
-        descripcion: preset.descripcion ?? "",
-        horas: preset.horas ?? 4,
-      },
-    ])
+    setActividades((prev) => {
+      const currentActivities = Array.isArray(prev) ? prev : [];
+      return [
+        ...currentActivities,
+        {
+          id: `${cat}-${preset.id}`,
+          titulo: preset.titulo,
+          categoria: cat,
+          descripcion: preset.descripcion ?? "",
+          horas: preset.horas ?? 4,
+        },
+      ];
+    })
   }
 
   const addEmptyActivity = () => {
-    setActividades((prev) => [
-      ...prev,
-      {
-        id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        titulo: "",
-        categoria: "Docencia",
-        descripcion: "",
-        horas: 2,
-      },
-    ])
+    setActividades((prev) => {
+      const currentActivities = Array.isArray(prev) ? prev : [];
+      return [
+        ...currentActivities,
+        {
+          id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          titulo: "",
+          categoria: "DOCENCIA",
+          descripcion: "",
+          fechaInicio: "",
+          fechaFin: "",
+          
+          ubicacion: "",
+          objetivos: "",
+          recursos: "",
+          presupuesto: 0,
+          participantesEsperados: 0,
+          archivoAdjunto: "",
+          horas: 2,
+  
+          periodo_planificacion: "",
+        },
+      ];
+    })
+  }
+
+  const autoSaveActivity = async (id) => {
+    try {
+      const activity = actividadesArray.find(a => a.id === id);
+      if (!activity) return;
+      
+      // Mapear campos según el esquema del backend (solo campos permitidos)
+      const activityData = {
+        nombre: activity.titulo || '',
+        descripcion: activity.descripcion || '',
+        categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
+        fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
+        fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        horas_dedicadas: activity.horas || 0,
+        observaciones: `Actividad planificada para el semestre ${semestre}`
+      };
+      
+      if (activity.isNew) {
+        await activityService.createPlannedActivity(activityData);
+        // Marcar como no nueva después de crear
+        setActividades((prev) => {
+          const currentActivities = Array.isArray(prev) ? prev : [];
+          return currentActivities.map((a) => 
+            a.id === id ? { ...a, isNew: false, guardada: true } : a
+          );
+        });
+      } else {
+        // Para actualizar, solo enviar los campos permitidos
+        const updateData = {
+          nombre: activity.titulo || '',
+          descripcion: activity.descripcion || '',
+          categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
+          fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
+          fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          horas_dedicadas: activity.horas || 0,
+          observaciones: `Actividad planificada para el semestre ${semestre}`
+        };
+        await activityService.updateActivity(id, updateData);
+        // Marcar como guardada
+        setActividades((prev) => {
+          const currentActivities = Array.isArray(prev) ? prev : [];
+          return currentActivities.map((a) => 
+            a.id === id ? { ...a, guardada: true } : a
+          );
+        });
+      }
+      
+      setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
+    } catch (error) {
+      console.error('Error en guardado automático:', error);
+      // No mostrar toast para errores de guardado automático para no molestar al usuario
+    }
   }
 
   const updateActivity = (id, key, value) => {
-    setActividades((prev) => prev.map((a) => (a.id === id ? { ...a, [key]: value } : a)))
+    setActividades((prev) => {
+      const currentActivities = Array.isArray(prev) ? prev : [];
+      return currentActivities.map((a) => (a.id === id ? { ...a, [key]: value, guardada: false } : a));
+    })
+    
+    // Limpiar timeout anterior si existe
+    if (autoSaveTimeouts[id]) {
+      clearTimeout(autoSaveTimeouts[id]);
+    }
+    
+    // Configurar nuevo timeout para guardado automático (2 segundos después del último cambio)
+    const timeoutId = setTimeout(() => {
+      autoSaveActivity(id);
+      setAutoSaveTimeouts(prev => {
+        const newTimeouts = { ...prev };
+        delete newTimeouts[id];
+        return newTimeouts;
+      });
+    }, 2000);
+    
+    setAutoSaveTimeouts(prev => ({
+      ...prev,
+      [id]: timeoutId
+    }));
   }
 
   const saveActivity = async (id) => {
     try {
-      const activity = actividades.find(a => a.id === id);
+      const activity = actividadesArray.find(a => a.id === id);
       if (!activity) return;
       
-      const activityData = {
-        ...activity,
-        teacherId: user.id,
-        semester: semestre
-      };
-      
       if (activity.isNew) {
-        await activityService.createActivity(activityData);
+        // Mapear campos según el esquema del backend para crear (solo campos permitidos)
+        const activityData = {
+          nombre: activity.titulo || '',
+          descripcion: activity.descripcion || '',
+          categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
+          fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
+          fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          horas_dedicadas: activity.horas || 0,
+          observaciones: `Actividad planificada para el semestre ${semestre}`
+        };
+        await activityService.createPlannedActivity(activityData);
         toast.success('Actividad creada exitosamente');
       } else {
-        await activityService.updateActivity(id, activityData);
+        // Para actualizar, solo enviar los campos permitidos
+        const updateData = {
+          nombre: activity.titulo || '',
+          descripcion: activity.descripcion || '',
+          categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
+          fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
+          fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          horas_dedicadas: activity.horas || 0,
+          observaciones: `Actividad planificada para el semestre ${semestre}`
+        };
+        await activityService.updateActivity(id, updateData);
         toast.success('Actividad actualizada exitosamente');
       }
       
-      setActividades((prev) => prev.map((a) => (a.id === id ? { ...a, guardada: true, isNew: false } : a)))
+      setActividades((prev) => {
+        const currentActivities = Array.isArray(prev) ? prev : [];
+        return currentActivities.map((a) => (a.id === id ? { ...a, guardada: true, isNew: false } : a));
+      })
       setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
       await loadActivities();
     } catch (error) {
@@ -407,28 +632,53 @@ export default function PlannedActivities() {
 
   const deleteActivity = async (id) => {
     try {
-      const activity = actividades.find(a => a.id === id);
+      const activity = actividadesArray.find(a => a.id === id);
       if (!activity?.isNew) {
         await activityService.deleteActivity(id);
-        toast.success('Actividad eliminada exitosamente');
+        toast.success('Actividad eliminada exitosamente', {
+          position: "top-right",
+          autoClose: 3000,
+        });
       }
-      setActividades((prev) => prev.filter((a) => a.id !== id))
+      setActividades((prev) => {
+        const currentActivities = Array.isArray(prev) ? prev : [];
+        return currentActivities.filter((a) => a.id !== id);
+      })
     } catch (error) {
-      toast.error('Error al eliminar actividad: ' + error.message);
+      toast.error(`Error al eliminar actividad: ${error.message || 'Error desconocido'}`, {
+        position: "top-right",
+        autoClose: 4000,
+      });
     }
   }
 
   const guardarBorrador = async () => {
     try {
-      for (const activity of actividades) {
-        if (!activity.guardada) {
-          await saveActivity(activity.id);
-        }
+      const currentActivities = Array.isArray(actividades) ? actividades : [];
+      const actividadesAGuardar = currentActivities.filter(activity => !activity.guardada);
+      
+      if (actividadesAGuardar.length === 0) {
+        toast.info('No hay cambios para guardar', {
+          position: "top-right",
+          autoClose: 2000,
+        });
+        return;
       }
+
+      for (const activity of actividadesAGuardar) {
+        await saveActivity(activity.id);
+      }
+      
       setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
-      toast.success('Borrador guardado exitosamente');
+      toast.success(`Borrador guardado exitosamente (${actividadesAGuardar.length} actividades)`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
     } catch (error) {
-      toast.error('Error al guardar borrador: ' + error.message);
+      toast.error(`Error al guardar borrador: ${error.message || 'Error desconocido'}`, {
+        position: "top-right",
+        autoClose: 4000,
+      });
     }
   }
 
@@ -438,12 +688,82 @@ export default function PlannedActivities() {
 
   const confirmarEnvio = async () => {
     try {
-      await activityService.submitPlan(user.id, semestre);
-      setSubmitted(true)
-      setConfirmOpen(false)
-      toast.success('Plan enviado exitosamente');
+      const currentActivities = Array.isArray(actividades) ? actividades : [];
+      
+      if (currentActivities.length === 0) {
+        toast.error('No hay actividades para enviar', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+        return;
+      }
+
+      // Mostrar toast de inicio del proceso
+      toast.info(`Procesando ${currentActivities.length} actividades...`, {
+        position: "top-right",
+        autoClose: 2000,
+      });
+
+      // Crear todas las actividades en la base de datos
+      const actividadesCreadas = [];
+      const actividadesError = [];
+      
+      for (const actividad of currentActivities) {
+        try {
+          // Preparar los datos de la actividad según el esquema del backend (solo campos permitidos)
+          const actividadData = {
+            nombre: actividad.titulo || '',
+            descripcion: actividad.descripcion || '',
+            categoria: actividad.categoria?.toUpperCase() || 'DOCENCIA',
+            fecha_inicio: actividad.fechaInicio || new Date().toISOString().split('T')[0],
+            fecha_fin: actividad.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            horas_dedicadas: actividad.horas || 0,
+            observaciones: `Actividad planificada para el semestre ${semestre}`
+          };
+
+          // Si la actividad ya tiene un ID numérico, significa que ya existe en la BD
+          if (actividad.id && !isNaN(actividad.id)) {
+            actividadesCreadas.push(actividad.id);
+          } else {
+            // Crear la actividad en la base de datos
+            const response = await activityService.createPlannedActivity(actividadData);
+            const actividadCreada = response.data || response;
+            actividadesCreadas.push(actividadCreada.id);
+          }
+        } catch (error) {
+          console.error('Error al crear actividad:', actividad.titulo, error);
+          actividadesError.push(actividad.titulo);
+          toast.error(`Error al crear la actividad: ${actividad.titulo}`, {
+            position: "top-right",
+            autoClose: 4000,
+          });
+        }
+      }
+
+      // Mostrar resultados del proceso
+      if (actividadesError.length > 0) {
+        toast.warning(`Se crearon ${actividadesCreadas.length} actividades. ${actividadesError.length} actividades tuvieron errores.`, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      } else {
+        toast.success(`¡Excelente! Se crearon ${actividadesCreadas.length} actividades exitosamente`, {
+          position: "top-right",
+          autoClose: 4000,
+        });
+      }
+
+      setSubmitted(true);
+      setConfirmOpen(false);
+      
+      // Recargar las actividades para mostrar los datos actualizados
+      await loadActivities();
     } catch (error) {
-      toast.error('Error al enviar plan: ' + error.message);
+      console.error('Error al enviar plan:', error);
+      toast.error(`Error al enviar plan: ${error.message || 'Error desconocido'}`, {
+        position: "top-right",
+        autoClose: 5000,
+      });
     }
   }
 
@@ -587,7 +907,7 @@ export default function PlannedActivities() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {actividades.map((a) => (
+              {actividadesArray.map((a) => (
                 <Card
                   key={a.id}
                   className={`bg-white shadow-sm border ${a.guardada ? "border-green-200" : "border-gray-200"}`}
@@ -610,15 +930,6 @@ export default function PlannedActivities() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => saveActivity(a.id)}
-                          disabled={disabled}
-                        >
-                          <Save className="w-4 h-4" />
-                          Guardar
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -699,6 +1010,62 @@ export default function PlannedActivities() {
                           disabled={disabled}
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <Label>Ubicación</Label>
+                        <Input
+                          value={a.ubicacion || ""}
+                          onChange={(e) => updateActivity(a.id, "ubicacion", e.target.value)}
+                          disabled={disabled}
+                          placeholder="p.ej., Aula 101, Laboratorio de Informática"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Presupuesto <span className="text-gray-500 text-sm">(opcional)</span></Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={a.presupuesto || ""}
+                          onChange={(e) => updateActivity(a.id, "presupuesto", Number(e.target.value || 0))}
+                          disabled={disabled}
+                          placeholder="Ingrese el presupuesto si aplica"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Participantes Esperados</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={a.participantesEsperados || 0}
+                          onChange={(e) => updateActivity(a.id, "participantesEsperados", Number(e.target.value || 0))}
+                          disabled={disabled}
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Objetivos</Label>
+                        <Textarea
+                          value={a.objetivos || ""}
+                          onChange={(e) => updateActivity(a.id, "objetivos", e.target.value)}
+                          disabled={disabled}
+                          placeholder="Describe los objetivos específicos de la actividad..."
+                        />
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Recursos Necesarios</Label>
+                        <Textarea
+                          value={a.recursos || ""}
+                          onChange={(e) => updateActivity(a.id, "recursos", e.target.value)}
+                          disabled={disabled}
+                          placeholder="Lista los recursos materiales, tecnológicos o humanos necesarios..."
+                        />
+                      </div>
+
+
                     </div>
                   </CardContent>
                 </Card>
@@ -710,27 +1077,70 @@ export default function PlannedActivities() {
 
       {/* Barra de acciones (sticky) */}
       <div className="fixed bottom-0 inset-x-0 border-t bg-white/95 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <CalendarDays className="w-4 h-4 text-gray-500" />
-            <span>
-              {lastSavedAt ? `Borrador guardado por última vez a las ${lastSavedAt}` : "Borrador no guardado"}
-            </span>
-            {submitted && (
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 ml-2">
-                Enviado
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={guardarBorrador} disabled={submitted}>
-              <Save className="w-4 h-4" />
-              Guardar Borrador
-            </Button>
-            <Button onClick={enviarPlan} disabled={submitted}>
-              <Send className="w-4 h-4" />
-              Enviar Planificación
-            </Button>
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="space-y-3">
+            {/* Información de guardado automático */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-gray-600">
+                <CalendarDays className="w-4 h-4 text-gray-500" />
+                <span>
+                  {lastSavedAt ? `Guardado automático a las ${lastSavedAt}` : "Sin guardado automático"}
+                </span>
+                {submitted && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 ml-2">
+                    Enviado
+                  </Badge>
+                )}
+              </div>
+              <Button onClick={enviarPlan} disabled={submitted}>
+                <Send className="w-4 h-4" />
+                Enviar Planificación
+              </Button>
+            </div>
+
+            {/* Sección de borradores en dispositivo */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-blue-700">
+                <HardDrive className="w-4 h-4" />
+                <span>
+                  {draftSavedAt ? `Borrador en dispositivo guardado a las ${draftSavedAt}` : "Sin borrador en dispositivo"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={saveDraftToLocalStorage} 
+                  disabled={submitted}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  <Download className="w-4 h-4" />
+                  Guardar en Dispositivo
+                </Button>
+                {hasDraftInLocalStorage() && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={loadDraftFromLocalStorage} 
+                    disabled={submitted}
+                    className="border-green-300 text-green-700 hover:bg-green-100"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Cargar desde Dispositivo
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={clearLocalStorage}
+                  className="border-red-300 text-red-700 hover:bg-red-100"
+                  title="Limpiar todos los datos guardados localmente"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Limpiar Datos
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

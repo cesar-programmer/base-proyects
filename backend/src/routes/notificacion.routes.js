@@ -21,13 +21,13 @@ router.use(verifyToken);
 
 // Rutas para notificaciones
 router.get('/', getNotificaciones);
-router.get('/usuario/:id_usuario', getNotificacionesByUsuario);
-router.get('/usuario/:id_usuario/no-leidas', getNotificacionesNoLeidas);
-router.get('/usuario/:id_usuario/estadisticas', getEstadisticasNotificaciones);
+router.get('/usuario/:usuarioId', getNotificacionesByUsuario);
+router.get('/usuario/:usuarioId/no-leidas', getNotificacionesNoLeidas);
+router.get('/usuario/:usuarioId/estadisticas', getEstadisticasNotificaciones);
 router.get('/:id', getNotificacionById);
 router.post('/', validateNotificacion, createNotificacion);
 router.patch('/:id/leer', marcarComoLeida);
-router.patch('/usuario/:id_usuario/leer-todas', marcarTodasComoLeidas);
+router.patch('/usuario/:usuarioId/leer-todas', marcarTodasComoLeidas);
 router.delete('/:id', deleteNotificacion);
 router.delete('/limpiar/antiguas', deleteNotificacionesAntiguas);
 

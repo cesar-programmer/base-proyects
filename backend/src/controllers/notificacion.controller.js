@@ -75,10 +75,10 @@ export const getNotificacionById = async (req, res) => {
 // Obtener notificaciones de un usuario
 export const getNotificacionesByUsuario = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { usuarioId } = req.params;
     const { leido, limit = 50 } = req.query;
     
-    const whereClause = { id_usuario_destino: id_usuario };
+    const whereClause = { id_usuario_destino: usuarioId };
     
     if (leido !== undefined) {
       whereClause.leido = leido === 'true';
@@ -106,11 +106,11 @@ export const getNotificacionesByUsuario = async (req, res) => {
 // Obtener notificaciones no leídas de un usuario
 export const getNotificacionesNoLeidas = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { usuarioId } = req.params;
     
     const notificaciones = await Notificacion.findAll({
       where: {
-        id_usuario_destino: id_usuario,
+        id_usuario_destino: usuarioId,
         leido: false
       },
       include: [
@@ -205,13 +205,13 @@ export const marcarComoLeida = async (req, res) => {
 // Marcar todas las notificaciones de un usuario como leídas
 export const marcarTodasComoLeidas = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { usuarioId } = req.params;
     
     const [updatedCount] = await Notificacion.update(
       { leido: true },
       {
         where: {
-          id_usuario_destino: id_usuario,
+          id_usuario_destino: usuarioId,
           leido: false
         }
       }
@@ -273,10 +273,10 @@ export const deleteNotificacionesAntiguas = async (req, res) => {
 // Obtener estadísticas de notificaciones
 export const getEstadisticasNotificaciones = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
+    const { usuarioId } = req.params;
     
     const estadisticas = await Notificacion.findAll({
-      where: { id_usuario_destino: id_usuario },
+      where: { id_usuario_destino: usuarioId },
       attributes: [
         'tipo',
         'leido',

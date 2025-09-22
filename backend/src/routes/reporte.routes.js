@@ -8,7 +8,8 @@ import {
   getReporteSchema,
   changeReporteStatusSchema,
   getReportesByDocenteSchema,
-  getReportesByPeriodSchema
+  getReportesByPeriodSchema,
+  getReportHistorySchema
 } from '../schemas/reporte.schema.js';
 
 const router = express.Router();
@@ -25,6 +26,14 @@ router.get('/',
   verifyToken,
   checkDocenteOrAdmin,
   reporteController.getReportes.bind(reporteController)
+);
+
+// Ruta para obtener historial de reportes (DEBE estar antes de /:id)
+router.get('/historial',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReportHistorySchema, 'query'),
+  reporteController.getReportHistory.bind(reporteController)
 );
 
 router.get('/:id',

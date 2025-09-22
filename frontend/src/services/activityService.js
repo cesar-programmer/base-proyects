@@ -31,6 +31,16 @@ const activityService = {
     }
   },
 
+  // Crear nueva actividad planificada (sin reporte)
+  createPlannedActivity: async (activityData) => {
+    try {
+      const response = await api.post('/actividades/planificada', activityData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al crear actividad planificada');
+    }
+  },
+
   // Actualizar actividad
   updateActivity: async (id, activityData) => {
     try {
@@ -160,6 +170,16 @@ const activityService = {
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener actividades devueltas');
+    }
+  },
+
+  // Enviar planificación de actividades
+  async submitPlan(planData) {
+    try {
+      const response = await api.post('/actividades/enviar-planificacion', planData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al enviar la planificación');
     }
   }
 };

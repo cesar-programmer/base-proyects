@@ -87,13 +87,13 @@ function TypeIcon({ tipo }) {
       return <TrendingUp className="w-4 h-4 text-purple-600" />
     case "Docencia":
       return <FileText className="w-4 h-4 text-blue-600" />
-    case "Tutoría":
+    case "TUTORIAS":
       return <Clock className="w-4 h-4 text-green-600" />
-    case "Gestión":
+    case "GESTION_ACADEMICA":
       return <Calendar className="w-4 h-4 text-orange-600" />
-    case "Extensión":
+    case "EXTENSION":
       return <Clock className="w-4 h-4 text-emerald-600" />
-    case "Capacitación":
+    case "CAPACITACION":
       return <CheckCircle2 className="w-4 h-4 text-cyan-600" />
     default:
       return <FileText className="w-4 h-4 text-gray-600" />
@@ -228,12 +228,15 @@ const SearchFilters = ({ busqueda, setBusqueda, tipoFiltro, setTipoFiltro, estad
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
         >
           <option value="all">Todos los tipos</option>
-          <option value="Docencia">Docencia</option>
-          <option value="Tutoría">Tutoría</option>
-          <option value="Gestión">Gestión</option>
-          <option value="Investigación">Investigación</option>
-          <option value="Extensión">Extensión</option>
-          <option value="Capacitación">Capacitación</option>
+          <option value="DOCENCIA">DOCENCIA</option>
+          <option value="TUTORIAS">TUTORIAS</option>
+          <option value="GESTION_ACADEMICA">GESTION_ACADEMICA</option>
+          <option value="INVESTIGACION">INVESTIGACION</option>
+          <option value="EXTENSION">EXTENSION</option>
+          <option value="CAPACITACION">CAPACITACION</option>
+          <option value="ADMINISTRATIVA">ADMINISTRATIVA</option>
+          <option value="POSGRADO">POSGRADO</option>
+          <option value="OTRA">OTRA</option>
         </select>
         <select
           value={estadoFiltro}
@@ -550,6 +553,7 @@ function ReportDetailDialog({
 
 export default function PendingReports() {
   const { user } = useAuth();
+  const semestreActual = currentSemesterFor();
   const [busqueda, setBusqueda] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("all");
   const [estadoFiltro, setEstadoFiltro] = useState("all");
@@ -567,9 +571,13 @@ export default function PendingReports() {
     try {
       setLoading(true);
       const response = await reportService.getReportsByTeacher(user.id);
-      setReportes(response.data || []);
+      // Asegurar que siempre sea un array
+      const reportsData = response?.data || response || [];
+      setReportes(Array.isArray(reportsData) ? reportsData : []);
     } catch (error) {
+      console.error('Error al cargar reportes:', error);
       toast.error('Error al cargar reportes: ' + error.message);
+      setReportes([]); // Asegurar que sea un array vacío en caso de error
     } finally {
       setLoading(false);
     }
@@ -621,7 +629,8 @@ export default function PendingReports() {
     },
   ])
 
-  const reportesDelSemestre = reportes.filter((r) => r.semestre === semestreActual)
+  const reportesArray = Array.isArray(reportes) ? reportes : [];
+  const reportesDelSemestre = reportesArray.filter((r) => r.semestre === semestreActual)
   const reportesFiltrados = reportesDelSemestre.filter((r) => {
     const txt = `${r.titulo} ${r.tipo} ${r.estado} ${r.ultimaActualizacion}`.toLowerCase()
     const matchesSearch = txt.includes(busqueda.toLowerCase())
@@ -658,7 +667,10 @@ export default function PendingReports() {
 
   const confirmarSolicitudEdicion = () => {
     if (!reporteSeleccionado) return
-    setReportes((prev) => prev.map((r) => (r.id === reporteSeleccionado.id ? { ...r, estado: "Pendiente" } : r)))
+    setReportes((prev) => {
+      const currentReports = Array.isArray(prev) ? prev : [];
+      return currentReports.map((r) => (r.id === reporteSeleccionado.id ? { ...r, estado: "Pendiente" } : r));
+    })
     setOpenSolicitud(false)
   }
 
@@ -673,22 +685,24 @@ export default function PendingReports() {
     if (!reporteSeleccionado) return
     const hoy = new Date()
     const fecha = hoy.toLocaleDateString("es-MX", { day: "2-digit", month: "long" })
-    setReportes((prev) =>
-      prev.map((r) =>
+    setReportes((prev) => {
+      const currentReports = Array.isArray(prev) ? prev : [];
+      return currentReports.map((r) =>
         r.id === reporteSeleccionado.id
           ? { ...r, estado: "En revisión", ultimaActualizacion: fecha, resumen: resumenCorreccion }
           : r,
-      ),
-    )
+      );
+    })
     setOpenCorreccion(false)
   }
 
   const enviarReporte = (rep) => {
     const hoy = new Date()
     const fecha = hoy.toLocaleDateString("es-MX", { day: "2-digit", month: "long" })
-    setReportes((prev) =>
-      prev.map((r) => (r.id === rep.id ? { ...r, estado: "En revisión", ultimaActualizacion: fecha } : r)),
-    )
+    setReportes((prev) => {
+      const currentReports = Array.isArray(prev) ? prev : [];
+      return currentReports.map((r) => (r.id === rep.id ? { ...r, estado: "En revisión", ultimaActualizacion: fecha } : r));
+    })
     setDropdownOpen(null)
   }
 

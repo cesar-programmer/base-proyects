@@ -121,7 +121,7 @@ export default function HistorialReportesDashboard() {
     {
       id: "8",
       titulo: "Capacitación Docente 2024",
-      tipo: "Capacitación",
+      tipo: "CAPACITACION",
       estado: "Pendiente",
       fechaEnvio: "05 de febrero, 2024",
       semestre: "2024-1",
@@ -230,9 +230,9 @@ export default function HistorialReportesDashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-green-800 mb-3">Historial de Reportes</h1>
+          <h1 className="text-4xl font-bold text-green-800 mb-3">Historial de Reportes - Actividades Realizadas</h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Visualiza y gestiona tu historial completo de reportes académicos de manera eficiente
+            Visualiza y gestiona tu historial completo de reportes académicos y actividades realizadas de manera eficiente
           </p>
         </div>
 
@@ -281,12 +281,15 @@ export default function HistorialReportesDashboard() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none bg-white"
               >
                 <option value="all">Todos los tipos</option>
-                <option value="Investigación">Investigación</option>
-                <option value="Docencia">Docencia</option>
-                <option value="Tutoría">Tutoría</option>
-                <option value="Gestión">Gestión</option>
-                <option value="Extensión">Extensión</option>
-                <option value="Capacitación">Capacitación</option>
+                <option value="INVESTIGACION">INVESTIGACION</option>
+                <option value="DOCENCIA">DOCENCIA</option>
+                <option value="TUTORIAS">TUTORIAS</option>
+                <option value="GESTION_ACADEMICA">GESTION_ACADEMICA</option>
+                <option value="EXTENSION">EXTENSION</option>
+                <option value="CAPACITACION">CAPACITACION</option>
+                <option value="ADMINISTRATIVA">ADMINISTRATIVA</option>
+                <option value="POSGRADO">POSGRADO</option>
+                <option value="OTRA">OTRA</option>
               </select>
               <select
                 value={filterStatus}

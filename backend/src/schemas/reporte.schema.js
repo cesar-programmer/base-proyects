@@ -215,6 +215,38 @@ const sendReporteSchema = Joi.object({
     })
 });
 
+// Esquema para obtener historial de reportes
+const getReportHistorySchema = Joi.object({
+  docenteId: Joi.number()
+    .integer()
+    .positive()
+    .required()
+    .messages({
+      'number.base': 'El ID del docente debe ser un número',
+      'number.integer': 'El ID del docente debe ser un número entero',
+      'number.positive': 'El ID del docente debe ser un número positivo',
+      'any.required': 'El ID del docente es requerido'
+    }),
+  estado: Joi.string()
+    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'DEVUELTO')
+    .messages({
+      'any.only': 'El estado debe ser BORRADOR, ENVIADO, EN_REVISION, APROBADO o DEVUELTO'
+    }),
+  tipo: Joi.string()
+    .valid('ACTIVIDADES_PLANIFICADAS', 'ACTIVIDADES_REALIZADAS')
+    .messages({
+      'any.only': 'El tipo debe ser ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS'
+    }),
+  fechaInicio: Joi.date()
+    .messages({
+      'date.base': 'La fecha de inicio debe ser una fecha válida'
+    }),
+  fechaFin: Joi.date()
+    .messages({
+      'date.base': 'La fecha de fin debe ser una fecha válida'
+    })
+});
+
 export {
   getReporteSchema,
   createReporteSchema,
@@ -223,5 +255,6 @@ export {
   getReportesByDocenteSchema,
   getReportesByPeriodSchema,
   getReportesQuerySchema,
-  sendReporteSchema
+  sendReporteSchema,
+  getReportHistorySchema
 };

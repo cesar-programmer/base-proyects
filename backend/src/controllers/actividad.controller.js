@@ -117,7 +117,20 @@ export const createActividad = async (req, res, next) => {
 // Crear nueva actividad planificada (sin reporte)
 export const createActividadPlanificada = async (req, res, next) => {
   try {
-    const { nombre, descripcion, categoria, fecha_inicio, fecha_fin, horas_dedicadas, observaciones } = req.body;
+    const { 
+      nombre, 
+      descripcion, 
+      categoria, 
+      fecha_inicio, 
+      fecha_fin, 
+      horas_dedicadas, 
+      ubicacion, 
+      presupuesto, 
+      participantesEsperados, 
+      objetivos, 
+      recursos, 
+      observaciones 
+    } = req.body;
     
     // Obtener el período académico activo
     const periodoActivo = await PeriodoAcademico.findOne({
@@ -137,6 +150,11 @@ export const createActividadPlanificada = async (req, res, next) => {
       categoria,
       fechaInicio: fecha_inicio,
       fechaFin: fecha_fin,
+      ubicacion,
+      presupuesto: presupuesto ? parseFloat(presupuesto) : null,
+      participantesEsperados: participantesEsperados ? parseInt(participantesEsperados) : null,
+      objetivos,
+      recursos,
       observaciones_planificacion: observaciones,
       usuarioId: req.user.id,
       periodoAcademicoId: periodoActivo.id,

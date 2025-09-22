@@ -511,7 +511,7 @@ export default function PlannedActivities() {
       const activity = actividadesArray.find(a => a.id === id);
       if (!activity) return;
       
-      // Mapear campos según el esquema del backend (solo campos permitidos)
+      // Mapear campos según el esquema del backend (incluir todos los campos del formulario)
       const activityData = {
         nombre: activity.titulo || '',
         descripcion: activity.descripcion || '',
@@ -519,7 +519,12 @@ export default function PlannedActivities() {
         fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
         fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         horas_dedicadas: activity.horas || 0,
-        observaciones: `Actividad planificada para el semestre ${semestre}`
+        ubicacion: activity.ubicacion || '',
+        presupuesto: activity.presupuesto || 0,
+        participantesEsperados: activity.participantesEsperados || 0,
+        objetivos: activity.objetivos || '',
+        recursos: activity.recursos || '',
+        observaciones: activity.observaciones || `Actividad planificada para el semestre ${semestre}`
       };
       
       if (activity.isNew) {
@@ -532,7 +537,7 @@ export default function PlannedActivities() {
           );
         });
       } else {
-        // Para actualizar, solo enviar los campos permitidos
+        // Para actualizar, enviar todos los campos del formulario
         const updateData = {
           nombre: activity.titulo || '',
           descripcion: activity.descripcion || '',
@@ -540,7 +545,12 @@ export default function PlannedActivities() {
           fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
           fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           horas_dedicadas: activity.horas || 0,
-          observaciones: `Actividad planificada para el semestre ${semestre}`
+          ubicacion: activity.ubicacion || '',
+          presupuesto: activity.presupuesto || 0,
+          participantesEsperados: activity.participantesEsperados || 0,
+          objetivos: activity.objetivos || '',
+          recursos: activity.recursos || '',
+          observaciones: activity.observaciones || `Actividad planificada para el semestre ${semestre}`
         };
         await activityService.updateActivity(id, updateData);
         // Marcar como guardada
@@ -592,7 +602,7 @@ export default function PlannedActivities() {
       if (!activity) return;
       
       if (activity.isNew) {
-        // Mapear campos según el esquema del backend para crear (solo campos permitidos)
+        // Mapear campos según el esquema del backend para crear (incluir todos los campos del formulario)
         const activityData = {
           nombre: activity.titulo || '',
           descripcion: activity.descripcion || '',
@@ -600,12 +610,17 @@ export default function PlannedActivities() {
           fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
           fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           horas_dedicadas: activity.horas || 0,
-          observaciones: `Actividad planificada para el semestre ${semestre}`
+          ubicacion: activity.ubicacion || '',
+          presupuesto: activity.presupuesto || 0,
+          participantesEsperados: activity.participantesEsperados || 0,
+          objetivos: activity.objetivos || '',
+          recursos: activity.recursos || '',
+          observaciones: activity.observaciones || `Actividad planificada para el semestre ${semestre}`
         };
         await activityService.createPlannedActivity(activityData);
         toast.success('Actividad creada exitosamente');
       } else {
-        // Para actualizar, solo enviar los campos permitidos
+        // Para actualizar, enviar todos los campos del formulario
         const updateData = {
           nombre: activity.titulo || '',
           descripcion: activity.descripcion || '',
@@ -613,7 +628,12 @@ export default function PlannedActivities() {
           fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
           fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           horas_dedicadas: activity.horas || 0,
-          observaciones: `Actividad planificada para el semestre ${semestre}`
+          ubicacion: activity.ubicacion || '',
+          presupuesto: activity.presupuesto || 0,
+          participantesEsperados: activity.participantesEsperados || 0,
+          objetivos: activity.objetivos || '',
+          recursos: activity.recursos || '',
+          observaciones: activity.observaciones || `Actividad planificada para el semestre ${semestre}`
         };
         await activityService.updateActivity(id, updateData);
         toast.success('Actividad actualizada exitosamente');
@@ -710,7 +730,7 @@ export default function PlannedActivities() {
       
       for (const actividad of currentActivities) {
         try {
-          // Preparar los datos de la actividad según el esquema del backend (solo campos permitidos)
+          // Preparar los datos de la actividad según el esquema del backend (incluir todos los campos del formulario)
           const actividadData = {
             nombre: actividad.titulo || '',
             descripcion: actividad.descripcion || '',
@@ -718,6 +738,11 @@ export default function PlannedActivities() {
             fecha_inicio: actividad.fechaInicio || new Date().toISOString().split('T')[0],
             fecha_fin: actividad.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             horas_dedicadas: actividad.horas || 0,
+            ubicacion: actividad.ubicacion || '',
+            presupuesto: actividad.presupuesto || 0,
+            participantesEsperados: actividad.participantesEsperados || 0,
+            objetivos: actividad.objetivos || '',
+            recursos: actividad.recursos || '',
             observaciones: `Actividad planificada para el semestre ${semestre}`
           };
 

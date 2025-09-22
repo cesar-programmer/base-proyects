@@ -24,6 +24,11 @@ const createActividadPlanificadaSchema = Joi.object({
   fecha_inicio: Joi.date().iso().required(),
   fecha_fin: Joi.date().iso().min(Joi.ref('fecha_inicio')).required(),
   horas_dedicadas: Joi.number().min(0).max(168).allow(null),
+  ubicacion: Joi.string().max(255).allow('', null),
+  presupuesto: Joi.number().min(0).allow(null),
+  participantesEsperados: Joi.number().integer().min(0).allow(null),
+  objetivos: Joi.string().max(2000).allow('', null),
+  recursos: Joi.string().max(2000).allow('', null),
   observaciones: Joi.string().max(1000).allow('', null)
 });
 
@@ -75,6 +80,11 @@ const updateActividadSchema = Joi.object({
     otherwise: Joi.date()
   }),
   horas_dedicadas: Joi.number().min(0).max(168).allow(null),
+  ubicacion: Joi.string().max(255).allow('', null),
+  presupuesto: Joi.number().min(0).allow(null),
+  participantesEsperados: Joi.number().integer().min(0).allow(null),
+  objetivos: Joi.string().max(2000).allow('', null),
+  recursos: Joi.string().max(2000).allow('', null),
   realizada: Joi.boolean(),
   observaciones: Joi.string().max(500).allow('', null),
   evidencias: Joi.string().max(500).allow('', null)

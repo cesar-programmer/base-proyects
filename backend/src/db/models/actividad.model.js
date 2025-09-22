@@ -62,6 +62,16 @@ const ActividadSchema = {
     type: DataTypes.INTEGER,
     field: 'participantesEsperados'
   },
+  objetivos: {
+    allowNull: true,
+    type: DataTypes.TEXT,
+    field: 'objetivos'
+  },
+  recursos: {
+    allowNull: true,
+    type: DataTypes.TEXT,
+    field: 'recursos'
+  },
   archivoAdjunto: {
     allowNull: true,
     type: DataTypes.STRING(255),

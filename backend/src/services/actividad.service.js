@@ -289,6 +289,20 @@ class ActividadService {
         fecha_revision: new Date()
       });
       
+      // Crear notificación automática de devolución
+      try {
+        const mensaje = `Su actividad "${actividad.nombre}" ha sido devuelta para correcciones. Observaciones: ${razon}`;
+          
+        await this.notificacionService.create({
+          id_usuario_destino: actividad.id_usuario,
+          mensaje: mensaje,
+          tipo: 'DEVOLUCION'
+        });
+      } catch (notifError) {
+        console.error('Error al crear notificación de devolución:', notifError);
+        // No fallar la operación principal si falla la notificación
+      }
+      
       return {
         message: 'Actividad devuelta exitosamente',
         data: actividad

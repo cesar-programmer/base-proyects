@@ -11,6 +11,7 @@ import { Archivo, ArchivoSchema } from './archivo.model.js';
 import { Notificacion, NotificacionSchema } from './notificacion.model.js';
 import { HistorialCambio, HistorialCambioSchema } from './historialCambio.model.js';
 import { Configuracion, ConfiguracionSchema } from './configuracion.model.js';
+import { ReporteActividad, ReporteActividadSchema } from './reporteActividad.model.js';
 
 // Configuración de la base de datos (se puede mover a un archivo de configuración separado)
 const sequelize = new Sequelize({
@@ -41,7 +42,8 @@ const models = {
   Archivo: Archivo.init(ArchivoSchema, Archivo.config(sequelize)),
   Notificacion: Notificacion.init(NotificacionSchema, Notificacion.config(sequelize)),
   HistorialCambio: HistorialCambio.init(HistorialCambioSchema, HistorialCambio.config(sequelize)),
-  Configuracion: Configuracion.init(ConfiguracionSchema, Configuracion.config(sequelize))
+  Configuracion: Configuracion.init(ConfiguracionSchema, Configuracion.config(sequelize)),
+  ReporteActividad: ReporteActividad.init(ReporteActividadSchema, ReporteActividad.config(sequelize))
 };
 
 // Establecer todas las asociaciones

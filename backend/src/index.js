@@ -63,7 +63,7 @@ app.use(boomErrorHandler);
 app.use(errorHandler);
 
 // Puerto
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Solo iniciar servidor si no estamos en modo test
 let server;

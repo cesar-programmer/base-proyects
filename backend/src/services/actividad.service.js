@@ -17,6 +17,7 @@ class ActividadService {
           }
         ]
       });
+
       return actividades;
     } catch (error) {
       throw boom.badImplementation('Error al obtener las actividades', error);
@@ -98,16 +99,29 @@ class ActividadService {
   // Obtener actividades por usuario
   async findByUsuario(usuarioId, options = {}) {
     try {
-      const { page = 1, limit = 10 } = options;
+      const { page = 1, limit = 10, periodoAcademicoId } = options;
       const offset = (page - 1) * limit;
 
+      // Construir la condición where
+      const whereCondition = { usuarioId: usuarioId };
+      
+      // Si se especifica un período académico, agregarlo al filtro
+      if (periodoAcademicoId) {
+        whereCondition.periodoAcademicoId = periodoAcademicoId;
+      }
+
       const actividades = await models.Actividad.findAndCountAll({
-        where: { usuarioId: usuarioId },
+        where: whereCondition,
         include: [
           {
             model: models.User,
             as: 'usuario',
             attributes: ['id', 'nombre', 'apellido', 'email']
+          },
+          {
+            model: models.PeriodoAcademico,
+            as: 'periodoAcademico',
+            attributes: ['id', 'nombre', 'fechaInicio', 'fechaFin']
           }
         ],
         order: [['createdAt', 'DESC']],

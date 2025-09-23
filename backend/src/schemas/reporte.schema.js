@@ -65,6 +65,65 @@ const createReporteSchema = Joi.object({
     .allow('')
     .messages({
       'string.max': 'Las observaciones no pueden exceder 1000 caracteres'
+    }),
+  actividadId: Joi.number()
+    .integer()
+    .positive()
+    .messages({
+      'number.base': 'El ID de la actividad debe ser un número',
+      'number.integer': 'El ID de la actividad debe ser un número entero',
+      'number.positive': 'El ID de la actividad debe ser un número positivo'
+    }),
+  actividades: Joi.array()
+    .items(
+      Joi.alternatives().try(
+        Joi.number().integer().positive(),
+        Joi.object({
+          id: Joi.number().integer().positive().required()
+        })
+      )
+    )
+    .min(1)
+    .messages({
+      'array.min': 'Debe seleccionar al menos una actividad',
+      'array.base': 'Las actividades deben ser un array'
+    }),
+  ubicacion: Joi.string()
+    .max(255)
+    .allow('')
+    .messages({
+      'string.max': 'La ubicación no puede exceder 255 caracteres'
+    }),
+  presupuesto: Joi.number()
+    .min(0)
+    .messages({
+      'number.base': 'El presupuesto debe ser un número',
+      'number.min': 'El presupuesto no puede ser negativo'
+    }),
+  participantesEsperados: Joi.number()
+    .integer()
+    .min(0)
+    .messages({
+      'number.base': 'Los participantes esperados deben ser un número',
+      'number.integer': 'Los participantes esperados deben ser un número entero',
+      'number.min': 'Los participantes esperados no pueden ser negativos'
+    }),
+  objetivos: Joi.string()
+    .max(2000)
+    .allow('')
+    .messages({
+      'string.max': 'Los objetivos no pueden exceder 2000 caracteres'
+    }),
+  recursos: Joi.string()
+    .max(2000)
+    .allow('')
+    .messages({
+      'string.max': 'Los recursos no pueden exceder 2000 caracteres'
+    }),
+  estado: Joi.string()
+    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'RECHAZADO')
+    .messages({
+      'any.only': 'El estado debe ser uno de: BORRADOR, ENVIADO, EN_REVISION, APROBADO, RECHAZADO'
     })
 });
 

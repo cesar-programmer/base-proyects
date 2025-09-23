@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import reportService from '../../services/reportService';
 import { toast } from 'react-hot-toast'
+import ModalCrearReporte from '../../components/ModalCrearReporte';
 
 // Componentes reutilizables
 const Button = ({ children, className = "", variant = "default", disabled = false, ...props }) => {
@@ -651,6 +652,7 @@ export default function PendingReports() {
   const [mensajeSolicitud, setMensajeSolicitud] = useState("")
   const [openCorreccion, setOpenCorreccion] = useState(false)
   const [resumenCorreccion, setResumenCorreccion] = useState("")
+  const [openCrearReporte, setOpenCrearReporte] = useState(false)
 
   const abrirDetalle = (rep) => {
     setReporteSeleccionado(rep)
@@ -758,8 +760,15 @@ export default function PendingReports() {
 
         {/* Listado */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-900">Reportes del semestre ({reportesFiltrados.length})</h3>
+            <Button 
+              onClick={() => setOpenCrearReporte(true)}
+              className="flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Crear Reporte
+            </Button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -989,6 +998,19 @@ export default function PendingReports() {
             </Button>
           </div>
         </Modal>
+
+        {/* Modal para crear reporte */}
+        {openCrearReporte && (
+          <ModalCrearReporte
+            open={openCrearReporte}
+            onClose={() => setOpenCrearReporte(false)}
+            onReporteCreado={() => {
+              setOpenCrearReporte(false);
+              // Recargar reportes
+              window.location.reload();
+            }}
+          />
+        )}
       </div>
     </main>
   )

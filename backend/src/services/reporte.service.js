@@ -11,6 +11,17 @@ class ReporteService {
               model: models.User,
               as: 'usuario',
               attributes: ['id', 'nombre', 'apellido', 'email']
+            },
+            {
+              model: models.Actividad,
+              as: 'actividad',
+              attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+            },
+            {
+              model: models.Actividad,
+              as: 'actividades',
+              through: { attributes: [] },
+              attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado']
             }
           ],
           order: [['createdAt', 'DESC']]
@@ -43,6 +54,12 @@ class ReporteService {
             model: models.Actividad,
             as: 'actividad',
             attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+          },
+          {
+            model: models.Actividad,
+            as: 'actividades',
+            through: { attributes: [] },
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado']
           }
         ],
         order: [['createdAt', 'DESC']]
@@ -123,6 +140,14 @@ class ReporteService {
             model: models.Actividad,
             as: 'actividad',
             attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+          },
+          {
+            model: models.Actividad,
+            as: 'actividades',
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'categoria', 'ubicacion'],
+            through: {
+              attributes: ['orden', 'observaciones']
+            }
           }
         ]
       });
@@ -140,6 +165,8 @@ class ReporteService {
 
   // Crear un nuevo reporte
   async create(reporteData) {
+    const transaction = await models.sequelize.transaction();
+    
     try {
       // Verificar que el usuario existe
       const usuario = await models.User.findByPk(reporteData.usuarioId);
@@ -147,18 +174,61 @@ class ReporteService {
         throw boom.notFound('Usuario no encontrado');
       }
 
-      // Verificar que la actividad existe
-      const actividad = await models.Actividad.findByPk(reporteData.actividadId);
-      if (!actividad) {
-        throw boom.notFound('Actividad no encontrada');
-      }
+      // Extraer actividades del reporteData
+      const { actividades, ...reporteDataSinActividades } = reporteData;
 
-      const newReporte = await models.Reporte.create(reporteData);
-      
-      // Retornar con relaciones incluidas
-      const reporteWithRelations = await this.findOne(newReporte.id);
-      return reporteWithRelations;
+      // Si hay actividades múltiples, usar la nueva funcionalidad
+      if (actividades && Array.isArray(actividades) && actividades.length > 0) {
+        // Verificar que todas las actividades existen
+        const actividadesIds = actividades.map(act => typeof act === 'object' ? act.id : act);
+        const actividadesExistentes = await models.Actividad.findAll({
+          where: { id: actividadesIds },
+          transaction
+        });
+
+        if (actividadesExistentes.length !== actividadesIds.length) {
+          throw boom.badRequest('Una o más actividades no existen');
+        }
+
+        // Crear el reporte sin actividadId
+        const newReporte = await models.Reporte.create({
+          ...reporteDataSinActividades,
+          actividadId: null // No usar la relación 1:1 antigua
+        }, { transaction });
+
+        // Crear las relaciones en la tabla intermedia
+        const reporteActividadesData = actividadesIds.map((actividadId, index) => ({
+          reporteId: newReporte.id,
+          actividadId: actividadId,
+          orden: index + 1
+        }));
+
+        await models.ReporteActividad.bulkCreate(reporteActividadesData, { transaction });
+
+        await transaction.commit();
+
+        // Retornar con relaciones incluidas
+        const reporteWithRelations = await this.findOne(newReporte.id);
+        return reporteWithRelations;
+      } else {
+        // Funcionalidad original para compatibilidad
+        if (reporteDataSinActividades.actividadId) {
+          const actividad = await models.Actividad.findByPk(reporteDataSinActividades.actividadId);
+          if (!actividad) {
+            throw boom.notFound('Actividad no encontrada');
+          }
+        }
+
+        const newReporte = await models.Reporte.create(reporteDataSinActividades, { transaction });
+        
+        await transaction.commit();
+        
+        // Retornar con relaciones incluidas
+        const reporteWithRelations = await this.findOne(newReporte.id);
+        return reporteWithRelations;
+      }
     } catch (error) {
+      await transaction.rollback();
       if (boom.isBoom(error)) throw error;
       throw boom.internal('Error al crear el reporte');
     }
@@ -166,22 +236,62 @@ class ReporteService {
 
   // Actualizar un reporte
   async update(id, reporteData) {
+    const transaction = await models.sequelize.transaction();
+    
     try {
       const reporte = await this.findOne(id);
 
+      // Extraer actividades del reporteData
+      const { actividades, ...reporteDataSinActividades } = reporteData;
+
       // Si se está cambiando el estado, actualizar fecha de revisión
-      if (reporteData.estado && reporteData.estado !== reporte.estado) {
-        if (reporteData.estado === 'revisado' || reporteData.estado === 'aprobado' || reporteData.estado === 'rechazado') {
-          reporteData.fechaRevision = new Date();
+      if (reporteDataSinActividades.estado && reporteDataSinActividades.estado !== reporte.estado) {
+        if (reporteDataSinActividades.estado === 'revisado' || reporteDataSinActividades.estado === 'aprobado' || reporteDataSinActividades.estado === 'rechazado') {
+          reporteDataSinActividades.fechaRevision = new Date();
         }
       }
 
-      const updatedReporte = await reporte.update(reporteData);
+      // Si se están actualizando las actividades
+      if (actividades && Array.isArray(actividades)) {
+        // Verificar que todas las actividades existen
+        const actividadesIds = actividades.map(act => typeof act === 'object' ? act.id : act);
+        const actividadesExistentes = await models.Actividad.findAll({
+          where: { id: actividadesIds },
+          transaction
+        });
+
+        if (actividadesExistentes.length !== actividadesIds.length) {
+          throw boom.badRequest('Una o más actividades no existen');
+        }
+
+        // Eliminar relaciones existentes
+        await models.ReporteActividad.destroy({
+          where: { reporteId: id },
+          transaction
+        });
+
+        // Crear nuevas relaciones
+        const reporteActividadesData = actividadesIds.map((actividadId, index) => ({
+          reporteId: id,
+          actividadId: actividadId,
+          orden: index + 1
+        }));
+
+        await models.ReporteActividad.bulkCreate(reporteActividadesData, { transaction });
+
+        // Limpiar actividadId si se está usando la nueva funcionalidad
+        reporteDataSinActividades.actividadId = null;
+      }
+
+      const updatedReporte = await reporte.update(reporteDataSinActividades, { transaction });
+      
+      await transaction.commit();
       
       // Retornar con relaciones incluidas
       const reporteWithRelations = await this.findOne(id);
       return reporteWithRelations;
     } catch (error) {
+      await transaction.rollback();
       if (boom.isBoom(error)) throw error;
       throw boom.internal('Error al actualizar el reporte');
     }

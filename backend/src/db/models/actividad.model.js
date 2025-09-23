@@ -142,15 +142,29 @@ class Actividad extends Model {
       foreignKey: 'periodoAcademicoId'
     });
     
-    // Una actividad puede tener muchos reportes
+    // Una actividad puede tener muchos reportes (relación original - mantener para compatibilidad)
     this.hasMany(models.Reporte, {
       as: 'reportes',
       foreignKey: 'actividadId'
     });
     
+    // Una actividad puede estar en muchos reportes (nueva relación muchos a muchos)
+    this.belongsToMany(models.Reporte, {
+      through: models.ReporteActividad,
+      as: 'reportesAsociados',
+      foreignKey: 'actividadId',
+      otherKey: 'reporteId'
+    });
+    
     // Una actividad puede tener muchos archivos
     this.hasMany(models.Archivo, {
       as: 'archivos',
+      foreignKey: 'actividadId'
+    });
+    
+    // Una actividad puede tener muchas entradas en ReporteActividad
+    this.hasMany(models.ReporteActividad, {
+      as: 'reporteActividades',
       foreignKey: 'actividadId'
     });
   }

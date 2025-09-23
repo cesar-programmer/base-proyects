@@ -100,10 +100,18 @@ class Reporte extends Model {
       foreignKey: 'revisadoPorId'
     });
     
-    // Un reporte pertenece a una actividad
+    // Un reporte pertenece a una actividad (relación original - mantener para compatibilidad)
     this.belongsTo(models.Actividad, {
       as: 'actividad',
       foreignKey: 'actividadId'
+    });
+    
+    // Un reporte puede tener muchas actividades (nueva relación muchos a muchos)
+    this.belongsToMany(models.Actividad, {
+      through: models.ReporteActividad,
+      as: 'actividades',
+      foreignKey: 'reporteId',
+      otherKey: 'actividadId'
     });
   }
 

@@ -50,12 +50,19 @@ export const getActividadById = async (req, res, next) => {
 export const getActividadesByUsuario = async (req, res, next) => {
   try {
     const { usuarioId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, periodoAcademicoId } = req.query;
     
-    const actividades = await actividadService.findByUsuario(usuarioId, {
+    const options = {
       page: parseInt(page),
       limit: parseInt(limit)
-    });
+    };
+    
+    // Si se especifica un período académico, agregarlo a las opciones
+    if (periodoAcademicoId) {
+      options.periodoAcademicoId = parseInt(periodoAcademicoId);
+    }
+    
+    const actividades = await actividadService.findByUsuario(usuarioId, options);
     
     res.json({
       message: 'Actividades del usuario obtenidas exitosamente',

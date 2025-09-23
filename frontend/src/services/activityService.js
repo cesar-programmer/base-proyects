@@ -21,6 +21,60 @@ const activityService = {
     }
   },
 
+  // Obtener actividades por usuario
+  getActivitiesByUser: async (usuarioId, options = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (options.page) params.append('page', options.page);
+      if (options.limit) params.append('limit', options.limit);
+      if (options.periodoAcademicoId) params.append('periodoAcademicoId', options.periodoAcademicoId);
+      
+      const response = await api.get(`/actividades/usuario/${usuarioId}?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener actividades del usuario');
+    }
+  },
+
+  // Obtener actividades por usuario del período académico actual
+  getActivitiesByUserCurrentPeriod: async (usuarioId, options = {}) => {
+    try {
+      console.log('🔍 [ActivityService] Obteniendo actividades del período actual para usuario:', usuarioId);
+      
+      // Primero obtener el período académico activo
+      console.log('📅 [ActivityService] Obteniendo período académico activo...');
+      const periodoResponse = await api.get('/periodos-academicos/activo');
+      const periodoActivo = periodoResponse.data;
+      console.log('📅 [ActivityService] Resultado período activo:', periodoActivo);
+      
+      if (!periodoActivo) {
+        console.error('❌ [ActivityService] No hay período académico activo configurado');
+        throw new Error('No hay período académico activo configurado');
+      }
+      
+      // Luego obtener las actividades del período actual
+      console.log('📋 [ActivityService] Obteniendo actividades del usuario con filtro de período...');
+      const params = new URLSearchParams();
+      if (options.page) params.append('page', options.page);
+      if (options.limit) params.append('limit', options.limit);
+      params.append('periodoAcademicoId', periodoActivo.id);
+      
+      const response = await api.get(`/actividades/usuario/${usuarioId}?${params.toString()}`);
+      console.log('📋 [ActivityService] Resultado actividades filtradas:', response.data);
+      
+      const result = {
+        ...response.data,
+        periodoActivo
+      };
+      
+      console.log('✅ [ActivityService] Actividades obtenidas exitosamente para período:', periodoActivo.nombre);
+      return result;
+    } catch (error) {
+      console.error('💥 [ActivityService] Error al obtener actividades del período actual:', error);
+      throw new Error(error.response?.data?.message || 'Error al obtener actividades del período actual');
+    }
+  },
+
   // Crear nueva actividad
   createActivity: async (activityData) => {
     try {

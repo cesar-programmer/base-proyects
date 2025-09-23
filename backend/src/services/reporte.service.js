@@ -1,123 +1,54 @@
 import boom from '@hapi/boom';
 import { models } from '../db/models/index.js';
+import { Op } from 'sequelize';
 
 class ReporteService {
-  // Obtener todos los reportes
-  async find() {
+  // Obtener todos los reportes con filtros y paginación
+  async find(options = {}) {
     try {
-      const reportes = await models.Reporte.findAll({
-          include: [
-            {
-              model: models.User,
-              as: 'usuario',
-              attributes: ['id', 'nombre', 'apellido', 'email']
-            },
-            {
-              model: models.Actividad,
-              as: 'actividad',
-              attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
-            },
-            {
-              model: models.Actividad,
-              as: 'actividades',
-              through: { attributes: [] },
-              attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado']
-            }
-          ],
-          order: [['createdAt', 'DESC']]
-        });
-      return reportes;
-    } catch (error) {
-      console.error('Error específico en reporte.service.js:', error);
-      throw boom.internal('Error al obtener los reportes');
-    }
-  }
+      const { page = 1, limit = 10, estado, actividadId, usuarioId } = options;
+      const offset = (page - 1) * limit;
+      
+      const whereClause = {};
+      if (estado) whereClause.estado = estado;
+      if (actividadId) whereClause.actividadId = actividadId;
+      if (usuarioId) whereClause.usuarioId = usuarioId;
 
-  // Obtener reportes por docente
-  async findByDocente(docenteId, filters = {}) {
-    try {
-      const whereClause = { usuarioId: docenteId };
-      
-      // Aplicar filtros adicionales si se proporcionan
-      if (filters.estado) whereClause.estado = filters.estado;
-      if (filters.actividadId) whereClause.actividadId = filters.actividadId;
-      
-      const reportes = await models.Reporte.findAll({
+      const reportes = await models.Reporte.findAndCountAll({
         where: whereClause,
         include: [
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'email']
           },
           {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+            model: models.User,
+            as: 'revisadoPor',
+            attributes: ['id', 'nombre', 'email'],
+            required: false
           },
           {
             model: models.Actividad,
             as: 'actividades',
-            through: { attributes: [] },
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado']
+            attributes: ['id', 'titulo', 'descripcion'],
+            required: false,
+            through: { attributes: [] }
           }
         ],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
         order: [['createdAt', 'DESC']]
       });
-      return reportes;
-    } catch (error) {
-      console.error('Error detallado en findByDocente:', error);
-      throw boom.internal(`Error al obtener los reportes del docente: ${error.message}`);
-    }
-  }
 
-  // Obtener reportes por actividad
-  async findByActividad(actividadId) {
-    try {
-      const reportes = await models.Reporte.findAll({
-        where: { actividadId: actividadId },
-        include: [
-          {
-            model: models.User,
-            as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
-          }
-        ],
-        order: [['createdAt', 'DESC']]
-      });
-      return reportes;
+      return {
+        reportes: reportes.rows,
+        total: reportes.count,
+        totalPages: Math.ceil(reportes.count / limit),
+        currentPage: parseInt(page)
+      };
     } catch (error) {
-      throw boom.internal('Error al obtener los reportes del periodo');
-    }
-  }
-
-  // Obtener reportes por estado
-  async findByStatus(estado) {
-    try {
-      const reportes = await models.Reporte.findAll({
-        where: { estado },
-        include: [
-          {
-            model: models.User,
-            as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'titulo', 'descripcion']
-          }
-        ],
-        order: [['createdAt', 'DESC']]
-      });
-      return reportes;
-    } catch (error) {
-      throw boom.internal('Error al obtener los reportes por estado');
+      throw boom.internal('Error al obtener los reportes');
     }
   }
 
@@ -129,25 +60,26 @@ class ReporteService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'email']
           },
           {
             model: models.User,
             as: 'revisadoPor',
-            attributes: ['id', 'nombre', 'apellido', 'email']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+            attributes: ['id', 'nombre', 'email'],
+            required: false
           },
           {
             model: models.Actividad,
             as: 'actividades',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'categoria', 'ubicacion'],
-            through: {
-              attributes: ['orden', 'observaciones']
-            }
+            attributes: ['id', 'titulo', 'descripcion'],
+            required: false,
+            through: { attributes: [] } // Excluir atributos de la tabla intermedia
+          },
+          {
+            model: models.Archivo,
+            as: 'archivos',
+            attributes: ['id', 'nombre_original', 'nombre_almacenado', 'ruta_almacenamiento', 'tipo_mime'],
+            required: false
           }
         ]
       });
@@ -158,140 +90,69 @@ class ReporteService {
 
       return reporte;
     } catch (error) {
+      console.log('Error específico en findOne:', error);
       if (boom.isBoom(error)) throw error;
       throw boom.internal('Error al obtener el reporte');
     }
   }
 
   // Crear un nuevo reporte
-  async create(reporteData) {
-    const transaction = await models.sequelize.transaction();
-    
+  async create(reporteData, archivos = []) {
     try {
-      // Verificar que el usuario existe
-      const usuario = await models.User.findByPk(reporteData.usuarioId);
-      if (!usuario) {
-        throw boom.notFound('Usuario no encontrado');
+      console.log('Datos del reporte antes de crear:', reporteData);
+      const newReporte = await models.Reporte.create(reporteData);
+
+      // Si hay archivos, asociarlos al reporte
+      if (archivos && archivos.length > 0) {
+        for (const archivo of archivos) {
+          await models.Archivo.create({
+            ...archivo,
+            reporteId: newReporte.id
+          });
+        }
       }
 
-      // Extraer actividades del reporteData
-      const { actividades, ...reporteDataSinActividades } = reporteData;
-
-      // Si hay actividades múltiples, usar la nueva funcionalidad
-      if (actividades && Array.isArray(actividades) && actividades.length > 0) {
-        // Verificar que todas las actividades existen
-        const actividadesIds = actividades.map(act => typeof act === 'object' ? act.id : act);
-        const actividadesExistentes = await models.Actividad.findAll({
-          where: { id: actividadesIds },
-          transaction
-        });
-
-        if (actividadesExistentes.length !== actividadesIds.length) {
-          throw boom.badRequest('Una o más actividades no existen');
-        }
-
-        // Crear el reporte sin actividadId
-        const newReporte = await models.Reporte.create({
-          ...reporteDataSinActividades,
-          actividadId: null // No usar la relación 1:1 antigua
-        }, { transaction });
-
-        // Crear las relaciones en la tabla intermedia
-        const reporteActividadesData = actividadesIds.map((actividadId, index) => ({
-          reporteId: newReporte.id,
-          actividadId: actividadId,
-          orden: index + 1
-        }));
-
-        await models.ReporteActividad.bulkCreate(reporteActividadesData, { transaction });
-
-        await transaction.commit();
-
-        // Retornar con relaciones incluidas
-        const reporteWithRelations = await this.findOne(newReporte.id);
-        return reporteWithRelations;
-      } else {
-        // Funcionalidad original para compatibilidad
-        if (reporteDataSinActividades.actividadId) {
-          const actividad = await models.Actividad.findByPk(reporteDataSinActividades.actividadId);
-          if (!actividad) {
-            throw boom.notFound('Actividad no encontrada');
-          }
-        }
-
-        const newReporte = await models.Reporte.create(reporteDataSinActividades, { transaction });
-        
-        await transaction.commit();
-        
-        // Retornar con relaciones incluidas
-        const reporteWithRelations = await this.findOne(newReporte.id);
-        return reporteWithRelations;
-      }
+      // Retornar el reporte con sus relaciones
+      return await this.findOne(newReporte.id);
     } catch (error) {
-      await transaction.rollback();
+      console.log('Error específico en create reporte:', error);
+      console.log('Error name:', error.name);
+      console.log('Error message:', error.message);
       if (boom.isBoom(error)) throw error;
-      throw boom.internal('Error al crear el reporte');
+      
+      if (error.name === 'SequelizeValidationError') {
+        const messages = error.errors.map(err => err.message).join(', ');
+        throw boom.badRequest(`Error de validación: ${messages}`);
+      }
+      
+      if (error.name === 'SequelizeForeignKeyConstraintError') {
+        throw boom.badRequest('Error de referencia: Verifique que los IDs de usuario y actividad sean válidos');
+      }
+      
+      throw boom.internal(`Error al crear el reporte: ${error.message}`);
     }
   }
 
   // Actualizar un reporte
-  async update(id, reporteData) {
-    const transaction = await models.sequelize.transaction();
-    
+  async update(id, reporteData, archivos = []) {
     try {
       const reporte = await this.findOne(id);
+      
+      await reporte.update(reporteData);
 
-      // Extraer actividades del reporteData
-      const { actividades, ...reporteDataSinActividades } = reporteData;
-
-      // Si se está cambiando el estado, actualizar fecha de revisión
-      if (reporteDataSinActividades.estado && reporteDataSinActividades.estado !== reporte.estado) {
-        if (reporteDataSinActividades.estado === 'revisado' || reporteDataSinActividades.estado === 'aprobado' || reporteDataSinActividades.estado === 'rechazado') {
-          reporteDataSinActividades.fechaRevision = new Date();
+      // Si hay archivos nuevos, agregarlos
+      if (archivos && archivos.length > 0) {
+        for (const archivo of archivos) {
+          await models.Archivo.create({
+            ...archivo,
+            reporteId: id
+          });
         }
       }
 
-      // Si se están actualizando las actividades
-      if (actividades && Array.isArray(actividades)) {
-        // Verificar que todas las actividades existen
-        const actividadesIds = actividades.map(act => typeof act === 'object' ? act.id : act);
-        const actividadesExistentes = await models.Actividad.findAll({
-          where: { id: actividadesIds },
-          transaction
-        });
-
-        if (actividadesExistentes.length !== actividadesIds.length) {
-          throw boom.badRequest('Una o más actividades no existen');
-        }
-
-        // Eliminar relaciones existentes
-        await models.ReporteActividad.destroy({
-          where: { reporteId: id },
-          transaction
-        });
-
-        // Crear nuevas relaciones
-        const reporteActividadesData = actividadesIds.map((actividadId, index) => ({
-          reporteId: id,
-          actividadId: actividadId,
-          orden: index + 1
-        }));
-
-        await models.ReporteActividad.bulkCreate(reporteActividadesData, { transaction });
-
-        // Limpiar actividadId si se está usando la nueva funcionalidad
-        reporteDataSinActividades.actividadId = null;
-      }
-
-      const updatedReporte = await reporte.update(reporteDataSinActividades, { transaction });
-      
-      await transaction.commit();
-      
-      // Retornar con relaciones incluidas
-      const reporteWithRelations = await this.findOne(id);
-      return reporteWithRelations;
+      // Retornar el reporte actualizado
+      return await this.findOne(id);
     } catch (error) {
-      await transaction.rollback();
       if (boom.isBoom(error)) throw error;
       throw boom.internal('Error al actualizar el reporte');
     }
@@ -301,144 +162,126 @@ class ReporteService {
   async delete(id) {
     try {
       const reporte = await this.findOne(id);
+      
+      // Eliminar archivos asociados primero
+      await models.Archivo.destroy({
+        where: { reporteId: id }
+      });
+      
       await reporte.destroy();
-      return { message: 'Reporte eliminado correctamente' };
+      
+      return { message: 'Reporte eliminado exitosamente' };
     } catch (error) {
       if (boom.isBoom(error)) throw error;
       throw boom.internal('Error al eliminar el reporte');
     }
   }
 
-  // Cambiar estado del reporte
-  async changeStatus(id, newStatus, userId, observaciones = null) {
+  // Eliminar archivo de un reporte
+  async removeArchivo(reporteId, archivoId, usuarioId) {
     try {
-      const reporte = await this.findOne(id);
-      const oldStatus = reporte.estado;
-
-      // Actualizar estado
-      await reporte.update({ 
-        estado: newStatus,
-        comentariosRevision: observaciones || reporte.comentariosRevision
+      const archivo = await models.Archivo.findOne({
+        where: {
+          id: archivoId,
+          reporteId: reporteId
+        }
       });
 
-      // Registrar cambio en historial
-      await models.HistorialCambio.create({
-        id_reporte: id,
-        id_usuario_modificador: userId,
-        descripcion_cambio: `Estado cambiado de ${oldStatus} a ${newStatus}${observaciones ? ` - ${observaciones}` : ''}`
-      });
-
-      // Si se está enviando, actualizar fecha de envío
-      if (newStatus === 'EN_REVISION' && oldStatus === 'BORRADOR') {
-        await reporte.update({ fecha_envio: new Date() });
+      if (!archivo) {
+        throw boom.notFound('Archivo no encontrado');
       }
 
-      return { 
-        message: `Estado del reporte cambiado a ${newStatus}`,
-        estado: newStatus
-      };
+      await archivo.destroy();
+      
+      return { message: 'Archivo eliminado exitosamente' };
     } catch (error) {
       if (boom.isBoom(error)) throw error;
-      throw boom.internal('Error al cambiar el estado del reporte');
+      throw boom.internal('Error al eliminar el archivo');
     }
   }
 
-  // Obtener estadísticas de reportes
-  async getStats() {
+  // Obtener reportes por docente
+  async findByDocente(docenteId, filters = {}) {
     try {
-      const totalReportes = await models.Reporte.count();
-      const reportesPorEstado = await models.Reporte.findAll({
-        attributes: [
-          'estado',
-          [models.sequelize.fn('COUNT', models.sequelize.col('estado')), 'count']
-        ],
-        group: ['estado']
-      });
-
-      const reportesPorTipo = await models.Reporte.findAll({
-        attributes: [
-          'tipo',
-          [models.sequelize.fn('COUNT', models.sequelize.col('tipo')), 'count']
-        ],
-        group: ['tipo']
-      });
-
-      return {
-        total: totalReportes,
-        porEstado: reportesPorEstado,
-        porTipo: reportesPorTipo
-      };
-    } catch (error) {
-      throw boom.internal('Error al obtener estadísticas de reportes');
-    }
-  }
-
-  // Obtener reportes pendientes de revisión
-  async findPendingReview() {
-    try {
-      const reportes = await models.Reporte.findAll({
-        where: { estado: 'EN_REVISION' },
-        include: [
-          {
-            model: models.User,
-            as: 'docente',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
-          },
-          {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'nombre']
-          }
-        ],
-        order: [['fecha_envio', 'ASC']]
-      });
-      return reportes;
-    } catch (error) {
-      throw boom.internal('Error al obtener reportes pendientes de revisión');
-    }
-  }
-
-  // Obtener historial de reportes de un docente
-  async getReportHistory(docenteId, filters = {}) {
-    try {
-      const whereClause = { usuarioId: docenteId };
+      const whereClause = { usuarioId: parseInt(docenteId) };
       
-      // Aplicar filtros adicionales si se proporcionan
       if (filters.estado) whereClause.estado = filters.estado;
-      if (filters.tipo) whereClause.tipo = filters.tipo;
-      if (filters.fechaInicio) {
-        whereClause.createdAt = {
-          ...whereClause.createdAt,
-          [models.sequelize.Op.gte]: filters.fechaInicio
-        };
-      }
-      if (filters.fechaFin) {
-        whereClause.createdAt = {
-          ...whereClause.createdAt,
-          [models.sequelize.Op.lte]: filters.fechaFin
-        };
-      }
-      
+      if (filters.actividadId) whereClause.actividadId = filters.actividadId;
+
       const reportes = await models.Reporte.findAll({
         where: whereClause,
         include: [
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'email']
           },
           {
             model: models.Actividad,
             as: 'actividad',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin']
+            attributes: ['id', 'titulo', 'descripcion'],
+            required: false
           }
         ],
         order: [['createdAt', 'DESC']]
       });
+
       return reportes;
     } catch (error) {
-      console.error('Error detallado en getReportHistory:', error);
-      throw boom.internal(`Error al obtener el historial de reportes: ${error.message}`);
+      throw boom.internal('Error al obtener reportes por docente');
+    }
+  }
+
+  // Obtener reportes por actividad/período
+  async findByActividad(actividadId, filters = {}) {
+    try {
+      const whereClause = { actividadId: parseInt(actividadId) };
+      
+      if (filters.estado) whereClause.estado = filters.estado;
+
+      const reportes = await models.Reporte.findAll({
+        where: whereClause,
+        include: [
+          {
+            model: models.User,
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'email']
+          },
+          {
+            model: models.Actividad,
+            as: 'actividad',
+            attributes: ['id', 'titulo', 'descripcion']
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+
+      return reportes;
+    } catch (error) {
+      throw boom.internal('Error al obtener reportes por actividad');
+    }
+  }
+
+  // Cambiar estado del reporte
+  async changeStatus(id, estado, comentariosRevision = null) {
+    try {
+      const reporte = await this.findOne(id);
+      
+      const updateData = { 
+        estado,
+        fechaRevision: new Date()
+      };
+      
+      if (comentariosRevision) {
+        updateData.comentariosRevision = comentariosRevision;
+      }
+      
+      await reporte.update(updateData);
+      
+      return await this.findOne(id);
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al cambiar el estado del reporte');
     }
   }
 }

@@ -60,7 +60,7 @@ const ReporteSchema = {
     type: DataTypes.TEXT
   },
   actividadId: {
-    allowNull: false,
+    allowNull: true,
     type: DataTypes.INTEGER,
     references: {
       model: 'Actividades',
@@ -103,7 +103,8 @@ class Reporte extends Model {
     // Un reporte pertenece a una actividad (relación original - mantener para compatibilidad)
     this.belongsTo(models.Actividad, {
       as: 'actividad',
-      foreignKey: 'actividadId'
+      foreignKey: 'actividadId',
+      allowNull: true
     });
     
     // Un reporte puede tener muchas actividades (nueva relación muchos a muchos)
@@ -112,6 +113,12 @@ class Reporte extends Model {
       as: 'actividades',
       foreignKey: 'reporteId',
       otherKey: 'actividadId'
+    });
+    
+    // Un reporte puede tener muchos archivos adjuntos
+    this.hasMany(models.Archivo, {
+      as: 'archivos',
+      foreignKey: 'reporteId'
     });
   }
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Search, Eye, Download, MoreVertical, Filter, Calendar, FileText, TrendingUp, Clock, X } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import reportService from '../../services/reportService';
-import { toast } from 'react-hot-toast'
+import { toast } from 'react-toastify'
 
 const Report = {
   id: "",

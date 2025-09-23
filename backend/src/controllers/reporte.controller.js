@@ -54,7 +54,10 @@ class ReporteController {
         reporteData.usuarioId = req.user.id;
       }
       
-      const newReporte = await reporteService.create(reporteData);
+      // Obtener archivos si se subieron
+      const archivos = req.files || [];
+      
+      const newReporte = await reporteService.create(reporteData, archivos);
       
       res.status(201).json({
         message: 'Reporte creado exitosamente',
@@ -77,7 +80,10 @@ class ReporteController {
         throw boom.forbidden('No tienes permisos para actualizar este reporte');
       }
       
-      const updatedReporte = await reporteService.update(id, reporteData);
+      // Obtener archivos si se subieron
+      const archivos = req.files || [];
+      
+      const updatedReporte = await reporteService.update(id, reporteData, archivos);
       
       res.json({
         message: 'Reporte actualizado exitosamente',
@@ -103,6 +109,28 @@ class ReporteController {
       
       res.json({
         message: 'Reporte eliminado exitosamente'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Eliminar archivo de un reporte
+  async removeArchivo(req, res, next) {
+    try {
+      const { id, archivoId } = req.params;
+      
+      // Verificar permisos: solo el usuario propietario o admin pueden eliminar archivos
+      const reporte = await reporteService.findOne(id);
+      if (req.user.rol !== 'ADMINISTRADOR' && reporte.usuarioId !== req.user.id) {
+        throw boom.forbidden('No tienes permisos para eliminar archivos de este reporte');
+      }
+      
+      const result = await reporteService.removeArchivo(id, archivoId, req.user.id);
+      
+      res.json({
+        message: 'Archivo eliminado exitosamente',
+        data: result
       });
     } catch (error) {
       next(error);

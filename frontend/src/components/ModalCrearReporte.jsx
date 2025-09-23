@@ -1,34 +1,51 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from 'react';
-import { X, FileText, Calendar, MapPin, Upload, Users, Target, DollarSign } from 'lucide-react';
+import { X, FileText, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import activityService from '../services/activityService';
+import periodoAcademicoService from '../services/periodoAcademicoService';
 import reportService from '../services/reportService';
-import { toast } from 'react-hot-toast';
+import fileService from '../services/fileService';
+import { toast } from 'react-toastify';
 
 const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [actividades, setActividades] = useState([]);
   const [actividadesSeleccionadas, setActividadesSeleccionadas] = useState([]);
+  const [periodoActivo, setPeriodoActivo] = useState(null);
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
     tipo: 'ACTIVIDADES_PLANIFICADAS',
-    semestre: '',
-    ubicacion: '',
-    presupuesto: '',
-    participantesEsperados: '',
-    objetivos: '',
-    recursos: '',
     fechaRealizacion: new Date().toISOString().split('T')[0]
   });
+  const [archivosSeleccionados, setArchivosSeleccionados] = useState([]);
+  const [subiendoArchivos, setSubiendoArchivos] = useState(false);
 
   useEffect(() => {
     if (open && user) {
       cargarActividades();
+      cargarPeriodoActivo();
     }
   }, [open, user]);
+
+  const cargarPeriodoActivo = async () => {
+    try {
+      console.log('📅 Cargando período académico activo...');
+      const response = await periodoAcademicoService.getPeriodoActivo();
+      if (response.success && response.data) {
+        setPeriodoActivo(response.data);
+        console.log('📅 Período activo cargado:', response.data);
+      } else {
+        console.error('❌ No se pudo cargar el período activo:', response.error);
+        toast.error('No hay período académico activo configurado');
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar período activo:', error);
+      toast.error('Error al cargar el período académico activo');
+    }
+  };
 
   const cargarActividades = async () => {
     console.log('🔍 Iniciando carga de actividades...');
@@ -150,40 +167,153 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
     }));
   };
 
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const invalidFiles = [];
+
+    files.forEach(file => {
+      if (!fileService.validateFileType(file)) {
+        invalidFiles.push(`${file.name} - Tipo de archivo no permitido`);
+        return;
+      }
+      
+      if (!fileService.validateFileSize(file)) {
+        invalidFiles.push(`${file.name} - Archivo muy grande (máximo 10MB)`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    if (invalidFiles.length > 0) {
+      toast.error(`Archivos no válidos:\n${invalidFiles.join('\n')}`);
+    }
+
+    if (validFiles.length > 0) {
+      setArchivosSeleccionados(prev => [...prev, ...validFiles]);
+      toast.success(`${validFiles.length} archivo(s) seleccionado(s)`);
+    }
+
+    // Limpiar el input
+    e.target.value = '';
+  };
+
+  const removeFile = (index) => {
+    setArchivosSeleccionados(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (actividadesSeleccionadas.length === 0) {
-      toast.error('Debe seleccionar al menos una actividad');
+      toast.error('⚠️ Debe seleccionar al menos una actividad para crear el reporte');
       return;
     }
 
     if (!formData.titulo.trim()) {
-      toast.error('El título es requerido');
+      toast.error('⚠️ El título del reporte es obligatorio');
+      return;
+    }
+
+    if (!periodoActivo) {
+      toast.error('❌ No hay período académico activo configurado. Contacte al administrador.');
       return;
     }
 
     try {
       setLoading(true);
       
-      // Crear el reporte
+      let archivosSubidos = [];
+      
+      // Subir archivos si hay alguno seleccionado
+      if (archivosSeleccionados.length > 0) {
+        setSubiendoArchivos(true);
+        
+        // Toast de inicio de subida
+        toast.info(`📤 Subiendo ${archivosSeleccionados.length} archivo(s)...`);
+        
+        try {
+          const responseArchivos = await fileService.uploadMultipleFiles(
+            archivosSeleccionados,
+            `Evidencias del reporte: ${formData.titulo}`,
+            'evidencia'
+          );
+          
+          if (responseArchivos.success) {
+            archivosSubidos = responseArchivos.files || [];
+            toast.success(`📁 ¡Perfecto! ${archivosSubidos.length} archivo(s) subido(s) exitosamente`);
+          }
+        } catch (errorArchivos) {
+          console.error('Error al subir archivos:', errorArchivos);
+          toast.error(`❌ Error al subir archivos: ${errorArchivos.message}`);
+          // Continuar con la creación del reporte sin archivos
+        } finally {
+          setSubiendoArchivos(false);
+        }
+      }
+      
+      console.log('📝 Creando reporte con datos:', {
+        titulo: formData.titulo,
+        descripcion: formData.descripcion,
+        fechaRealizacion: formData.fechaRealizacion,
+        tipo: formData.tipo,
+        semestre: periodoActivo.nombre,
+        actividades: actividadesSeleccionadas,
+        archivos: archivosSubidos
+      });
+      
+      // Crear el reporte según el esquema del backend
       const reporteData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         fechaRealizacion: formData.fechaRealizacion,
-        estado: 'borrador',
-        actividades: actividadesSeleccionadas
+        tipo: formData.tipo, // ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS
+        semestre: periodoActivo.nombre, // Usar el nombre del período activo
+        estado: 'borrador', // Estado inicial
+        actividades: actividadesSeleccionadas, // Array de IDs de actividades
+        archivos: archivosSubidos.map(archivo => ({
+          filename: archivo.filename,
+          originalName: archivo.originalName,
+          size: archivo.size,
+          mimetype: archivo.mimetype
+        }))
       };
 
-      await reportService.createReport(reporteData);
+      // Toast de inicio de creación
+      toast.info('📝 Creando reporte...');
+
+      const response = await reportService.createReport(reporteData);
+      console.log('✅ Reporte creado exitosamente:', response);
       
-      toast.success('Reporte creado exitosamente');
-      onReporteCreado();
+      toast.success(`📋 ¡Excelente! Reporte "${formData.titulo}" creado exitosamente`);
+      
+      // Limpiar formulario
+      setFormData({
+        titulo: '',
+        descripcion: '',
+        tipo: 'ACTIVIDADES_PLANIFICADAS',
+        fechaRealizacion: new Date().toISOString().split('T')[0]
+      });
+      setActividadesSeleccionadas([]);
+      setArchivosSeleccionados([]);
+      
+      // Llamar callback y cerrar modal
+      if (onReporteCreado) {
+        onReporteCreado();
+      }
+      onClose();
+      
     } catch (error) {
-      console.error('Error al crear reporte:', error);
-      toast.error('Error al crear el reporte');
+      console.error('💥 Error al crear reporte:', error);
+      console.error('💥 Detalles del error:', error.response?.data || error.message);
+      
+      // Mostrar mensaje de error más específico
+      const errorMessage = error.response?.data?.message || error.message || 'Error al crear el reporte';
+      toast.error(`❌ Error al crear el reporte: ${errorMessage}`);
     } finally {
       setLoading(false);
+      setSubiendoArchivos(false);
     }
   };
 
@@ -207,7 +337,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Información básica del reporte */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -243,16 +373,15 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  <Calendar className="w-4 h-4 inline mr-1" />
                   Semestre
                 </label>
                 <input
                   type="text"
                   name="semestre"
-                  value={formData.semestre}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Ej: 2024-1"
+                  value={periodoActivo ? periodoActivo.nombre : 'Cargando...'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                  disabled
+                  placeholder="Período académico activo"
                 />
               </div>
 
@@ -269,51 +398,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Ubicación
-                </label>
-                <input
-                  type="text"
-                  name="ubicacion"
-                  value={formData.ubicacion}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Ej: Aula 101, Campus Principal"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  <DollarSign className="w-4 h-4 inline mr-1" />
-                  Presupuesto
-                </label>
-                <input
-                  type="number"
-                  name="presupuesto"
-                  value={formData.presupuesto}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  <Users className="w-4 h-4 inline mr-1" />
-                  Participantes Esperados
-                </label>
-                <input
-                  type="number"
-                  name="participantesEsperados"
-                  value={formData.participantesEsperados}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="0"
-                />
-              </div>
             </div>
 
             {/* Descripción */}
@@ -331,36 +416,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
               />
             </div>
 
-            {/* Objetivos */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                <Target className="w-4 h-4 inline mr-1" />
-                Objetivos
-              </label>
-              <textarea
-                name="objetivos"
-                value={formData.objetivos}
-                onChange={handleInputChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Describe los objetivos del reporte..."
-              />
-            </div>
 
-            {/* Recursos */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Recursos Necesarios
-              </label>
-              <textarea
-                name="recursos"
-                value={formData.recursos}
-                onChange={handleInputChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Describe los recursos necesarios..."
-              />
-            </div>
 
             {/* Selección de actividades */}
             <div className="space-y-4">
@@ -435,11 +491,41 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                 type="file"
                 multiple
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                onChange={handleFileSelect}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500">
                 Formatos permitidos: PDF, Word, Excel, imágenes (JPG, PNG)
               </p>
+              
+              {/* Lista de archivos seleccionados */}
+              {archivosSeleccionados.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm font-medium text-gray-700">
+                    Archivos seleccionados ({archivosSeleccionados.length}):
+                  </p>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {archivosSeleccionados.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="ml-2 p-1 hover:bg-gray-200 rounded flex-shrink-0"
+                        >
+                          <X className="w-4 h-4 text-gray-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </form>
         </div>
@@ -456,10 +542,10 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || actividadesSeleccionadas.length === 0 || !formData.titulo.trim()}
+            disabled={loading || subiendoArchivos || actividadesSeleccionadas.length === 0 || !formData.titulo.trim()}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creando...' : 'Crear Reporte'}
+            {subiendoArchivos ? 'Subiendo archivos...' : loading ? 'Creando...' : 'Crear Reporte'}
           </button>
         </div>
       </div>

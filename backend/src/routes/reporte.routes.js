@@ -65,6 +65,14 @@ router.delete('/:id',
   reporteController.deleteReporte.bind(reporteController)
 );
 
+// Nueva ruta para eliminar archivos de reportes
+router.delete('/:id/archivos/:archivoId',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.removeArchivo.bind(reporteController)
+);
+
 router.get('/docente/:docenteId',
   verifyToken,
   checkDocenteOrAdmin,

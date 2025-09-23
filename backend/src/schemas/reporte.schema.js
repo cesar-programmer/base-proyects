@@ -48,16 +48,11 @@ const createReporteSchema = Joi.object({
       'any.only': 'El tipo debe ser ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS',
       'any.required': 'El tipo de reporte es requerido'
     }),
-  semestre: Joi.number()
-    .integer()
-    .min(1)
-    .max(2)
+  semestre: Joi.string()
+    .pattern(/^\d{4}-[12]$/)
     .required()
     .messages({
-      'number.base': 'El semestre debe ser un número',
-      'number.integer': 'El semestre debe ser un número entero',
-      'number.min': 'El semestre debe ser 1 o 2',
-      'number.max': 'El semestre debe ser 1 o 2',
+      'string.pattern.base': 'El semestre debe tener el formato YYYY-1 o YYYY-2 (ej: 2024-1)',
       'any.required': 'El semestre es requerido'
     }),
   observaciones_admin: Joi.string()
@@ -121,9 +116,22 @@ const createReporteSchema = Joi.object({
       'string.max': 'Los recursos no pueden exceder 2000 caracteres'
     }),
   estado: Joi.string()
-    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'RECHAZADO')
+    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'RECHAZADO', 'borrador', 'enviado', 'en_revision', 'aprobado', 'rechazado')
     .messages({
       'any.only': 'El estado debe ser uno de: BORRADOR, ENVIADO, EN_REVISION, APROBADO, RECHAZADO'
+    }),
+  archivos: Joi.array()
+    .items(
+      Joi.object({
+        filename: Joi.string().required(),
+        originalName: Joi.string().required(),
+        size: Joi.number().required(),
+        mimetype: Joi.string().required()
+      })
+    )
+    .default([])
+    .messages({
+      'array.base': 'Los archivos deben ser un array'
     })
 });
 

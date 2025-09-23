@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Clock, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 const Card = ({ children, className = "", ...props }) => (
   <div className={`bg-white rounded-lg border shadow-sm ${className}`} {...props}>

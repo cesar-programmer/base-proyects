@@ -18,8 +18,9 @@ import {
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import reportService from '../../services/reportService';
-import { toast } from 'react-hot-toast'
+import { toast } from 'react-toastify'
 import ModalCrearReporte from '../../components/ModalCrearReporte';
+import ListaArchivosReporte from '../../components/ListaArchivosReporte';
 
 // Componentes reutilizables
 const Button = ({ children, className = "", variant = "default", disabled = false, ...props }) => {
@@ -475,49 +476,10 @@ function ReportDetailDialog({
                   <h3 className="text-lg font-semibold text-gray-900">Documentos de Respaldo</h3>
                 </div>
                 <div className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <span className="font-medium text-gray-900 block">Evidencias de Docencia.pdf</span>
-                          <span className="text-sm text-gray-500">2.4 MB • Subido el 10 de marzo, 2024</span>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center gap-2">
-                        <Download className="w-4 h-4" />
-                        Descargar
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-green-600" />
-                        <div>
-                          <span className="font-medium text-gray-900 block">Certificado de Participación.pdf</span>
-                          <span className="text-sm text-gray-500">1.8 MB • Subido el 12 de marzo, 2024</span>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center gap-2">
-                        <Download className="w-4 h-4" />
-                        Descargar
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-purple-600" />
-                        <div>
-                          <span className="font-medium text-gray-900 block">Evaluaciones Estudiantiles.xlsx</span>
-                          <span className="text-sm text-gray-500">856 KB • Subido el 14 de marzo, 2024</span>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center gap-2">
-                        <Download className="w-4 h-4" />
-                        Descargar
-                      </button>
-                    </div>
-                  </div>
+                  <ListaArchivosReporte 
+                    archivos={report.archivos || []} 
+                    titulo="Archivos adjuntos"
+                  />
                 </div>
               </div>
             )}
@@ -584,54 +546,49 @@ export default function PendingReports() {
     }
   };
 
-  const [mockReportes] = useState([
-    {
-      id: "r-1",
-      titulo: "Informe de Gestión Académica",
-      tipo: "Gestión",
-      estado: "Pendiente",
-      fechaLimite: "30 de Junio",
-      ultimaActualizacion: "12 de Junio",
-      semestre: semestreActual,
-      resumen: "Consolidado de actividades de coordinación académica y procesos administrativos.",
-      actividades: [
-        { id: "a1", titulo: "Organización de evento académico", estado: "Programada", fecha: "2025-06-22" },
-        { id: "a2", titulo: "Revisión de planes de curso", estado: "En Progreso", fecha: "2025-06-18" },
-      ],
-    },
-    {
-      id: "r-2",
-      titulo: "Actividades de Tutoría Junio",
-      tipo: "Tutoría",
-      estado: "En revisión",
-      fechaLimite: "25 de Junio",
-      ultimaActualizacion: "20 de Junio",
-      semestre: semestreActual,
-      resumen: "Acompañamiento académico a estudiantes con sesiones individuales y grupales.",
-      actividades: [
-        { id: "a3", titulo: "Sesión grupal de orientación", estado: "Completada", fecha: "2025-06-10" },
-        { id: "a4", titulo: "Seguimiento de 5 casos", estado: "En Progreso", fecha: "2025-06-19" },
-      ],
-    },
-    {
-      id: "r-3",
-      titulo: "Reporte de Docencia Semestre",
-      tipo: "Docencia",
-      estado: "Devuelto",
-      fechaLimite: "30 de Junio",
-      ultimaActualizacion: "18 de Junio",
-      semestre: semestreActual,
-      resumen: "Actividades de clase, evaluaciones y desarrollo de materiales didácticos.",
-      comentariosRevision: "Agregar evidencias de evaluaciones de la unidad 2 y actualizar horas frente a grupo.",
-      actividades: [
-        { id: "a5", titulo: "Preparación de material didáctico", estado: "Completada", fecha: "2025-06-05" },
-        { id: "a6", titulo: "Evaluación parcial", estado: "En Progreso", fecha: "2025-06-21" },
-      ],
-    },
-  ])
+  // Mapear los reportes del backend al formato esperado por el frontend
+  const mapReporteFromBackend = (reporte) => {
+    const estadoMap = {
+      'borrador': 'Pendiente',
+      'enviado': 'En revisión',
+      'revisado': 'En revisión',
+      'aprobado': 'Aprobado',
+      'rechazado': 'Devuelto'
+    };
 
-  const reportesArray = Array.isArray(reportes) ? reportes : [];
-  const reportesDelSemestre = reportesArray.filter((r) => r.semestre === semestreActual)
+    const tipoMap = {
+      'ACTIVIDADES_PLANIFICADAS': 'Docencia',
+      'ACTIVIDADES_REALIZADAS': 'Docencia',
+      'INVESTIGACION': 'Investigación',
+      'EXTENSION': 'Extensión',
+      'GESTION_ACADEMICA': 'Gestión',
+      'TUTORIAS': 'Tutoría',
+      'CAPACITACION': 'Capacitación'
+    };
+
+    return {
+      id: reporte.id,
+      titulo: reporte.titulo,
+      tipo: tipoMap[reporte.tipo] || 'Docencia',
+      estado: estadoMap[reporte.estado] || 'Pendiente',
+      fechaLimite: new Date(reporte.fechaRealizacion).toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'long' 
+      }),
+      ultimaActualizacion: new Date(reporte.updatedAt || reporte.createdAt).toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'long' 
+      }),
+      semestre: semestreActual, // Usar el semestre actual por defecto
+      resumen: reporte.descripcion,
+      comentariosRevision: reporte.comentariosRevision,
+      actividades: reporte.actividades || [],
+      archivos: reporte.archivos || []
+    };
+  };
+
+  const reportesArray = Array.isArray(reportes) ? reportes.map(mapReporteFromBackend) : [];
+  const reportesDelSemestre = reportesArray
   const reportesFiltrados = reportesDelSemestre.filter((r) => {
     const txt = `${r.titulo} ${r.tipo} ${r.estado} ${r.ultimaActualizacion}`.toLowerCase()
     const matchesSearch = txt.includes(busqueda.toLowerCase())
@@ -1006,8 +963,10 @@ export default function PendingReports() {
             onClose={() => setOpenCrearReporte(false)}
             onReporteCreado={() => {
               setOpenCrearReporte(false);
-              // Recargar reportes
-              window.location.reload();
+              // Recargar reportes después de 2 segundos para asegurar que la operación se complete
+              setTimeout(() => {
+                window.location.reload();
+              }, 2000);
             }}
           />
         )}

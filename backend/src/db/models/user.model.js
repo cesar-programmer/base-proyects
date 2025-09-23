@@ -102,6 +102,12 @@ class User extends Model {
       as: 'historial_cambios',
       foreignKey: 'id_usuario_modificador'
     });
+    
+    // Un usuario puede subir muchos archivos
+    this.hasMany(models.Archivo, {
+      as: 'archivosSubidos',
+      foreignKey: 'usuarioSubida'
+    });
   }
 
   static config(sequelize) {

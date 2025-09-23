@@ -24,50 +24,9 @@ class ActividadService {
     }
   }
 
-  // Obtener actividades por reporte
-  async findByReporte(reporteId) {
-    try {
-      const actividades = await models.Actividad.findAll({
-        where: { reporteId: reporteId },
-        include: [
-          {
-            model: models.CatalogoActividad,
-            as: 'catalogo',
-            attributes: ['id', 'titulo', 'descripcion', 'horas_estimadas']
-          },
-          {
-            model: models.Archivo,
-            as: 'archivos',
-            attributes: ['id', 'nombre_original', 'tipo_mime', 'fecha_subida']
-          }
-        ],
-        order: [['categoria', 'ASC'], ['titulo', 'ASC']]
-      });
-      return actividades;
-    } catch (error) {
-      throw boom.internal('Error al obtener las actividades del reporte');
-    }
-  }
 
-  // Obtener actividades por categoría
-  async findByCategory(categoria) {
-    try {
-      const actividades = await models.Actividad.findAll({
-        where: { categoria },
-        include: [
-          {
-            model: models.Reporte,
-            as: 'reporte',
-            attributes: ['id', 'tipo', 'estado', 'semestre']
-          }
-        ],
-        order: [['fecha_creacion', 'DESC']]
-      });
-      return actividades;
-    } catch (error) {
-      throw boom.internal('Error al obtener las actividades por categoría');
-    }
-  }
+
+
 
   // Obtener una actividad por ID
   async findOne(id) {
@@ -215,43 +174,9 @@ class ActividadService {
 
 
 
-  // Obtener estadísticas de actividades por categoría
-  async getStatsByCategory() {
-    try {
-      const stats = await models.Actividad.findAll({
-        attributes: [
-          'categoria',
-          [models.sequelize.fn('COUNT', models.sequelize.col('categoria')), 'count'],
-          [models.sequelize.fn('SUM', models.sequelize.col('horas_estimadas')), 'total_horas']
-        ],
-        group: ['categoria']
-      });
 
-      return stats;
-    } catch (error) {
-      throw boom.internal('Error al obtener estadísticas por categoría');
-    }
-  }
 
-  // Obtener actividades por estado de realización
-  async findByRealizationStatus(estado) {
-    try {
-      const actividades = await models.Actividad.findAll({
-        where: { estado_realizado: estado },
-        include: [
-          {
-            model: models.Reporte,
-            as: 'reporte',
-            attributes: ['id_reporte', 'tipo', 'estado', 'semestre']
-          }
-        ],
-        order: [['fecha_creacion', 'DESC']]
-      });
-      return actividades;
-    } catch (error) {
-      throw boom.internal('Error al obtener actividades por estado de realización');
-    }
-  }
+
 
   // Actualizar estado de realización
   async updateRealizationStatus(id, estado) {
@@ -303,19 +228,7 @@ class ActividadService {
         fecha_revision: new Date()
       });
       
-      // Crear notificación automática de devolución
-      try {
-        const mensaje = `Su actividad "${actividad.nombre}" ha sido devuelta para correcciones. Observaciones: ${razon}`;
-          
-        await this.notificacionService.create({
-          id_usuario_destino: actividad.id_usuario,
-          mensaje: mensaje,
-          tipo: 'DEVOLUCION'
-        });
-      } catch (notifError) {
-        console.error('Error al crear notificación de devolución:', notifError);
-        // No fallar la operación principal si falla la notificación
-      }
+      // TODO: Implementar notificación automática de devolución cuando se configure el servicio
       
       return {
         message: 'Actividad devuelta exitosamente',

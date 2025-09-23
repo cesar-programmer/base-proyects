@@ -13,6 +13,7 @@ import { HistorialCambio, HistorialCambioSchema } from './historialCambio.model.
 import { Configuracion, ConfiguracionSchema } from './configuracion.model.js';
 import { ReporteActividad, ReporteActividadSchema } from './reporteActividad.model.js';
 
+
 // Configuración de la base de datos (se puede mover a un archivo de configuración separado)
 const sequelize = new Sequelize({
   dialect: 'mysql',
@@ -104,5 +105,6 @@ export {
   Archivo,
   Notificacion,
   HistorialCambio,
-  Configuracion
+  Configuracion,
+  ReporteActividad
 };

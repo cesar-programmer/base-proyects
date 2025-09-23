@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+  
+  <!-- Header -->
+  <rect x="20" y="20" width="360" height="40" fill="#e9ecef" stroke="#adb5bd"/>
+  <text x="200" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#495057">
+    DOCUMENTO DE PRUEBA
+  </text>
+  
+  <!-- Content -->
+  <text x="30" y="90" font-family="Arial, sans-serif" font-size="12" fill="#212529">
+    Este es un documento de prueba para testear la funcionalidad
+  </text>
+  <text x="30" y="110" font-family="Arial, sans-serif" font-size="12" fill="#212529">
+    de subida y visualización de archivos en el sistema de reportes.
+  </text>
+  
+  <!-- Simulated PDF icon -->
+  <rect x="30" y="130" width="60" height="80" fill="#dc3545" rx="5"/>
+  <text x="60" y="155" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">
+    PDF
+  </text>
+  <text x="60" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">
+    TEST
+  </text>
+  <text x="60" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="white">
+    FILE
+  </text>
+  
+  <!-- File info -->
+  <text x="110" y="150" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+    Nombre: evidencia-actividades.pdf
+  </text>
+  <text x="110" y="165" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+    Tamaño: 2.4 MB
+  </text>
+  <text x="110" y="180" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+    Tipo: application/pdf
+  </text>
+  <text x="110" y="195" font-family="Arial, sans-serif" font-size="11" fill="#212529">
+    Estado: Listo para subir
+  </text>
+  
+  <!-- Footer -->
+  <rect x="20" y="240" width="360" height="30" fill="#e9ecef" stroke="#adb5bd"/>
+  <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#6c757d">
+    Sistema de Reportes Académicos - UABC Docentes
+  </text>
+</svg>

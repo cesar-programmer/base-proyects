@@ -17,24 +17,35 @@ class ArchivoService {
     try {
       const where = {};
       
-      if (filters.id_actividad) {
-        where.id_actividad = filters.id_actividad;
+      if (filters.actividadId) {
+        where.actividadId = filters.actividadId;
       }
       
-      if (filters.tipo) {
-        where.tipo = filters.tipo;
+      if (filters.reporteId) {
+        where.reporteId = filters.reporteId;
+      }
+      
+      if (filters.categoria) {
+        where.categoria = filters.categoria;
       }
 
       const archivos = await this.model.findAll({
         where,
         include: [
           {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'nombre']
+            association: 'actividad',
+            attributes: ['id', 'titulo']
+          },
+          {
+            association: 'reporte',
+            attributes: ['id', 'titulo']
+          },
+          {
+            association: 'usuarioQueSubio',
+            attributes: ['id', 'nombre', 'email']
           }
         ],
-        order: [['created_at', 'DESC']]
+        order: [['fecha_subida', 'DESC']]
       });
       return archivos;
     } catch (error) {
@@ -47,9 +58,16 @@ class ArchivoService {
       const archivo = await this.model.findByPk(id, {
         include: [
           {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'nombre']
+            association: 'actividad',
+            attributes: ['id', 'titulo']
+          },
+          {
+            association: 'reporte',
+            attributes: ['id', 'titulo']
+          },
+          {
+            association: 'usuarioQueSubio',
+            attributes: ['id', 'nombre', 'email']
           }
         ]
       });
@@ -63,18 +81,21 @@ class ArchivoService {
     }
   }
 
-  async findByActivity(idActividad) {
+  async findByActivity(actividadId) {
     try {
       const archivos = await this.model.findAll({
-        where: { id_actividad: idActividad },
+        where: { actividadId },
         include: [
           {
-            model: models.Actividad,
-            as: 'actividad',
-            attributes: ['id', 'nombre']
+            association: 'actividad',
+            attributes: ['id', 'titulo']
+          },
+          {
+            association: 'usuarioQueSubio',
+            attributes: ['id', 'nombre', 'email']
           }
         ],
-        order: [['created_at', 'DESC']]
+        order: [['fecha_subida', 'DESC']]
       });
       return archivos;
     } catch (error) {
@@ -82,38 +103,82 @@ class ArchivoService {
     }
   }
 
-  async create(data, file) {
+  async findByReporte(reporteId) {
     try {
-      // Verificar que la actividad existe
-      const actividad = await models.Actividad.findByPk(data.id_actividad);
-      if (!actividad) {
-        throw Boom.notFound('Actividad no encontrada');
+      const archivos = await this.model.findAll({
+        where: { reporteId },
+        include: [
+          {
+            association: 'reporte',
+            attributes: ['id', 'titulo']
+          },
+          {
+            association: 'usuarioQueSubio',
+            attributes: ['id', 'nombre', 'email']
+          }
+        ],
+        order: [['fecha_subida', 'DESC']]
+      });
+      return archivos;
+    } catch (error) {
+      throw Boom.internal('Error al obtener archivos por reporte', error);
+    }
+  }
+
+  async create(data, file, options = {}) {
+    try {
+      // Validar que al menos uno de actividadId o reporteId esté presente
+      if (!data.actividadId && !data.reporteId) {
+        throw Boom.badRequest('El archivo debe estar asociado a una actividad o a un reporte');
+      }
+
+      let targetDir;
+      let entityId;
+
+      // Verificar que la entidad existe y determinar el directorio
+      if (data.actividadId) {
+        const actividad = await models.Actividad.findByPk(data.actividadId, options);
+        if (!actividad) {
+          throw Boom.notFound('Actividad no encontrada');
+        }
+        targetDir = path.join(this.uploadsPath, 'actividades', data.actividadId.toString());
+        entityId = data.actividadId;
+      } else if (data.reporteId) {
+        const reporte = await models.Reporte.findByPk(data.reporteId, options);
+        if (!reporte) {
+          throw Boom.notFound('Reporte no encontrado');
+        }
+        targetDir = path.join(this.uploadsPath, 'reportes', data.reporteId.toString());
+        entityId = data.reporteId;
       }
 
       // Crear directorio si no existe
-      const actividadDir = path.join(this.uploadsPath, 'actividades', data.id_actividad.toString());
-      await fs.mkdir(actividadDir, { recursive: true });
+      await fs.mkdir(targetDir, { recursive: true });
 
       // Generar nombre único para el archivo
       const timestamp = Date.now();
       const extension = path.extname(file.originalname);
       const filename = `${timestamp}_${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const filepath = path.join(actividadDir, filename);
+      const filepath = path.join(targetDir, filename);
 
       // Guardar archivo en el sistema de archivos
       await fs.writeFile(filepath, file.buffer);
 
       // Crear registro en la base de datos
       const archivoData = {
-        ...data,
+        actividadId: data.actividadId || null,
+        reporteId: data.reporteId || null,
         nombre_original: file.originalname,
-        nombre_archivo: filename,
-        ruta_archivo: path.relative(this.uploadsPath, filepath),
+        nombre_almacenado: filename,
+        ruta_almacenamiento: filepath,
         tipo_mime: file.mimetype,
-        tamaño: file.size
+        tamano_bytes: file.size,
+        descripcion: data.descripcion || null,
+        categoria: data.categoria || 'evidencia',
+        usuarioSubida: data.usuarioSubida
       };
 
-      const archivo = await this.model.create(archivoData);
+      const archivo = await this.model.create(archivoData, options);
       return archivo;
     } catch (error) {
       if (error.isBoom) throw error;
@@ -124,7 +189,7 @@ class ArchivoService {
   async getFileInfo(id) {
     try {
       const archivo = await this.findById(id);
-      const fullPath = path.join(this.uploadsPath, archivo.ruta_archivo);
+      const fullPath = archivo.ruta_almacenamiento;
       
       // Verificar que el archivo existe en el sistema de archivos
       try {
@@ -155,7 +220,7 @@ class ArchivoService {
         buffer: fileBuffer,
         filename,
         mimetype: archivo.tipo_mime,
-        size: archivo.tamaño
+        size: archivo.tamano_bytes
       };
     } catch (error) {
       if (error.isBoom) throw error;
@@ -166,7 +231,7 @@ class ArchivoService {
   async delete(id) {
     try {
       const archivo = await this.findById(id);
-      const fullPath = path.join(this.uploadsPath, archivo.ruta_archivo);
+      const fullPath = archivo.ruta_almacenamiento;
       
       // Eliminar archivo del sistema de archivos
       try {
@@ -201,8 +266,8 @@ class ArchivoService {
       const stats = await this.model.findAll({
         attributes: [
           [models.sequelize.fn('COUNT', models.sequelize.col('id')), 'total_archivos'],
-          [models.sequelize.fn('SUM', models.sequelize.col('tamaño')), 'tamaño_total'],
-          [models.sequelize.fn('AVG', models.sequelize.col('tamaño')), 'tamaño_promedio']
+          [models.sequelize.fn('SUM', models.sequelize.col('tamano_bytes')), 'tamaño_total'],
+          [models.sequelize.fn('AVG', models.sequelize.col('tamano_bytes')), 'tamaño_promedio']
         ],
         raw: true
       });
@@ -210,6 +275,66 @@ class ArchivoService {
       return stats[0];
     } catch (error) {
       throw Boom.internal('Error al obtener estadísticas de almacenamiento', error);
+    }
+  }
+
+  /**
+   * Procesar múltiples archivos subidos
+   * @param {Array} files - Array de archivos de multer
+   * @param {Object} options - Opciones adicionales
+   * @returns {Promise<Array>} Archivos procesados
+   */
+  async createMultiple(files, data = {}, options = {}) {
+    try {
+      const archivosCreados = [];
+
+      for (const file of files) {
+        const archivo = await this.create(data, file, options);
+        archivosCreados.push(archivo);
+      }
+
+      return archivosCreados;
+    } catch (error) {
+      if (error.isBoom) throw error;
+      throw Boom.internal('Error al procesar archivos múltiples', error);
+    }
+  }
+
+  /**
+   * Validar acceso a un archivo basado en el usuario y rol
+   * @param {number} archivoId - ID del archivo
+   * @param {number} usuarioId - ID del usuario
+   * @param {string} rolUsuario - Rol del usuario
+   * @returns {Promise<boolean>} True si puede acceder
+   */
+  async validarAcceso(archivoId, usuarioId, rolUsuario) {
+    try {
+      const archivo = await this.findById(archivoId);
+      
+      // Los administradores pueden acceder a cualquier archivo
+      if (rolUsuario === 'admin') {
+        return true;
+      }
+
+      // Si el archivo pertenece a un reporte, verificar acceso al reporte
+      if (archivo.reporteId) {
+        const reporte = await models.Reporte.findByPk(archivo.reporteId);
+        if (!reporte) return false;
+        
+        // El usuario puede acceder si es el autor del reporte
+        return reporte.usuarioId === usuarioId;
+      }
+
+      // Si el archivo pertenece a una actividad, verificar acceso
+      if (archivo.actividadId) {
+        // Por ahora, permitir acceso si es el usuario que subió el archivo
+        return archivo.usuarioSubida === usuarioId;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error al validar acceso a archivo:', error);
+      return false;
     }
   }
 }

@@ -667,6 +667,7 @@ export default function PendingReports() {
       }),
       semestre: semestreActual,
       resumen: reporte.descripcion,
+      resumenEjecutivo: reporte.resumenEjecutivo, // Agregar el resumen ejecutivo
       comentariosRevision: reporte.comentariosRevision,
       actividades: reporte.actividades || [],
       archivos: reporte.archivos || []
@@ -705,6 +706,11 @@ export default function PendingReports() {
       
       // El backend devuelve { message: '...', data: ... }, no { success: true, data: ... }
       if (reporteCompleto && reporteCompleto.data) {
+        console.log('Datos completos del reporte desde backend:', reporteCompleto.data);
+        console.log('¿Tiene resumenEjecutivo?', reporteCompleto.data.resumenEjecutivo);
+        console.log('¿Tiene archivos adjuntos?', reporteCompleto.data.archivos || reporteCompleto.data.documentos);
+        console.log('Todas las propiedades del reporte:', Object.keys(reporteCompleto.data));
+        
         // Aplicar el mapeo de estados al reporte del modal también
         const reporteMapeado = mapReporteFromBackend(reporteCompleto.data)
         setReporteSeleccionado(reporteMapeado)

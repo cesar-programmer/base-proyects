@@ -18,6 +18,11 @@ const ReporteSchema = {
     allowNull: false,
     type: DataTypes.TEXT
   },
+  resumenEjecutivo: {
+    allowNull: true,
+    type: DataTypes.TEXT,
+    comment: 'Resumen ejecutivo del reporte con puntos principales y conclusiones'
+  },
   fechaRealizacion: {
     allowNull: false,
     type: DataTypes.DATE

@@ -43,6 +43,14 @@ router.get('/:id',
   reporteController.getReporte.bind(reporteController)
 );
 
+// Ruta para generar PDF del reporte
+router.get('/:id/pdf',
+  verifyToken,
+  checkDocenteOrAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.generateReportePDF.bind(reporteController)
+);
+
 router.post('/',
   verifyToken,
   checkDocenteOrAdmin,
@@ -91,6 +99,12 @@ router.get('/stats/general',
   verifyToken,
   checkDocenteOrAdmin,
   reporteController.getReporteStats.bind(reporteController)
+);
+
+// Ruta para obtener información de fecha límite y semestre
+router.get('/deadline/info',
+  verifyToken,
+  reporteController.getDeadlineInfo.bind(reporteController)
 );
 
 // Rutas solo para administradores

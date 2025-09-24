@@ -1,8 +1,11 @@
 import boom from '@hapi/boom';
 import { models } from '../db/models/index.js';
 import { Op } from 'sequelize';
+import PeriodoAcademicoService from './periodoAcademico.service.js';
+import FechaLimiteService from './fechaLimite.service.js';
 
 class ReporteService {
+
   // Obtener todos los reportes con filtros y paginación
   async find(options = {}) {
     try {
@@ -31,7 +34,7 @@ class ReporteService {
           {
             model: models.Actividad,
             as: 'actividades',
-            attributes: ['id', 'titulo', 'descripcion'],
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado_realizado', 'categoria'],
             required: false,
             through: { attributes: [] }
           }
@@ -55,23 +58,25 @@ class ReporteService {
   // Obtener un reporte por ID
   async findOne(id) {
     try {
+      console.log('=== DEBUG: Buscando reporte con ID:', id);
+      
       const reporte = await models.Reporte.findByPk(id, {
         include: [
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
             model: models.User,
             as: 'revisadoPor',
-            attributes: ['id', 'nombre', 'email'],
+            attributes: ['id', 'nombre', 'apellido', 'email'],
             required: false
           },
           {
             model: models.Actividad,
             as: 'actividades',
-            attributes: ['id', 'titulo', 'descripcion'],
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado_realizado', 'categoria'],
             required: false,
             through: { attributes: [] } // Excluir atributos de la tabla intermedia
           },
@@ -88,6 +93,19 @@ class ReporteService {
         throw boom.notFound('Reporte no encontrado');
       }
 
+      console.log('=== DEBUG: Reporte encontrado ===');
+      console.log('ID del reporte:', reporte.id);
+      console.log('Título:', reporte.titulo);
+      console.log('Actividades encontradas:', reporte.actividades ? reporte.actividades.length : 0);
+      console.log('Archivos encontrados:', reporte.archivos ? reporte.archivos.length : 0);
+      
+      if (reporte.actividades && reporte.actividades.length > 0) {
+        console.log('Detalles de actividades:');
+        reporte.actividades.forEach((act, index) => {
+          console.log(`  Actividad ${index + 1}: ID=${act.id}, Título=${act.titulo}`);
+        });
+      }
+
       return reporte;
     } catch (error) {
       console.log('Error específico en findOne:', error);
@@ -100,7 +118,24 @@ class ReporteService {
   async create(reporteData, archivos = []) {
     try {
       console.log('Datos del reporte antes de crear:', reporteData);
-      const newReporte = await models.Reporte.create(reporteData);
+      
+      // Extraer las actividades del reporteData antes de crear el reporte
+      const { actividades, ...reporteDataSinActividades } = reporteData;
+      
+      const newReporte = await models.Reporte.create(reporteDataSinActividades);
+
+      // Si hay actividades, asociarlas al reporte
+      if (actividades && actividades.length > 0) {
+        console.log('Asociando actividades al reporte:', actividades);
+        for (let i = 0; i < actividades.length; i++) {
+          const actividadId = actividades[i];
+          await models.ReporteActividad.create({
+            reporteId: newReporte.id,
+            actividadId: actividadId,
+            orden: i + 1
+          });
+        }
+      }
 
       // Si hay archivos, asociarlos al reporte
       if (archivos && archivos.length > 0) {
@@ -282,6 +317,91 @@ class ReporteService {
     } catch (error) {
       if (boom.isBoom(error)) throw error;
       throw boom.internal('Error al cambiar el estado del reporte');
+    }
+  }
+
+  // Obtener información de fecha límite y semestre para reportes
+  async getReportDeadlineInfo() {
+    try {
+      const periodoService = new PeriodoAcademicoService();
+      const fechaLimiteService = new FechaLimiteService();
+
+      // Obtener el período académico activo
+      const periodoActivo = await periodoService.findActive();
+      
+      if (!periodoActivo) {
+        return {
+          semestre: "N/A",
+          fechaLimite: "N/A",
+          periodoActivo: null
+        };
+      }
+
+      // Extraer el semestre del nombre del período (ej: "2024-2" -> "2024-2")
+      const semestre = periodoActivo.nombre;
+
+      // Obtener las fechas límite de categoría 'ENTREGA' para el período activo
+       const fechasLimite = await fechaLimiteService.findByCategory('ENTREGA');
+      
+      if (!fechasLimite || fechasLimite.length === 0) {
+        return {
+          semestre: semestre,
+          fechaLimite: "N/A",
+          periodoActivo: periodoActivo.nombre,
+          periodoActivoId: periodoActivo.id
+        };
+      }
+
+      // Filtrar solo las fechas del período activo
+      const fechasDelPeriodoActivo = fechasLimite.filter(fecha => 
+        fecha.periodo && fecha.periodo.id === periodoActivo.id
+      );
+
+      if (fechasDelPeriodoActivo.length === 0) {
+        return {
+          semestre: semestre,
+          fechaLimite: "N/A",
+          periodoActivo: periodoActivo.nombre,
+          periodoActivoId: periodoActivo.id
+        };
+      }
+
+      // Encontrar la fecha límite más próxima (futura o pasada)
+      const now = new Date();
+      const fechaLimiteProxima = fechasDelPeriodoActivo.reduce((closest, current) => {
+        const currentDate = new Date(current.fecha_limite);
+        const closestDate = new Date(closest.fecha_limite);
+        
+        // Si ambas son futuras, tomar la más cercana
+        if (currentDate >= now && closestDate >= now) {
+          return currentDate < closestDate ? current : closest;
+        }
+        
+        // Si una es futura y otra pasada, tomar la futura
+        if (currentDate >= now && closestDate < now) {
+          return current;
+        }
+        if (currentDate < now && closestDate >= now) {
+          return closest;
+        }
+        
+        // Si ambas son pasadas, tomar la más reciente
+        return currentDate > closestDate ? current : closest;
+      });
+
+      return {
+        semestre: semestre,
+        fechaLimite: fechaLimiteProxima ? fechaLimiteProxima.fecha_limite : "N/A",
+        periodoActivo: periodoActivo.nombre,
+        periodoActivoId: periodoActivo.id
+      };
+    } catch (error) {
+      console.error('Error al obtener información de fecha límite:', error);
+      return {
+        semestre: "N/A",
+        fechaLimite: "N/A",
+        periodoActivo: null
+      };
     }
   }
 }

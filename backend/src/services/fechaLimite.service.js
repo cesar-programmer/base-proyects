@@ -51,7 +51,7 @@ class FechaLimiteService {
             model: models.PeriodoAcademico,
             as: 'periodo',
             where: { activo: true },
-            attributes: ['id_periodo', 'nombre']
+            attributes: ['id', 'nombre']
           }
         ],
         order: [['fecha_limite', 'ASC']]
@@ -178,7 +178,7 @@ class FechaLimiteService {
             model: models.PeriodoAcademico,
             as: 'periodo',
             where: { activo: true },
-            attributes: ['id_periodo', 'nombre']
+            attributes: ['id', 'nombre']
           }
         ],
         order: [['fecha_limite', 'ASC']]
@@ -221,17 +221,27 @@ class FechaLimiteService {
   // Obtener fechas límite por categoría
   async findByCategory(categoria) {
     try {
+      // Primero obtener el período activo
+      const periodoActivo = await models.PeriodoAcademico.findOne({
+        where: { activo: true }
+      });
+
+      if (!periodoActivo) {
+        return [];
+      }
+
+      // Luego obtener las fechas límite para ese período
       const fechasLimite = await models.FechaLimite.findAll({
         where: { 
           categoria,
-          activo: true
+          activo: true,
+          id_periodo: periodoActivo.id
         },
         include: [
           {
             model: models.PeriodoAcademico,
             as: 'periodo',
-            where: { activo: true },
-            attributes: ['id_periodo', 'nombre']
+            attributes: ['id', 'nombre']
           }
         ],
         order: [['fecha_limite', 'ASC']]

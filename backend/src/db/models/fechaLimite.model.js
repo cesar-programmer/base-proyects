@@ -39,7 +39,7 @@ const FechaLimiteSchema = {
     comment: 'Periodo académico al que pertenece',
     references: {
       model: PERIODOS_ACADEMICOS_TABLE,
-      key: 'id_periodo'
+      key: 'id'
     },
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE'

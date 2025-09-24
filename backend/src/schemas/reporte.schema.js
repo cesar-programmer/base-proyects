@@ -33,6 +33,39 @@ const createReporteSchema = Joi.object({
     .messages({
       'any.required': 'La fecha de realización es requerida'
     }),
+  participantesReales: Joi.number()
+    .integer()
+    .min(0)
+    .allow(null)
+    .messages({
+      'number.base': 'Los participantes reales deben ser un número',
+      'number.integer': 'Los participantes reales deben ser un número entero',
+      'number.min': 'Los participantes reales no pueden ser negativos'
+    }),
+  resultados: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Los resultados no pueden exceder 2000 caracteres'
+    }),
+  observaciones: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Las observaciones no pueden exceder 2000 caracteres'
+    }),
+  recomendaciones: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Las recomendaciones no pueden exceder 2000 caracteres'
+    }),
+  resumenEjecutivo: Joi.string()
+    .max(3000)
+    .allow('', null)
+    .messages({
+      'string.max': 'El resumen ejecutivo no puede exceder 3000 caracteres'
+    }),
   usuarioId: Joi.number()
     .integer()
     .positive()
@@ -116,9 +149,9 @@ const createReporteSchema = Joi.object({
       'string.max': 'Los recursos no pueden exceder 2000 caracteres'
     }),
   estado: Joi.string()
-    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'RECHAZADO', 'borrador', 'enviado', 'en_revision', 'aprobado', 'rechazado')
+    .valid('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado')
     .messages({
-      'any.only': 'El estado debe ser uno de: BORRADOR, ENVIADO, EN_REVISION, APROBADO, RECHAZADO'
+      'any.only': 'El estado debe ser borrador, enviado, revisado, aprobado o rechazado'
     }),
   archivos: Joi.array()
     .items(
@@ -178,10 +211,10 @@ const updateReporteSchema = Joi.object({
 // Esquema para cambiar estado del reporte
 const changeReporteStatusSchema = Joi.object({
   estado: Joi.string()
-    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'DEVUELTO')
+    .valid('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado')
     .required()
     .messages({
-      'any.only': 'El estado debe ser BORRADOR, ENVIADO, EN_REVISION, APROBADO o DEVUELTO',
+      'any.only': 'El estado debe ser borrador, enviado, revisado, aprobado o rechazado',
       'any.required': 'El estado es requerido'
     }),
   observaciones_admin: Joi.string()
@@ -243,9 +276,9 @@ const getReportesQuerySchema = Joi.object({
       'number.max': 'El límite no puede ser mayor a 100'
     }),
   estado: Joi.string()
-    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'DEVUELTO')
+    .valid('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado')
     .messages({
-      'any.only': 'El estado debe ser BORRADOR, ENVIADO, EN_REVISION, APROBADO o DEVUELTO'
+      'any.only': 'El estado debe ser borrador, enviado, revisado, aprobado o rechazado'
     }),
   tipo: Joi.string()
     .valid('ACTIVIDADES_PLANIFICADAS', 'ACTIVIDADES_REALIZADAS')
@@ -295,9 +328,9 @@ const getReportHistorySchema = Joi.object({
       'any.required': 'El ID del docente es requerido'
     }),
   estado: Joi.string()
-    .valid('BORRADOR', 'ENVIADO', 'EN_REVISION', 'APROBADO', 'DEVUELTO')
+    .valid('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado')
     .messages({
-      'any.only': 'El estado debe ser BORRADOR, ENVIADO, EN_REVISION, APROBADO o DEVUELTO'
+      'any.only': 'El estado debe ser borrador, enviado, revisado, aprobado o rechazado'
     }),
   tipo: Joi.string()
     .valid('ACTIVIDADES_PLANIFICADAS', 'ACTIVIDADES_REALIZADAS')

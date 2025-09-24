@@ -17,8 +17,13 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
+    resumenEjecutivo: '',
     tipo: 'ACTIVIDADES_PLANIFICADAS',
-    fechaRealizacion: new Date().toISOString().split('T')[0]
+    fechaRealizacion: new Date().toISOString().split('T')[0],
+    participantesReales: '',
+    resultados: '',
+    observaciones: '',
+    recomendaciones: ''
   });
   const [archivosSeleccionados, setArchivosSeleccionados] = useState([]);
   const [subiendoArchivos, setSubiendoArchivos] = useState(false);
@@ -267,7 +272,12 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
       const reporteData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
+        resumenEjecutivo: formData.resumenEjecutivo,
         fechaRealizacion: formData.fechaRealizacion,
+        participantesReales: formData.participantesReales ? parseInt(formData.participantesReales) : null,
+        resultados: formData.resultados,
+        observaciones: formData.observaciones,
+        recomendaciones: formData.recomendaciones,
         tipo: formData.tipo, // ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS
         semestre: periodoActivo.nombre, // Usar el nombre del período activo
         estado: 'borrador', // Estado inicial
@@ -292,8 +302,13 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
       setFormData({
         titulo: '',
         descripcion: '',
+        resumenEjecutivo: '',
         tipo: 'ACTIVIDADES_PLANIFICADAS',
-        fechaRealizacion: new Date().toISOString().split('T')[0]
+        fechaRealizacion: new Date().toISOString().split('T')[0],
+        participantesReales: '',
+        resultados: '',
+        observaciones: '',
+        recomendaciones: ''
       });
       setActividadesSeleccionadas([]);
       setArchivosSeleccionados([]);
@@ -398,6 +413,20 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Participantes Reales
+                </label>
+                <input
+                  type="number"
+                  name="participantesReales"
+                  value={formData.participantesReales}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Número de participantes reales"
+                  min="0"
+                />
+              </div>
 
             </div>
 
@@ -413,6 +442,69 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Describe el propósito y contenido del reporte..."
+              />
+            </div>
+
+            {/* Resumen Ejecutivo */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Resumen Ejecutivo
+              </label>
+              <textarea
+                name="resumenEjecutivo"
+                value={formData.resumenEjecutivo}
+                onChange={handleInputChange}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Resumen ejecutivo del reporte con los puntos más importantes y conclusiones principales..."
+              />
+              <p className="text-xs text-gray-500">
+                Incluye un resumen de las actividades realizadas, logros principales y conclusiones del período reportado.
+              </p>
+            </div>
+
+            {/* Resultados */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Resultados
+              </label>
+              <textarea
+                name="resultados"
+                value={formData.resultados}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Describe los resultados obtenidos de las actividades realizadas..."
+              />
+            </div>
+
+            {/* Observaciones */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Observaciones
+              </label>
+              <textarea
+                name="observaciones"
+                value={formData.observaciones}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Observaciones adicionales sobre el desarrollo de las actividades..."
+              />
+            </div>
+
+            {/* Recomendaciones */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Recomendaciones
+              </label>
+              <textarea
+                name="recomendaciones"
+                value={formData.recomendaciones}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Recomendaciones para futuras actividades o mejoras..."
               />
             </div>
 

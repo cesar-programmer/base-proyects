@@ -178,14 +178,24 @@ function DropdownMenuItem({ onClick, children, className = "" }) {
 }
 
 // Componente de encabezado del dashboard
-const DashboardHeader = () => (
+const DashboardHeader = ({ semestre, fechaLimite }) => (
   <div className="text-center">
     <h1 className="text-3xl font-bold text-green-800 mb-2">
       Reportes Pendientes
     </h1>
-    <p className="text-green-600 max-w-2xl mx-auto">
+    <p className="text-green-600 max-w-2xl mx-auto mb-4">
       Gestiona y completa tus reportes académicos pendientes de manera eficiente
     </p>
+    <div className="flex justify-center items-center gap-6 text-sm">
+      <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+        <Calendar className="w-4 h-4 text-green-600" />
+        <span className="font-medium text-green-800">Semestre: {semestre}</span>
+      </div>
+      <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
+        <Clock className="w-4 h-4 text-amber-600" />
+        <span className="font-medium text-amber-800">Fecha límite: {fechaLimite}</span>
+      </div>
+    </div>
   </div>
 );
 
@@ -261,7 +271,9 @@ function ReportDetailDialog({
   onOpenChange, 
   report, 
   showObservationsTab = false, 
-  footer 
+  footer,
+  semestreActual,
+  fechaLimiteActual
 }) {
   const [activeTab, setActiveTab] = useState("actividades")
 
@@ -290,11 +302,11 @@ function ReportDetailDialog({
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Semestre:</span>
-                  <p className="font-semibold text-gray-900 mt-1">{report.semestre}</p>
+                  <p className="font-semibold text-gray-900 mt-1">{semestreActual || report.semestre}</p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Fecha límite:</span>
-                  <p className="font-semibold text-gray-900 mt-1">{report.fechaLimite || "N/A"}</p>
+                  <p className="font-semibold text-gray-900 mt-1">{fechaLimiteActual || report.fechaLimite || "N/A"}</p>
                 </div>
               </div>
             </div>
@@ -403,56 +415,73 @@ function ReportDetailDialog({
                   <h3 className="text-lg font-semibold text-gray-900">Actividades del Período</h3>
                 </div>
                 <div className="p-6 space-y-4">
-                  {report.actividades?.map((a) => (
-                    <div
-                      key={a.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
-                        a.estado === "Completada"
-                          ? "bg-green-50 border-l-green-500"
-                          : a.estado === "En Progreso"
-                            ? "bg-yellow-50 border-l-yellow-500"
-                            : "bg-blue-50 border-l-blue-500"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            a.estado === "Completada"
-                              ? "bg-green-500"
-                              : a.estado === "En Progreso"
-                                ? "bg-yellow-500"
-                                : "bg-blue-500"
-                          }`}
-                        >
-                          {a.estado === "Completada" ? (
-                            <CheckCircle2 className="w-4 h-4 text-white" />
-                          ) : a.estado === "En Progreso" ? (
-                            <Clock className="w-4 h-4 text-white" />
-                          ) : (
-                            <Calendar className="w-4 h-4 text-white" />
+                  {report.actividades && report.actividades.length > 0 ? (
+                    report.actividades.map((a) => (
+                      <div
+                        key={a.id}
+                        className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
+                          a.estado_realizado === "COMPLETADA"
+                            ? "bg-green-50 border-l-green-500"
+                            : a.estado_realizado === "EN_PROGRESO"
+                              ? "bg-yellow-50 border-l-yellow-500"
+                              : "bg-blue-50 border-l-blue-500"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              a.estado_realizado === "COMPLETADA"
+                                ? "bg-green-500"
+                                : a.estado_realizado === "EN_PROGRESO"
+                                  ? "bg-yellow-500"
+                                  : "bg-blue-500"
+                            }`}
+                          >
+                            {a.estado_realizado === "COMPLETADA" ? (
+                              <CheckCircle2 className="w-4 h-4 text-white" />
+                            ) : a.estado_realizado === "EN_PROGRESO" ? (
+                              <Clock className="w-4 h-4 text-white" />
+                            ) : (
+                              <Calendar className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-900 block">{a.titulo}</span>
+                            {a.descripcion && <span className="text-sm text-gray-600">{a.descripcion}</span>}
+                            {a.categoria && (
+                              <span className="inline-block mt-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                                {a.categoria}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span
+                            className={`text-sm font-medium block ${
+                              a.estado_realizado === "COMPLETADA"
+                                ? "text-green-600"
+                                : a.estado_realizado === "EN_PROGRESO"
+                                  ? "text-yellow-600"
+                                  : "text-blue-600"
+                            }`}
+                          >
+                            {a.estado_realizado === "COMPLETADA" ? "Completada" : 
+                             a.estado_realizado === "EN_PROGRESO" ? "En Progreso" : "Planificada"}
+                          </span>
+                          {a.fechaInicio && (
+                            <span className="text-xs text-gray-500 block mt-1">
+                              {new Date(a.fechaInicio).toLocaleDateString()}
+                            </span>
                           )}
                         </div>
-                        <div>
-                          <span className="font-medium text-gray-900 block">{a.titulo}</span>
-                          {a.detalle && <span className="text-sm text-gray-600">{a.detalle}</span>}
-                        </div>
                       </div>
-                      <div className="text-right">
-                        <span
-                          className={`text-sm font-medium ${
-                            a.estado === "Completada"
-                              ? "text-green-600"
-                              : a.estado === "En Progreso"
-                                ? "text-yellow-600"
-                                : "text-blue-600"
-                          }`}
-                        >
-                          {a.estado}
-                        </span>
-                        <p className="text-xs text-gray-500">{a.fecha}</p>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p>No hay actividades registradas en este reporte</p>
                     </div>
-                  )) || <p className="text-gray-500 p-6">No hay actividades registradas.</p>}
+                  )}
                 </div>
               </div>
             )}
@@ -464,7 +493,17 @@ function ReportDetailDialog({
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="prose max-w-none">
-                    <p className="text-gray-700">{report.resumen || "Sin resumen disponible."}</p>
+                    {report.resumenEjecutivo ? (
+                      <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                        {report.resumenEjecutivo}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>No hay resumen ejecutivo disponible para este reporte.</p>
+                        <p className="text-sm mt-1">El resumen ejecutivo se puede agregar al editar el reporte.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -516,7 +555,8 @@ function ReportDetailDialog({
 
 export default function PendingReports() {
   const { user } = useAuth();
-  const semestreActual = currentSemesterFor();
+  const [semestreActual, setSemestreActual] = useState(currentSemesterFor());
+  const [fechaLimiteActual, setFechaLimiteActual] = useState("N/A");
   const [busqueda, setBusqueda] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("all");
   const [estadoFiltro, setEstadoFiltro] = useState("all");
@@ -526,6 +566,7 @@ export default function PendingReports() {
 
   useEffect(() => {
     loadReports();
+    loadDeadlineInfo();
   }, [user]);
 
   const loadReports = async () => {
@@ -534,8 +575,24 @@ export default function PendingReports() {
     try {
       setLoading(true);
       const response = await reportService.getReportsByTeacher(user.id);
+      console.log('Respuesta completa de reportes:', response);
+      
       // Asegurar que siempre sea un array
       const reportsData = response?.data || response || [];
+      console.log('Datos de reportes extraídos:', reportsData);
+      
+      // Log de los estados de cada reporte
+      if (Array.isArray(reportsData)) {
+        reportsData.forEach((reporte, index) => {
+          console.log(`Reporte ${index + 1}:`, {
+            id: reporte.id,
+            titulo: reporte.titulo,
+            estado: reporte.estado,
+            tipo: reporte.tipo
+          });
+        });
+      }
+      
       setReportes(Array.isArray(reportsData) ? reportsData : []);
     } catch (error) {
       console.error('Error al cargar reportes:', error);
@@ -543,6 +600,36 @@ export default function PendingReports() {
       setReportes([]); // Asegurar que sea un array vacío en caso de error
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDeadlineInfo = async () => {
+    try {
+      const response = await reportService.getDeadlineInfo();
+      console.log('Respuesta completa del endpoint deadline info:', response);
+      
+      // Los datos están en response.data
+      const deadlineInfo = response.data || response;
+      console.log('Datos extraídos:', deadlineInfo);
+      
+      if (deadlineInfo.semestre && deadlineInfo.semestre !== "N/A") {
+        console.log('Estableciendo semestre:', deadlineInfo.semestre);
+        setSemestreActual(deadlineInfo.semestre);
+      }
+      if (deadlineInfo.fechaLimite && deadlineInfo.fechaLimite !== "N/A") {
+        console.log('Fecha límite recibida:', deadlineInfo.fechaLimite);
+        const fechaFormateada = new Date(deadlineInfo.fechaLimite).toLocaleDateString('es-ES', { 
+          day: 'numeric', 
+          month: 'long' 
+        });
+        console.log('Fecha límite formateada:', fechaFormateada);
+        setFechaLimiteActual(fechaFormateada);
+      } else {
+        console.log('No se recibió fecha límite válida:', deadlineInfo.fechaLimite);
+      }
+    } catch (error) {
+      console.error('Error al cargar información de fecha límite:', error);
+      // Mantener los valores por defecto en caso de error
     }
   };
 
@@ -566,20 +653,19 @@ export default function PendingReports() {
       'CAPACITACION': 'Capacitación'
     };
 
+    const estadoMapeado = estadoMap[reporte.estado] || 'Pendiente';
+
     return {
       id: reporte.id,
       titulo: reporte.titulo,
       tipo: tipoMap[reporte.tipo] || 'Docencia',
-      estado: estadoMap[reporte.estado] || 'Pendiente',
-      fechaLimite: new Date(reporte.fechaRealizacion).toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'long' 
-      }),
+      estado: estadoMapeado,
+      fechaLimite: fechaLimiteActual,
       ultimaActualizacion: new Date(reporte.updatedAt || reporte.createdAt).toLocaleDateString('es-ES', { 
         day: 'numeric', 
         month: 'long' 
       }),
-      semestre: semestreActual, // Usar el semestre actual por defecto
+      semestre: semestreActual,
       resumen: reporte.descripcion,
       comentariosRevision: reporte.comentariosRevision,
       actividades: reporte.actividades || [],
@@ -611,10 +697,26 @@ export default function PendingReports() {
   const [resumenCorreccion, setResumenCorreccion] = useState("")
   const [openCrearReporte, setOpenCrearReporte] = useState(false)
 
-  const abrirDetalle = (rep) => {
-    setReporteSeleccionado(rep)
-    setOpenDetalle(true)
-    setDropdownOpen(null)
+  const abrirDetalle = async (rep) => {
+    try {
+      setDropdownOpen(null)
+      // Obtener los datos completos del reporte desde el backend
+      const reporteCompleto = await reportService.getReportById(rep.id)
+      
+      // El backend devuelve { message: '...', data: ... }, no { success: true, data: ... }
+      if (reporteCompleto && reporteCompleto.data) {
+        // Aplicar el mapeo de estados al reporte del modal también
+        const reporteMapeado = mapReporteFromBackend(reporteCompleto.data)
+        setReporteSeleccionado(reporteMapeado)
+        setOpenDetalle(true)
+      } else {
+        console.error('Estructura inesperada de respuesta:', reporteCompleto)
+        toast.error('Error al cargar los detalles del reporte')
+      }
+    } catch (error) {
+      console.error('Error al obtener detalles del reporte:', error)
+      toast.error('Error al cargar los detalles del reporte')
+    }
   }
 
   const solicitarEdicion = (rep) => {
@@ -655,14 +757,71 @@ export default function PendingReports() {
     setOpenCorreccion(false)
   }
 
-  const enviarReporte = (rep) => {
-    const hoy = new Date()
-    const fecha = hoy.toLocaleDateString("es-MX", { day: "2-digit", month: "long" })
-    setReportes((prev) => {
-      const currentReports = Array.isArray(prev) ? prev : [];
-      return currentReports.map((r) => (r.id === rep.id ? { ...r, estado: "En revisión", ultimaActualizacion: fecha } : r));
-    })
-    setDropdownOpen(null)
+  // Función para mapear estados del frontend al backend
+  const mapEstadoToBackend = (estadoFrontend) => {
+    const estadoMap = {
+      'Pendiente': 'borrador',
+      'En revisión': 'enviado',
+      'Aprobado': 'aprobado',
+      'Devuelto': 'rechazado'
+    };
+    return estadoMap[estadoFrontend] || 'borrador';
+  };
+
+  const enviarReporte = async (rep) => {
+    try {
+      setDropdownOpen(null)
+      
+      // Cambiar el estado del reporte a "enviado" (que se mapea a "En revisión" en el frontend)
+      const resultado = await reportService.changeReportStatus(rep.id, 'enviado')
+      
+      if (resultado.success) {
+        toast.success('Reporte enviado para revisión exitosamente')
+        
+        // Actualizar la lista local de reportes
+        setReportes((prev) => {
+          const currentReports = Array.isArray(prev) ? prev : [];
+          return currentReports.map((r) => 
+            r.id === rep.id 
+              ? { ...r, estado: "En revisión", ultimaActualizacion: new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long" }) } 
+              : r
+          );
+        })
+        
+        // Actualizar estadísticas
+        setStats(prev => ({
+          ...prev,
+          pendientes: prev.pendientes - 1,
+          revision: prev.revision + 1
+        }))
+      } else {
+        toast.error('Error al enviar el reporte para revisión')
+      }
+    } catch (error) {
+      console.error('Error al enviar reporte:', error)
+      toast.error('Error al enviar el reporte para revisión')
+    }
+   }
+
+  const descargarReportePDF = async (reporte) => {
+    try {
+      const blob = await reportService.downloadReportPDF(reporte.id)
+      
+      // Crear URL del blob y descargar
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Reporte_${reporte.titulo || reporte.id}_${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success('Reporte descargado exitosamente')
+    } catch (error) {
+      console.error('Error al descargar reporte:', error)
+      toast.error('Error al descargar el reporte en PDF')
+    }
   }
 
   const statsArray = [
@@ -696,7 +855,7 @@ export default function PendingReports() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        <DashboardHeader />
+        <DashboardHeader semestre={semestreActual} fechaLimite={fechaLimiteActual} />
 
         {/* Tarjetas de estado */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -793,7 +952,7 @@ export default function PendingReports() {
                           </DropdownMenuItem>
                         )}
 
-                        <DropdownMenuItem onClick={() => {}}>
+                        <DropdownMenuItem onClick={() => descargarReportePDF(r)}>
                           <Download className="w-4 h-4 mr-2 text-gray-600" />
                           Descargar PDF
                         </DropdownMenuItem>
@@ -822,6 +981,8 @@ export default function PendingReports() {
             semestre: "",
           }}
           showObservationsTab={true}
+          semestreActual={semestreActual}
+          fechaLimiteActual={fechaLimiteActual}
           footer={
             <>
               {reporteSeleccionado?.estado === "Pendiente" && (
@@ -856,6 +1017,7 @@ export default function PendingReports() {
               <Button 
                 variant="outline"
                 className="inline-flex items-center px-4 py-2 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent rounded-md transition-colors focus:ring-gray-300"
+                onClick={() => descargarReportePDF(reporteSeleccionado)}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Descargar PDF

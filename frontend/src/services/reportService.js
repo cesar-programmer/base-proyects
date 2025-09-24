@@ -149,6 +149,28 @@ const reportService = {
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al exportar reportes');
     }
+  },
+
+  // Descargar reporte individual en PDF
+  downloadReportPDF: async (id) => {
+    try {
+      const response = await api.get(`/reportes/${id}/pdf`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al descargar reporte en PDF');
+    }
+  },
+
+  // Obtener información de fecha límite y semestre actual
+  getDeadlineInfo: async () => {
+    try {
+      const response = await api.get('/reportes/deadline/info');
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener información de fecha límite');
+    }
   }
 };
 

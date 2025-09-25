@@ -75,6 +75,14 @@ function StatusBadge({ estado }) {
       </span>
     )
   }
+  if (estado === "Completado") {
+    return (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+        <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+        Completado
+      </span>
+    )
+  }
   return (
     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
       <div className="w-2 h-2 bg-red-500 rounded-full mr-2" />
@@ -639,7 +647,7 @@ export default function PendingReports() {
       'borrador': 'Pendiente',
       'enviado': 'En revisión',
       'revisado': 'En revisión',
-      'aprobado': 'Aprobado',
+      'aprobado': 'Completado',
       'rechazado': 'Devuelto'
     };
 
@@ -653,7 +661,9 @@ export default function PendingReports() {
       'CAPACITACION': 'Capacitación'
     };
 
-    const estadoMapeado = estadoMap[reporte.estado] || 'Pendiente';
+    // Acceder al estado correctamente - los datos vienen directamente en reporte.estado
+    const estadoOriginal = reporte.estado;
+    const estadoMapeado = estadoMap[estadoOriginal] || 'Pendiente';
 
     return {
       id: reporte.id,
@@ -688,6 +698,7 @@ export default function PendingReports() {
     pendientes: reportesDelSemestre.filter((r) => r.estado === "Pendiente").length,
     revision: reportesDelSemestre.filter((r) => r.estado === "En revisión").length,
     devueltos: reportesDelSemestre.filter((r) => r.estado === "Devuelto").length,
+    completados: reportesDelSemestre.filter((r) => r.estado === "Completado").length,
   }
 
   const [reporteSeleccionado, setReporteSeleccionado] = useState(null)
@@ -778,36 +789,21 @@ export default function PendingReports() {
     try {
       setDropdownOpen(null)
       
-      // Cambiar el estado del reporte a "enviado" (que se mapea a "En revisión" en el frontend)
-      const resultado = await reportService.changeReportStatus(rep.id, 'enviado')
+      // Enviar el reporte usando el nuevo endpoint específico para docentes
+      const resultado = await reportService.sendReport(rep.id)
       
-      if (resultado.success) {
-        toast.success('Reporte enviado para revisión exitosamente')
-        
-        // Actualizar la lista local de reportes
-        setReportes((prev) => {
-          const currentReports = Array.isArray(prev) ? prev : [];
-          return currentReports.map((r) => 
-            r.id === rep.id 
-              ? { ...r, estado: "En revisión", ultimaActualizacion: new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long" }) } 
-              : r
-          );
-        })
-        
-        // Actualizar estadísticas
-        setStats(prev => ({
-          ...prev,
-          pendientes: prev.pendientes - 1,
-          revision: prev.revision + 1
-        }))
-      } else {
-        toast.error('Error al enviar el reporte para revisión')
-      }
+      toast.success('Reporte enviado para revisión exitosamente')
+      
+      // Recargar los reportes desde el servidor para asegurar que el estado esté actualizado
+      setTimeout(() => {
+        loadReports();
+      }, 1000); // Esperar 1 segundo para que el toast se muestre antes del reload
+      
     } catch (error) {
       console.error('Error al enviar reporte:', error)
       toast.error('Error al enviar el reporte para revisión')
     }
-   }
+  }
 
   const descargarReportePDF = async (reporte) => {
     try {
@@ -846,6 +842,13 @@ export default function PendingReports() {
       icon: Eye
     },
     {
+      label: "Completados",
+      value: stats.completados,
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+      icon: CheckCircle2
+    },
+    {
       label: "Devueltos",
       value: stats.devueltos,
       color: "text-red-600", 
@@ -864,7 +867,7 @@ export default function PendingReports() {
         <DashboardHeader semestre={semestreActual} fechaLimite={fechaLimiteActual} />
 
         {/* Tarjetas de estado */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsArray.map((stat, index) => (
             <StatsCard key={index} stat={stat} icon={stat.icon} />
           ))}

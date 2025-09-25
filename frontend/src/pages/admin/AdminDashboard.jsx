@@ -14,8 +14,7 @@ import {
   RefreshCcw,
 } from "lucide-react"
 import { Link } from "react-router-dom"
-import activityService from "../../services/activityService"
-import { useStats } from "../../context/StatsContext"
+import reportService from "../../services/reportService"
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -88,21 +87,25 @@ const ComplianceProgress = ({ item }) => (
   </div>
 );
 
-// Componente de actividad pendiente
-const PendingActivityItem = ({ activity }) => (
-  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+
+
+// Componente de reporte pendiente
+const PendingReportItem = ({ report }) => (
+  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
     <div className="flex items-center gap-3">
-      <AlertTriangle className="h-5 w-5 text-orange-500" />
+      <BarChart3 className="h-5 w-5 text-blue-500" />
       <div>
-        <div className="font-medium text-gray-900">{activity.name}</div>
-        <div className="text-sm text-gray-600">{activity.activity}</div>
+        <div className="font-medium text-gray-900">{report.docenteNombre || 'Docente'}</div>
+        <div className="text-sm text-gray-600">{report.titulo || 'Reporte de actividades'}</div>
       </div>
     </div>
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
-      Pendiente
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+      {report.estado || 'Pendiente'}
     </span>
   </div>
 );
+
+
 
 // Componente de encabezado del dashboard
 const DashboardHeader = ({ onRefresh, isRefreshing }) => (
@@ -125,51 +128,62 @@ const DashboardHeader = ({ onRefresh, isRefreshing }) => (
   </div>
 );
 
-// Componente de sección de cumplimiento
-const ComplianceSection = ({ data = [] }) => (
-  <Card>
-    <div className="p-6 pb-6 border-b border-gray-200">
-      <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
-        <CheckCircle className="h-6 w-6" />
-        Resumen de Cumplimiento
-      </h2>
-    </div>
-    
-    <div className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {data.map((item, index) => (
-          <ComplianceProgress key={index} item={item} />
-        ))}
-      </div>
-    </div>
-  </Card>
-);
 
-// Componente de sección de actividades pendientes
-const PendingActivitiesSection = ({ activities = [] }) => (
+
+
+
+// Componente de sección de cumplimiento de reportes
+const ReportComplianceSection = ({ data = [] }) => {
+  // Validación adicional para asegurar que data sea un array
+  const safeData = Array.isArray(data) ? data : [];
+  
+  return (
+    <Card>
+      <div className="p-6 pb-6 border-b border-gray-200">
+        <h2 className="text-xl font-semibold text-blue-800 flex items-center gap-2">
+          <BarChart3 className="h-6 w-6" />
+          Resumen de Reportes Completos
+        </h2>
+      </div>
+      
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {safeData.map((item, index) => (
+            <ComplianceProgress key={index} item={item} />
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// Componente de sección de reportes pendientes
+const PendingReportsSection = ({ reports = [] }) => (
   <Card>
     <div className="p-6 pb-6 border-b border-gray-200">
-      <h2 className="text-xl font-semibold text-green-800 flex items-center gap-2">
-        <Clock className="h-6 w-6" />
-        Actividades Pendientes de Revisión
+      <h2 className="text-xl font-semibold text-blue-800 flex items-center gap-2">
+        <BarChart3 className="h-6 w-6" />
+        Reportes Pendientes de Revisión
       </h2>
     </div>
     
     <div className="p-6">
       <div className="space-y-4">
-        {activities.length > 0 ? (
-          activities.map((activity, index) => (
-            <PendingActivityItem key={index} activity={activity} />
+        {reports.length > 0 ? (
+          reports.map((report, index) => (
+            <PendingReportItem key={index} report={report} />
           ))
         ) : (
           <div className="text-center text-gray-500 py-4">
-            No hay actividades pendientes de revisión
+            No hay reportes pendientes de revisión
           </div>
         )}
       </div>
     </div>
   </Card>
 );
+
+
 
 // Componente de pie de página
 const DashboardFooter = () => (
@@ -233,38 +247,71 @@ const adminSections = [
 
 // Componente principal
 export default function AdminDashboard() {
-  const [complianceData, setComplianceData] = useState([]);
-  const [pendingActivities, setPendingActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [reportComplianceData, setReportComplianceData] = useState([])
+  const [pendingReports, setPendingReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Usar StatsContext
-  const { stats, loading: statsLoading, error: statsError, fetchStats } = useStats();
 
   const fetchDashboardData = async (isManualRefresh = false) => {
     console.log('🚀 AdminDashboard: Iniciando fetchDashboardData...');
     
     if (isManualRefresh) {
       setIsRefreshing(true);
-      // Actualizar el contexto cuando es refresh manual
-      await fetchStats();
     } else {
       setLoading(true);
     }
     setError(null);
     
     try {
-      // Obtener actividades pendientes de revisión
-      console.log('📋 AdminDashboard: Obteniendo actividades pendientes...');
-      const pendingResponse = await activityService.getPendingActivitiesForDashboard(5);
-      console.log('📋 AdminDashboard: Actividades pendientes:', pendingResponse);
-      setPendingActivities(pendingResponse);
+      // Obtener reportes pendientes para el dashboard
+      console.log('📊 AdminDashboard: Obteniendo reportes pendientes...');
+      const pendingReportsResponse = await reportService.getPendingReportsForDashboard();
+      console.log('📊 AdminDashboard: Reportes pendientes:', pendingReportsResponse);
+      setPendingReports(pendingReportsResponse);
+      
+      // Obtener estadísticas de reportes
+      console.log('📈 AdminDashboard: Obteniendo estadísticas de reportes...');
+      const reportStatsResponse = await reportService.getReportStats();
+      console.log('📈 AdminDashboard: Estadísticas de reportes:', reportStatsResponse);
+      
+      // Transformar estadísticas de reportes
+      const transformedReportData = [
+        { 
+          label: "Reportes Completados", 
+          percentage: reportStatsResponse?.porcentajes?.completados || 0, 
+          color: "bg-blue-500", 
+          textColor: "text-blue-600",
+          count: reportStatsResponse?.completados || 0
+        },
+        { 
+          label: "Reportes Pendientes", 
+          percentage: reportStatsResponse?.porcentajes?.pendientes || 0, 
+          color: "bg-yellow-500", 
+          textColor: "text-yellow-600",
+          count: reportStatsResponse?.pendientes || 0
+        },
+        { 
+          label: "Reportes En Revisión", 
+          percentage: reportStatsResponse?.porcentajes?.enRevision || 0, 
+          color: "bg-purple-500", 
+          textColor: "text-purple-600",
+          count: reportStatsResponse?.enRevision || 0
+        },
+      ];
+      
+      console.log('📊 AdminDashboard: transformedReportData:', transformedReportData);
+      setReportComplianceData(transformedReportData);
       
     } catch (err) {
       console.error('❌ AdminDashboard: Error al cargar datos del dashboard:', err);
       setError('Error al cargar los datos del dashboard');
-      setPendingActivities([]);
+      setPendingReports([]);
+      setReportComplianceData([
+        { label: "Reportes Completados", percentage: 0, color: "bg-blue-500", textColor: "text-blue-600", count: 0 },
+        { label: "Reportes Pendientes", percentage: 0, color: "bg-yellow-500", textColor: "text-yellow-600", count: 0 },
+        { label: "Reportes En Revisión", percentage: 0, color: "bg-purple-500", textColor: "text-purple-600", count: 0 },
+      ]);
     } finally {
       if (isManualRefresh) {
         setIsRefreshing(false);
@@ -282,54 +329,11 @@ export default function AdminDashboard() {
   // Efecto para cargar datos iniciales
   useEffect(() => {
     fetchDashboardData();
-    // Cargar estadísticas del contexto si no están cargadas
-    if (!stats && !statsLoading) {
-      fetchStats();
-    }
   }, []);
 
-  // Efecto para transformar datos del contexto cuando cambien
-  useEffect(() => {
-    if (stats) {
-      console.log('📊 AdminDashboard: Transformando datos del StatsContext:', stats);
-      
-      const transformedComplianceData = [
-        { 
-          label: "Actividades Completadas", 
-          percentage: stats?.porcentajes?.completadas || 0, 
-          color: "bg-green-500", 
-          textColor: "text-green-600",
-          count: stats?.completadas || 0
-        },
-        { 
-          label: "Actividades Pendientes", 
-          percentage: stats?.porcentajes?.pendientes || 0, 
-          color: "bg-orange-500", 
-          textColor: "text-orange-600",
-          count: stats?.pendientes || 0
-        },
-        { 
-          label: "Actividades Devueltas", 
-          percentage: stats?.porcentajes?.atrasadas || 0, 
-          color: "bg-red-500", 
-          textColor: "text-red-600",
-          count: stats?.atrasadas || 0
-        },
-      ];
-      
-      console.log('📈 AdminDashboard: transformedComplianceData desde contexto:', transformedComplianceData);
-      setComplianceData(transformedComplianceData);
-    } else if (statsError) {
-      // Datos de fallback en caso de error del contexto
-      setComplianceData([
-        { label: "Actividades Completadas", percentage: 0, color: "bg-green-500", textColor: "text-green-600", count: 0 },
-        { label: "Actividades Pendientes", percentage: 0, color: "bg-orange-500", textColor: "text-orange-600", count: 0 },
-        { label: "Actividades Devueltas", percentage: 0, color: "bg-red-500", textColor: "text-red-600", count: 0 },
-      ]);
-    }
-  }, [stats, statsError]);
 
-  if (loading || statsLoading) {
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 p-6">
         <div className="max-w-7xl mx-auto">
@@ -346,18 +350,18 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto">
         <DashboardHeader onRefresh={handleRefresh} isRefreshing={isRefreshing} />
         
-        {(error || statsError) && (
+        {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error || statsError}
+            {error}
           </div>
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <ComplianceSection data={complianceData} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="lg:col-span-1">
+            <ReportComplianceSection data={reportComplianceData} />
           </div>
           <div>
-            <PendingActivitiesSection activities={pendingActivities} />
+            <PendingReportsSection reports={pendingReports} />
           </div>
         </div>
         

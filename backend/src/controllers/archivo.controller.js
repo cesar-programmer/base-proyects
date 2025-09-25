@@ -111,28 +111,52 @@ export const uploadArchivo = async (req, res) => {
 export const downloadArchivo = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('🔍 [Backend] downloadArchivo - ID recibido:', id);
     
     const archivo = await Archivo.findByPk(id);
+    console.log('📁 [Backend] Archivo encontrado en BD:', {
+      id: archivo?.id_archivo,
+      nombre_original: archivo?.nombre_original,
+      nombre_almacenado: archivo?.nombre_almacenado,
+      ruta_almacenamiento: archivo?.ruta_almacenamiento,
+      tipo_mime: archivo?.tipo_mime,
+      tamano_bytes: archivo?.tamano_bytes
+    });
     
     if (!archivo) {
+      console.log('❌ [Backend] Archivo no encontrado en BD');
       return res.status(404).json({ message: 'Archivo no encontrado' });
     }
     
     // Verificar que el archivo existe en el sistema de archivos
     try {
       await fs.access(archivo.ruta_almacenamiento);
+      console.log('✅ [Backend] Archivo existe en sistema de archivos:', archivo.ruta_almacenamiento);
     } catch (error) {
+      console.log('❌ [Backend] Archivo no encontrado en sistema de archivos:', {
+        ruta: archivo.ruta_almacenamiento,
+        error: error.message
+      });
       return res.status(404).json({ message: 'Archivo no encontrado en el servidor' });
     }
     
     // Configurar headers para la descarga
+    console.log('📤 [Backend] Configurando headers para descarga');
     res.setHeader('Content-Disposition', `attachment; filename="${archivo.nombre_original}"`);
     res.setHeader('Content-Type', archivo.tipo_mime);
     res.setHeader('Content-Length', archivo.tamano_bytes);
     
+    console.log('📦 [Backend] Headers configurados:', {
+      'Content-Disposition': `attachment; filename="${archivo.nombre_original}"`,
+      'Content-Type': archivo.tipo_mime,
+      'Content-Length': archivo.tamano_bytes
+    });
+    
     // Enviar el archivo
+    console.log('🚀 [Backend] Enviando archivo...');
     res.sendFile(path.resolve(archivo.ruta_almacenamiento));
   } catch (error) {
+    console.error('❌ [Backend] Error en downloadArchivo:', error);
     handleError(res, error, 'Error al descargar archivo');
   }
 };

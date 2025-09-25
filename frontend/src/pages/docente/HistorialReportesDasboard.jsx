@@ -33,13 +33,65 @@ export default function HistorialReportesDashboard() {
     loadReports();
   }, [user]);
 
+  // Mapear los reportes del backend al formato esperado por el frontend
+  const mapReporteFromBackend = (reporte) => {
+    
+    const estadoMap = {
+      'borrador': 'Pendiente',
+      'enviado': 'En revisión',
+      'revisado': 'En revisión',
+      'aprobado': 'Completado',
+      'rechazado': 'Devuelto',
+      'devuelto': 'Devuelto'
+    };
+
+    const tipoMap = {
+      'ACTIVIDADES_PLANIFICADAS': 'Docencia',
+      'ACTIVIDADES_REALIZADAS': 'Docencia',
+      'INVESTIGACION': 'Investigación',
+      'EXTENSION': 'Extensión',
+      'GESTION_ACADEMICA': 'Gestión',
+      'TUTORIAS': 'Tutoría',
+      'CAPACITACION': 'Capacitación'
+    };
+
+    // Acceder al estado correctamente - los datos vienen directamente en reporte.estado
+    const estadoOriginal = reporte.estado;
+    const estadoMapeado = estadoMap[estadoOriginal] || 'Pendiente';
+
+    return {
+      id: reporte.id,
+      titulo: reporte.titulo,
+      tipo: tipoMap[reporte.tipo] || 'Docencia',
+      estado: estadoMapeado,
+      fechaEnvio: reporte.fechaEnvio ? new Date(reporte.fechaEnvio).toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'long',
+        year: 'numeric'
+      }) : new Date(reporte.createdAt).toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'long',
+        year: 'numeric'
+      }),
+      semestre: reporte.semestre || '2024-1',
+      descripcion: reporte.descripcion,
+      fechaCreacion: new Date(reporte.createdAt).toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'long',
+        year: 'numeric'
+      })
+    };
+  };
+
   const loadReports = async () => {
     if (!user?.id) return;
     
     try {
       setLoading(true);
       const response = await reportService.getReportHistory(user.id);
-      setReports(response.data || []);
+      
+      const reportesArray = Array.isArray(response.data) ? response.data.map(mapReporteFromBackend) : [];
+      setReports(reportesArray);
     } catch (error) {
       toast.error('Error al cargar historial de reportes: ' + error.message);
     } finally {
@@ -164,6 +216,20 @@ export default function HistorialReportesDashboard() {
             Pendiente
           </span>
         )
+      case "Devuelto":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+            <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+            Devuelto
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+            <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+            {status}
+          </span>
+        )
     }
   }
 
@@ -206,6 +272,12 @@ export default function HistorialReportesDashboard() {
       value: reports.filter((r) => r.estado === "Pendiente").length,
       color: "text-yellow-600",
       bgColor: "bg-yellow-100",
+    },
+    {
+      label: "Devueltos",
+      value: reports.filter((r) => r.estado === "Devuelto").length,
+      color: "text-red-600",
+      bgColor: "bg-red-100",
     },
   ]
 
@@ -300,6 +372,7 @@ export default function HistorialReportesDashboard() {
                 <option value="Completado">Completado</option>
                 <option value="En revisión">En revisión</option>
                 <option value="Pendiente">Pendiente</option>
+                <option value="Devuelto">Devuelto</option>
               </select>
             </div>
           </div>

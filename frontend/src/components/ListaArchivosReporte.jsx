@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Image, File, Download, Eye, Paperclip } from 'lucide-react';
 import ModalVisualizarArchivo from './ModalVisualizarArchivo';
-import fileService from '../services/fileService';
+import archivoService from '../services/archivoService';
 import { toast } from 'react-toastify';
 
 const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) => {
@@ -23,7 +23,7 @@ const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) =
   const handleViewFile = (archivo) => {
     setModalArchivo(archivo);
     setShowModal(true);
-    toast.success(`Abriendo "${archivo.originalName || archivo.filename}"`, {
+    toast.success(`Abriendo "${archivo.nombre_original || archivo.filename}"`, {
       position: "top-right",
       autoClose: 2000,
       icon: '👁️'
@@ -32,30 +32,32 @@ const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) =
 
   const handleDownloadFile = async (archivo) => {
     try {
+
+
       // Toast de inicio de descarga
-      const downloadToastId = toast.loading(`Descargando "${archivo.originalName || archivo.filename}"...`, {
+      const downloadToastId = toast.loading(`Descargando "${archivo.nombre_original || archivo.filename}"...`, {
         position: "top-right",
       });
 
-      const blob = await fileService.downloadFile(archivo.filename);
+      const blob = await archivoService.downloadArchivo(archivo.id);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = archivo.originalName || archivo.filename;
+      link.download = archivo.nombre_original || archivo.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
       toast.dismiss(downloadToastId);
-      toast.success(`¡Descarga completada! "${archivo.originalName || archivo.filename}"`, {
+      toast.success(`¡Descarga completada! "${archivo.nombre_original || archivo.filename}"`, {
         position: "top-right",
         autoClose: 3000,
         icon: '⬇️'
       });
     } catch (error) {
       console.error('Error al descargar archivo:', error);
-      toast.error(`Error al descargar "${archivo.originalName || archivo.filename}": ${error.message}`, {
+      toast.error(`Error al descargar "${archivo.nombre_original || archivo.filename}": ${error.message}`, {
         position: "top-right",
         autoClose: 4000,
         icon: '❌'
@@ -65,7 +67,7 @@ const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) =
 
   const formatFileSize = (bytes) => {
     if (!bytes) return '';
-    return fileService.formatFileSize(bytes);
+    return archivoService.formatFileSize(bytes);
   };
 
   const closeModal = () => {
@@ -96,17 +98,17 @@ const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) =
             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors"
           >
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              {getFileIcon(archivo.mimetype)}
+              {getFileIcon(archivo.tipo_mime)}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {archivo.originalName || archivo.filename}
+                  {archivo.nombre_original || archivo.filename}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>{archivo.mimetype || 'Tipo desconocido'}</span>
-                  {archivo.size && (
+                  <span>{archivo.tipo_mime || 'Tipo desconocido'}</span>
+                  {archivo.tamaño && (
                     <>
                       <span>•</span>
-                      <span>{formatFileSize(archivo.size)}</span>
+                      <span>{formatFileSize(archivo.tamaño)}</span>
                     </>
                   )}
                 </div>
@@ -114,7 +116,7 @@ const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) =
             </div>
             
             <div className="flex items-center gap-1 ml-2">
-              {isViewableFile(archivo.mimetype) && (
+              {isViewableFile(archivo.tipo_mime) && (
                 <button
                   onClick={() => handleViewFile(archivo)}
                   className="p-2 hover:bg-gray-200 rounded-lg transition-colors"

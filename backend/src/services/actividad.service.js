@@ -340,9 +340,8 @@ class ActividadService {
         dateTo = '' 
       } = filters;
 
-      const whereConditions = {
-        estado_realizado: 'devuelta'
-      };
+      // Buscar actividades que tengan reportes con estado 'devuelto'
+      const whereConditions = {};
 
       // Construir condiciones de búsqueda
       const includeConditions = [
@@ -361,49 +360,78 @@ class ActividadService {
         {
           model: models.Reporte,
           as: 'reportes',
-          attributes: ['id', 'titulo', 'estado', 'fechaEnvio', 'fechaRevision'],
-          required: false // LEFT JOIN para incluir actividades sin reportes
+          attributes: ['id', 'titulo', 'estado', 'fechaEnvio', 'fechaRevision', 'observaciones'],
+          where: { estado: 'devuelto' }, // Buscar reportes con estado 'devuelto'
+          required: false // LEFT JOIN para incluir actividades con reportes devueltos
+        },
+        {
+          model: models.Reporte,
+          as: 'reportesAsociados',
+          attributes: ['id', 'titulo', 'estado', 'fechaEnvio', 'fechaRevision', 'observaciones'],
+          where: { estado: 'devuelto' }, // Buscar reportes con estado 'devuelto'
+          required: false, // LEFT JOIN para incluir actividades con reportes devueltos
+          through: { attributes: [] } // No incluir atributos de la tabla intermedia
         }
       ];
 
-      // Filtros de fecha
+      // Filtros de fecha (aplicar a ambas relaciones de reportes)
       if (dateFrom || dateTo) {
         const dateConditions = {};
         if (dateFrom) dateConditions[models.Sequelize.Op.gte] = new Date(dateFrom);
         if (dateTo) dateConditions[models.Sequelize.Op.lte] = new Date(dateTo + ' 23:59:59');
         
         if (Object.keys(dateConditions).length > 0) {
-          whereConditions.fecha_revision = dateConditions;
+          // Aplicar filtro de fecha a ambas relaciones de reportes
+          includeConditions[1].where.fechaRevision = dateConditions;
+          includeConditions[2].where.fechaRevision = dateConditions;
         }
       }
 
       // Calcular offset para paginación
       const offset = (parseInt(page) - 1) * parseInt(limit);
 
-      // Obtener actividades devueltas
+      // Obtener actividades devueltas usando una consulta con OR para ambas relaciones
       const { count, rows: actividades } = await models.Actividad.findAndCountAll({
-        where: whereConditions,
+        where: {
+          ...whereConditions,
+          [models.Sequelize.Op.or]: [
+            { '$reportes.estado$': 'devuelto' },
+            { '$reportesAsociados.estado$': 'devuelto' }
+          ]
+        },
         include: includeConditions,
-        order: [['fecha_revision', 'DESC']],
+        order: [
+          [models.Sequelize.literal('COALESCE(reportes.fechaRevision, reportesAsociados.fechaRevision)'), 'DESC']
+        ],
         limit: parseInt(limit),
         offset: offset,
-        distinct: true
+        distinct: true,
+        subQuery: false
       });
 
       // Formatear datos para el frontend
       const formattedActivities = actividades.map(actividad => {
-        const primerReporte = actividad.reportes && actividad.reportes.length > 0 ? actividad.reportes[0] : null;
+        // Buscar el primer reporte devuelto en cualquiera de las dos relaciones
+        let primerReporte = null;
+        
+        if (actividad.reportes && actividad.reportes.length > 0) {
+          primerReporte = actividad.reportes.find(r => r.estado === 'devuelto') || actividad.reportes[0];
+        }
+        
+        if (!primerReporte && actividad.reportesAsociados && actividad.reportesAsociados.length > 0) {
+          primerReporte = actividad.reportesAsociados.find(r => r.estado === 'devuelto') || actividad.reportesAsociados[0];
+        }
         
         return {
           id: actividad.id,
           teacherName: `${actividad.usuario.nombre} ${actividad.usuario.apellido}`,
           email: actividad.usuario.email,
           period: 'N/A', // No hay campo semestre en el modelo actual
-          observations: actividad.comentarios_revision || 'Sin observaciones',
-          returnedDate: actividad.fecha_revision,
+          observations: primerReporte?.observaciones || 'Sin observaciones',
+          returnedDate: primerReporte?.fechaRevision || null,
           status: 'devuelto',
           reportDetails: {
-            title: actividad.titulo,
+            title: primerReporte?.titulo || actividad.titulo,
             submittedDate: primerReporte?.fechaEnvio || actividad.createdAt,
             activities: [{
               id: actividad.id,
@@ -412,7 +440,7 @@ class ActividadService {
               status: actividad.estado_realizado === 'aprobada' ? 'completed' : 'incomplete',
               evidence: actividad.evidencias || null
             }],
-            originalObservations: actividad.comentarios_revision || 'Sin observaciones'
+            originalObservations: primerReporte?.observaciones || 'Sin observaciones'
           }
         };
       });

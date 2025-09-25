@@ -15,6 +15,11 @@ class ReporteController {
       if (actividadId) filters.actividadId = parseInt(actividadId);
       if (usuarioId) filters.usuarioId = parseInt(usuarioId);
 
+      // Si es administrador, solo mostrar reportes que han sido enviados (tienen fechaEnvio)
+      if (req.user.rol === 'ADMINISTRADOR') {
+        filters.onlySubmitted = true;
+      }
+
       const reportes = await reporteService.find({
         page: parseInt(page),
         limit: parseInt(limit),
@@ -206,6 +211,36 @@ class ReporteController {
     }
   }
 
+  // Enviar reporte (para docentes) - cambiar de Pendiente a En revisión
+  async enviarReporte(req, res, next) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      // Verificar que el reporte pertenece al docente (si no es administrador)
+      if (req.user.rol !== 'ADMINISTRADOR') {
+        const reporte = await reporteService.findOne(id);
+        if (reporte.usuarioId !== userId) {
+          throw boom.forbidden('No tienes permisos para enviar este reporte');
+        }
+        
+        // Verificar que el reporte esté en estado borrador o pendiente
+        if (reporte.estado !== 'pendiente' && reporte.estado !== 'borrador') {
+          throw boom.badRequest('Solo se pueden enviar reportes en estado Borrador o Pendiente');
+        }
+      }
+      
+      const updatedReporte = await reporteService.changeStatus(id, 'enviado', '');
+      
+      res.json({
+        message: 'Reporte enviado para revisión exitosamente',
+        data: updatedReporte
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Obtener estadísticas de reportes
   async getReporteStats(req, res, next) {
     try {
@@ -226,24 +261,21 @@ class ReporteController {
     }
   }
 
-  // Obtener reportes pendientes de revisión
-  async getReportesPendingReview(req, res, next) {
+  // Obtener reportes pendientes para el dashboard
+  async getPendingForDashboard(req, res, next) {
     try {
-      // Solo administradores pueden ver reportes pendientes
-      if (req.user.rol !== 'ADMINISTRADOR') {
-        throw boom.forbidden('No tienes permisos para ver reportes pendientes');
-      }
-      
-      const reportes = await reporteService.findPendingReview();
+      const pendingReports = await reporteService.getPendingForDashboard();
       
       res.json({
-        message: 'Reportes pendientes obtenidos exitosamente',
-        data: reportes
+        message: 'Reportes pendientes para dashboard obtenidos exitosamente',
+        data: pendingReports
       });
     } catch (error) {
       next(error);
     }
   }
+
+
 
   // Obtener mis reportes (usuario autenticado)
   async getMyReportes(req, res, next) {
@@ -283,7 +315,7 @@ class ReporteController {
       if (fechaInicio) filters.fechaInicio = fechaInicio;
       if (fechaFin) filters.fechaFin = fechaFin;
       
-      const reportes = await reporteService.getReportHistory(parseInt(docenteId), filters);
+      const reportes = await reporteService.findByDocente(parseInt(docenteId), filters);
       
       res.json({
         message: 'Historial de reportes obtenido exitosamente',
@@ -557,6 +589,137 @@ class ReporteController {
       next(error);
     }
   }
+
+  // Aprobar reporte
+  async approveReporte(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { comentarios = '' } = req.body;
+      const revisadoPorId = req.user.id;
+
+      const result = await reporteService.approve(id, comentarios, revisadoPorId);
+      
+      res.json({
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Rechazar reporte
+  async rejectReporte(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { razon } = req.body;
+      const revisadoPorId = req.user?.id;
+
+      console.log('=== DEBUG REJECT REPORTE ===');
+      console.log('ID del reporte:', id);
+      console.log('Razón:', razon);
+      console.log('Usuario:', req.user);
+      console.log('revisadoPorId:', revisadoPorId);
+
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón del rechazo es requerida');
+      }
+
+      if (!revisadoPorId) {
+        throw boom.unauthorized('Usuario no autenticado');
+      }
+
+      const result = await reporteService.reject(id, razon, revisadoPorId);
+      
+      res.json({
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Aprobar reporte rápidamente
+  async quickApproveReporte(req, res, next) {
+    try {
+      const { id } = req.params;
+      const revisadoPorId = req.user.id;
+
+      const result = await reporteService.quickApprove(id, revisadoPorId);
+      
+      res.json({
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Devolver reporte a pendiente
+  async returnReporteToPending(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { razon } = req.body;
+      const revisadoPorId = req.user.id;
+
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón para devolver a pendiente es requerida');
+      }
+
+      const result = await reporteService.returnToPending(id, razon, revisadoPorId);
+      
+      res.json({
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Devolver reporte a revisión
+  async returnReporteToReview(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { razon } = req.body;
+      const revisadoPorId = req.user.id;
+
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón para devolver a revisión es requerida');
+      }
+
+      const result = await reporteService.returnToReview(id, razon, revisadoPorId);
+      
+      res.json({
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Actualizar estado del reporte
+  async updateReporteStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { estado, comentarios } = req.body;
+      const revisadoPorId = req.user.id;
+
+      const result = await reporteService.updateStatus(id, estado, comentarios, revisadoPorId);
+      
+      res.json({
+        message: result.message,
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
 }
 
 export default ReporteController;

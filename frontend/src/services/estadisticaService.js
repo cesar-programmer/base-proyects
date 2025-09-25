@@ -99,12 +99,12 @@ class EstadisticaService {
       return {
         completadas: 0,
         pendientes: 0,
-        atrasadas: 0,
+        devueltas: 0,
         total: 0,
         porcentajes: {
           completadas: 0,
           pendientes: 0,
-          atrasadas: 0
+          devueltas: 0
         }
       };
     }
@@ -114,20 +114,20 @@ class EstadisticaService {
     // ⭐ Mapear los datos al formato que espera el AdminDashboard
     const completadas = actividades.aprobadas || 0;
     const pendientes = actividades.pendientes || 0;
-    const atrasadas = actividades.devueltas || 0;
+    const devueltas = actividades.devueltas || 0;
     const total = actividades.total || 0;
     
     // Calcular porcentajes
     const porcentajes = {
       completadas: total > 0 ? Math.round((completadas / total) * 100) : 0,
       pendientes: total > 0 ? Math.round((pendientes / total) * 100) : 0,
-      atrasadas: total > 0 ? Math.round((atrasadas / total) * 100) : 0
+      devueltas: total > 0 ? Math.round((devueltas / total) * 100) : 0
     };
     
     return {
       completadas,
       pendientes,
-      atrasadas,
+      devueltas,
       total,
       porcentajes
     };

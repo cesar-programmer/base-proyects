@@ -9,13 +9,20 @@ class ReporteService {
   // Obtener todos los reportes con filtros y paginación
   async find(options = {}) {
     try {
-      const { page = 1, limit = 10, estado, actividadId, usuarioId } = options;
+      const { page = 1, limit = 10, estado, actividadId, usuarioId, onlySubmitted = false } = options;
       const offset = (page - 1) * limit;
       
       const whereClause = {};
       if (estado) whereClause.estado = estado;
       if (actividadId) whereClause.actividadId = actividadId;
       if (usuarioId) whereClause.usuarioId = usuarioId;
+      
+      // Filtrar solo reportes que han sido enviados (tienen fechaEnvio)
+      if (onlySubmitted) {
+        whereClause.fechaEnvio = {
+          [Op.ne]: null
+        };
+      }
 
       const reportes = await models.Reporte.findAndCountAll({
         where: whereClause,
@@ -307,6 +314,11 @@ class ReporteService {
         fechaRevision: new Date()
       };
       
+      // Si el estado cambia a 'enviado', establecer la fecha de envío
+      if (estado === 'enviado') {
+        updateData.fechaEnvio = new Date();
+      }
+      
       if (comentariosRevision) {
         updateData.comentariosRevision = comentariosRevision;
       }
@@ -404,6 +416,288 @@ class ReporteService {
       };
     }
   }
+
+  // Aprobar reporte
+  async approve(id, comentarios = '', revisadoPorId) {
+    try {
+      const reporte = await this.findOne(id);
+      
+      await reporte.update({ 
+        estado: 'aprobado',
+        comentariosRevision: comentarios,
+        fechaRevision: new Date(),
+        revisadoPorId: revisadoPorId
+      });
+      
+      return {
+        message: 'Reporte aprobado exitosamente',
+        data: reporte
+      };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al aprobar el reporte');
+    }
+  }
+
+  // Rechazar reporte
+  async reject(id, razon, revisadoPorId) {
+    try {
+      console.log('=== DEBUG REJECT SERVICE ===');
+      console.log('ID:', id);
+      console.log('Razón:', razon);
+      console.log('revisadoPorId:', revisadoPorId);
+
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón del rechazo es requerida');
+      }
+      
+      console.log('Buscando reporte...');
+      const reporte = await this.findOne(id);
+      console.log('Reporte encontrado:', reporte.id);
+      
+      console.log('Actualizando reporte...');
+      await reporte.update({ 
+        estado: 'devuelto',
+        comentariosRevision: razon,
+        fechaRevision: new Date(),
+        revisadoPorId: revisadoPorId
+      });
+      console.log('Reporte actualizado exitosamente');
+      
+      return {
+        message: 'Reporte devuelto exitosamente',
+        data: reporte
+      };
+    } catch (error) {
+      console.log('Error en reject service:', error);
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al rechazar el reporte');
+    }
+  }
+
+  // Aprobar reporte rápidamente (sin comentarios)
+  async quickApprove(id, revisadoPorId) {
+    try {
+      const reporte = await this.findOne(id);
+      
+      await reporte.update({ 
+        estado: 'aprobado',
+        comentariosRevision: 'Aprobado rápidamente',
+        fechaRevision: new Date(),
+        revisadoPorId: revisadoPorId
+      });
+      
+      return {
+        message: 'Reporte aprobado rápidamente',
+        data: reporte
+      };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al aprobar rápidamente el reporte');
+    }
+  }
+
+  // Devolver reporte a pendiente
+  async returnToPending(id, razon, revisadoPorId) {
+    try {
+      console.log('=== DEBUG returnToPending ===');
+      console.log('ID:', id);
+      console.log('Razón:', razon);
+      console.log('revisadoPorId:', revisadoPorId);
+      
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón para devolver a pendiente es requerida');
+      }
+      
+      console.log('Buscando reporte...');
+      const reporte = await this.findOne(id);
+      console.log('Reporte encontrado, estado actual:', reporte.estado);
+      
+      console.log('Intentando actualizar reporte...');
+      const updateData = { 
+        estado: 'borrador',
+        comentariosRevision: razon,
+        fechaRevision: new Date(),
+        revisadoPorId: revisadoPorId
+      };
+      console.log('Datos de actualización:', updateData);
+      
+      await reporte.update(updateData);
+      console.log('Reporte actualizado exitosamente');
+      
+      return {
+        message: 'Reporte devuelto a borrador exitosamente',
+        data: reporte
+      };
+    } catch (error) {
+      console.log('Error específico en returnToPending:', error);
+      console.log('Error name:', error.name);
+      console.log('Error message:', error.message);
+      console.log('Error stack:', error.stack);
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal(`Error al devolver el reporte a borrador: ${error.message}`);
+    }
+  }
+
+  // Devolver reporte a revisión
+  async returnToReview(id, razon, revisadoPorId) {
+    try {
+      if (!razon || !razon.trim()) {
+        throw boom.badRequest('La razón para devolver a revisión es requerida');
+      }
+      
+      const reporte = await this.findOne(id);
+      
+      await reporte.update({ 
+        estado: 'en_revision',
+        comentariosRevision: razon,
+        fechaRevision: new Date(),
+        revisadoPorId: revisadoPorId
+      });
+      
+      return {
+        message: 'Reporte devuelto a revisión exitosamente',
+        data: reporte
+      };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al devolver el reporte a revisión');
+    }
+  }
+
+  // Actualizar estado del reporte
+  async updateStatus(id, estado, comentarios = '', revisadoPorId = null) {
+    try {
+      const reporte = await this.findOne(id);
+      
+      const updateData = { 
+        estado: estado,
+        fechaRevision: new Date()
+      };
+      
+      if (comentarios) {
+        updateData.comentariosRevision = comentarios;
+      }
+      
+      if (revisadoPorId) {
+        updateData.revisadoPorId = revisadoPorId;
+      }
+      
+      await reporte.update(updateData);
+      
+      return {
+        message: `Estado del reporte actualizado a ${estado}`,
+        data: reporte
+      };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al actualizar el estado del reporte');
+    }
+  }
+
+  // Obtener estadísticas de reportes
+  async getStats(filters = {}) {
+    try {
+      const whereClause = {};
+      
+      if (filters.actividadId) whereClause.actividadId = filters.actividadId;
+      if (filters.usuarioId) whereClause.usuarioId = filters.usuarioId;
+
+      const totalReportes = await models.Reporte.count({ where: whereClause });
+      
+      // Obtener reportes para contar por estado
+      const reportes = await models.Reporte.findAll({
+        attributes: ['estado'],
+        where: whereClause
+      });
+
+      // Contar manualmente por estado
+      const estadoCount = {};
+      reportes.forEach(reporte => {
+        const estado = reporte.estado || 'Sin estado';
+        estadoCount[estado] = (estadoCount[estado] || 0) + 1;
+      });
+
+      const reportesPorEstado = Object.entries(estadoCount).map(([estado, count]) => ({
+        estado,
+        count
+      }));
+
+      // Contar reportes por categorías específicas
+      const completados = estadoCount['aprobado'] || 0;
+      const pendientes = estadoCount['borrador'] || 0;
+      const enRevision = estadoCount['enviado'] || 0;
+
+      // Calcular porcentajes
+      const calcularPorcentaje = (cantidad) => {
+        return totalReportes > 0 ? Math.round((cantidad / totalReportes) * 100) : 0;
+      };
+
+      return {
+        total: totalReportes,
+        completados,
+        pendientes,
+        enRevision,
+        porcentajes: {
+          completados: calcularPorcentaje(completados),
+          pendientes: calcularPorcentaje(pendientes),
+          enRevision: calcularPorcentaje(enRevision)
+        },
+        porEstado: reportesPorEstado
+      };
+    } catch (error) {
+      console.error('Error en getStats:', error);
+      throw boom.internal('Error al obtener estadísticas de reportes');
+    }
+  }
+
+  // Obtener reportes pendientes para el dashboard
+  async getPendingForDashboard() {
+    try {
+      // Obtener reportes que están pendientes de revisión
+      // Solo mostrar reportes que han sido enviados (tienen fechaEnvio) - mismo filtro que usa la vista de revisión
+      const reportesPendientes = await models.Reporte.findAll({
+        where: {
+          estado: {
+            [Op.in]: ['enviado', 'pendiente'] // Solo estados enviados, excluyendo 'borrador'
+          },
+          fechaEnvio: {
+            [Op.ne]: null // Solo reportes que han sido enviados (mismo filtro que getReportes para admin)
+          }
+        },
+        include: [
+          {
+            model: models.User,
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
+          }
+        ],
+        order: [['updatedAt', 'DESC']], // Los más recientes primero
+        limit: 10 // Limitar a los 10 más recientes para el dashboard
+      });
+
+      const totalPendientes = await models.Reporte.count({
+        where: {
+          estado: {
+            [Op.in]: ['enviado', 'pendiente'] // Solo estados enviados, excluyendo 'borrador'
+          },
+          fechaEnvio: {
+            [Op.ne]: null // Solo reportes que han sido enviados
+          }
+        }
+      });
+
+      return {
+        reportes: reportesPendientes,
+        total: totalPendientes
+      };
+    } catch (error) {
+      console.error('Error en getPendingForDashboard:', error);
+      throw boom.internal('Error al obtener reportes pendientes para el dashboard');
+    }
+  }
+
+
 }
 
 export default ReporteService;

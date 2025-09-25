@@ -45,7 +45,7 @@ const ReporteSchema = {
   },
   estado: {
     allowNull: false,
-    type: DataTypes.ENUM('borrador', 'enviado', 'revisado', 'aprobado', 'rechazado'),
+    type: DataTypes.ENUM('borrador', 'enviado', 'revisado', 'aprobado', 'devuelto'),
     defaultValue: 'borrador'
   },
   evidencias: {

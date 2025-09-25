@@ -213,7 +213,6 @@ class ArchivoService {
     try {
       const { archivo, fullPath, filename } = await this.getFileInfo(id);
       
-      // Leer el archivo
       const fileBuffer = await fs.readFile(fullPath);
       
       return {

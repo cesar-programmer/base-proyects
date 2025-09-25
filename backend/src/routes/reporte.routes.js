@@ -101,6 +101,13 @@ router.get('/stats/general',
   reporteController.getReporteStats.bind(reporteController)
 );
 
+// Ruta para obtener reportes pendientes para el dashboard
+router.get('/pending/dashboard',
+  verifyToken,
+  checkDocenteOrAdmin,
+  reporteController.getPendingForDashboard.bind(reporteController)
+);
+
 // Ruta para obtener información de fecha límite y semestre
 router.get('/deadline/info',
   verifyToken,
@@ -108,10 +115,13 @@ router.get('/deadline/info',
 );
 
 // Rutas solo para administradores
-router.get('/pending/review',
+
+// Endpoint para que docentes envíen sus reportes (cambiar de Pendiente a En revisión)
+router.patch('/:id/enviar',
   verifyToken,
-  checkAdmin,
-  reporteController.getReportesPendingReview.bind(reporteController)
+  checkDocenteOrAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.enviarReporte.bind(reporteController)
 );
 
 router.patch('/:id/status',
@@ -121,5 +131,50 @@ router.patch('/:id/status',
   validatorHandler(changeReporteStatusSchema, 'body'),
   reporteController.changeReporteStatus.bind(reporteController)
 );
+
+// Rutas para aprobación y rechazo de reportes
+router.patch('/:id/aprobar',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.approveReporte.bind(reporteController)
+);
+
+router.patch('/:id/aprobar-rapido',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.quickApproveReporte.bind(reporteController)
+);
+
+router.patch('/:id/rechazar',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.rejectReporte.bind(reporteController)
+);
+
+router.patch('/:id/devolver-pendiente',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.returnReporteToPending.bind(reporteController)
+);
+
+router.patch('/:id/devolver-revision',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.returnReporteToReview.bind(reporteController)
+);
+
+router.patch('/:id/estado',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  reporteController.updateReporteStatus.bind(reporteController)
+);
+
+
 
 export default router;

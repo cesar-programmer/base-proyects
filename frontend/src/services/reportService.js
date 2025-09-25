@@ -4,7 +4,7 @@ const reportService = {
   // Obtener todos los reportes
   getAllReports: async () => {
     try {
-      const response = await api.get('/reportes');
+      const response = await api.get('/reportes?limit=1000'); // Aumentar límite para obtener todos los reportes
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener reportes');
@@ -64,7 +64,7 @@ const reportService = {
   // Obtener reportes por estado
   getReportsByStatus: async (estado) => {
     try {
-      const response = await api.get(`/reportes/estado/${estado}`);
+      const response = await api.get(`/reportes?estado=${estado}`);
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener reportes por estado');
@@ -84,7 +84,7 @@ const reportService = {
   // Cambiar estado de reporte
   changeReportStatus: async (id, nuevoEstado, comentarios = '') => {
     try {
-      const response = await api.patch(`/reportes/${id}/estado`, { 
+      const response = await api.patch(`/reportes/${id}/status`, { 
         estado: nuevoEstado,
         comentariosRevision: comentarios 
       });
@@ -94,23 +94,83 @@ const reportService = {
     }
   },
 
+  // Enviar reporte (para docentes) - cambiar de Pendiente a En revisión
+  sendReport: async (id) => {
+    try {
+      const response = await api.patch(`/reportes/${id}/enviar`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al enviar reporte');
+    }
+  },
+
   // Aprobar reporte
   approveReport: async (id, comentarios = '') => {
     try {
-      const response = await api.patch(`/reportes/${id}/aprobar`, { comentariosRevision: comentarios });
+      const response = await api.patch(`/reportes/${id}/aprobar`, { comentarios });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al aprobar reporte');
     }
   },
 
-  // Rechazar reporte
-  rejectReport: async (id, comentarios) => {
+  // Aprobar reporte rápidamente
+  quickApproveReport: async (id) => {
     try {
-      const response = await api.patch(`/reportes/${id}/rechazar`, { comentariosRevision: comentarios });
+      const response = await api.patch(`/reportes/${id}/aprobar-rapido`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al aprobar reporte rápidamente');
+    }
+  },
+
+  // Rechazar reporte
+  rejectReport: async (id, razon) => {
+    try {
+      const response = await api.patch(`/reportes/${id}/rechazar`, { razon });
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al rechazar reporte');
+    }
+  },
+
+  // Devolver reporte a pendiente
+  returnReportToPending: async (id, razon) => {
+    try {
+      const response = await api.patch(`/reportes/${id}/devolver-pendiente`, { razon });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al devolver reporte a pendiente');
+    }
+  },
+
+  // Devolver reporte a revisión
+  returnReportToReview: async (id, razon) => {
+    try {
+      const response = await api.patch(`/reportes/${id}/devolver-revision`, { razon });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al devolver reporte a revisión');
+    }
+  },
+
+  // Actualizar estado del reporte
+  updateReportStatus: async (id, estado, comentarios = '') => {
+    try {
+      const response = await api.patch(`/reportes/${id}/estado`, { estado, comentarios });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al actualizar estado del reporte');
+    }
+  },
+
+  // Obtener reportes pendientes para el dashboard
+  getPendingReportsForDashboard: async () => {
+    try {
+      const response = await api.get('/reportes/pending/dashboard');
+      return response.data.data.reportes; // Extraer el array de reportes del objeto
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener reportes pendientes para el dashboard');
     }
   },
 
@@ -132,8 +192,8 @@ const reportService = {
   // Obtener estadísticas de reportes
   getReportStats: async () => {
     try {
-      const response = await api.get('/reportes/estadisticas');
-      return response.data;
+      const response = await api.get('/reportes/stats/general');
+      return response.data.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener estadísticas de reportes');
     }
@@ -171,7 +231,9 @@ const reportService = {
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener información de fecha límite');
     }
-  }
+  },
+
+
 };
 
 export default reportService;

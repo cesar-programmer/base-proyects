@@ -2,7 +2,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -81,8 +81,18 @@ export default function LoginPageAdmin() {
 
   return (
     <div className="min-h-screen bg-green-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <div className="flex justify-center mb-6">
+      <div className="bg-white p-8 rounded-lg shadow-md w-96 relative">
+        {/* Botón de regreso */}
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-4 left-4 flex items-center text-green-600 hover:text-green-800 transition-colors duration-200"
+          title="Regresar a página de inicio"
+        >
+          <ArrowLeft className="w-5 h-5 mr-1" />
+          <span className="text-sm font-medium">Inicio</span>
+        </button>
+        
+        <div className="flex justify-center mb-6 mt-8">
           <img
             src="/placeholder.svg"
             alt="UABC Logo"

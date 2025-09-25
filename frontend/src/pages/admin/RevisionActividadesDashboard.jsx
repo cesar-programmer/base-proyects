@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useStats } from '../../context/StatsContext'
 import activityService from '../../services/activityService'
+import reportService from '../../services/reportService'
 import { toast } from 'react-toastify'
 
 // Simple Modal Component
@@ -82,29 +83,9 @@ const TabsContent = ({ value, activeTab, children }) => {
 
 // Componente para mostrar las actividades registradas del profesor seleccionado
 const TeacherActivitiesTab = ({ selectedActivity }) => {
-  const [teacherActivities, setTeacherActivities] = useState([])
-  const [loadingActivities, setLoadingActivities] = useState(false)
-
-  // Cargar actividades del profesor cuando se selecciona una actividad
-  useEffect(() => {
-    const loadTeacherActivities = async () => {
-      if (!selectedActivity?.usuario?.id) return
-      
-      setLoadingActivities(true)
-      try {
-          const response = await activityService.getActivitiesByTeacher(selectedActivity.usuario.id)
-        setTeacherActivities(response.data?.data || [])
-      } catch (error) {
-        console.error('Error al cargar actividades del profesor:', error)
-        toast.error('Error al cargar las actividades del profesor')
-        setTeacherActivities([])
-      } finally {
-        setLoadingActivities(false)
-      }
-    }
-
-    loadTeacherActivities()
-  }, [selectedActivity?.usuario?.id])
+  // Usar las actividades del reporte directamente
+  const reportActivities = selectedActivity?.actividades || []
+  const loadingActivities = false
 
   // Función para obtener el icono y estilo según el estado
   const getActivityStatusIcon = (estado) => {
@@ -113,7 +94,7 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
         return { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', border: 'border-l-green-500' }
       case 'pendiente':
         return { icon: AlertTriangle, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-l-yellow-500' }
-      case 'devuelta':
+      case 'devuelto':
         return { icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-l-red-500' }
       default:
         return { icon: Clock, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-l-gray-500' }
@@ -137,12 +118,9 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
   return (
     <div className="bg-white border border-gray-200 rounded-lg mt-4">
       <div className="border-b border-gray-200 p-4">
-        <h3 className="text-lg font-semibold text-gray-900">Actividades Registradas</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Actividades del Período</h3>
         <p className="text-sm text-gray-600 mt-1">
-          {selectedActivity?.usuario?.nombre ? 
-            `Actividades de ${selectedActivity.usuario.nombre} ${selectedActivity.usuario.apellido || ''}` :
-            'Selecciona una actividad para ver las actividades del profesor'
-          }
+          Actividades registradas en este reporte
         </p>
       </div>
       <div className="p-4">
@@ -151,51 +129,77 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
             <span className="ml-3 text-gray-600">Cargando actividades...</span>
           </div>
-        ) : teacherActivities.length === 0 ? (
+        ) : reportActivities.length === 0 ? (
           <div className="text-center py-8">
             <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h4 className="text-lg font-medium text-gray-900 mb-2">No hay actividades registradas</h4>
             <p className="text-gray-500">
-              {selectedActivity?.usuario?.nombre ? 
-                'Este profesor no tiene actividades registradas aún.' :
-                'Selecciona una actividad para ver las actividades del profesor.'
-              }
+              No hay actividades registradas en este reporte.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {teacherActivities.map((activity) => {
-              const statusConfig = getActivityStatusIcon(activity.estado_realizado)
+            {reportActivities.map((activity) => {
+              const statusConfig = getActivityStatusIcon(activity.estado_realizado || activity.estado)
               const StatusIcon = statusConfig.icon
               
               return (
                 <div 
                   key={activity.id} 
-                  className={`flex items-center justify-between p-3 ${statusConfig.bg} rounded-lg border-l-4 ${statusConfig.border}`}
+                  className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
+                    activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
+                      ? "bg-green-50 border-l-green-500"
+                      : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
+                        ? "bg-yellow-50 border-l-yellow-500"
+                        : "bg-blue-50 border-l-blue-500"
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <StatusIcon className={`w-5 h-5 ${statusConfig.color}`} />
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
+                          ? "bg-green-500"
+                          : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
+                            ? "bg-yellow-500"
+                            : "bg-blue-500"
+                      }`}
+                    >
+                      {activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA" ? (
+                        <CheckCircle className="w-4 h-4 text-white" />
+                      ) : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO" ? (
+                        <Clock className="w-4 h-4 text-white" />
+                      ) : (
+                        <Calendar className="w-4 h-4 text-white" />
+                      )}
+                    </div>
                     <div>
-                      <span className="font-medium text-gray-900">{activity.titulo}</span>
+                      <span className="font-medium text-gray-900 block">{activity.titulo}</span>
+                      {activity.descripcion && <span className="text-sm text-gray-600">{activity.descripcion}</span>}
                       {activity.categoria && (
-                        <span className="ml-2 text-xs px-2 py-1 bg-white bg-opacity-50 rounded-full text-gray-700">
+                        <span className="inline-block mt-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
                           {activity.categoria}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm text-gray-500 block">
-                      {formatDate(activity.fechaInicio || activity.createdAt)}
+                    <span
+                      className={`text-sm font-medium block ${
+                        activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
+                          ? "text-green-600"
+                          : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
+                            ? "text-yellow-600"
+                            : "text-blue-600"
+                      }`}
+                    >
+                      {activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA" ? "Completada" : 
+                       activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO" ? "En Progreso" : "Planificada"}
                     </span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      activity.estado_realizado === 'aprobada' ? 'bg-green-100 text-green-800' :
-                      activity.estado_realizado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      activity.estado_realizado === 'devuelta' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {activity.estado_realizado || 'Sin estado'}
-                    </span>
+                    {activity.fechaInicio && (
+                      <span className="text-xs text-gray-500 block mt-1">
+                        {formatDate(activity.fechaInicio)}
+                      </span>
+                    )}
                   </div>
                 </div>
               )
@@ -223,9 +227,7 @@ export default function RevisionActividadesDashboard() {
   const [dropdownOpen, setDropdownOpen] = useState(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false)
-  const [isRequestRevisionDialogOpen, setIsRequestRevisionDialogOpen] = useState(false)
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false)
-  const [revisionComment, setRevisionComment] = useState("")
   const [returnComment, setReturnComment] = useState("")
   const dropdownRefs = useRef({})
 
@@ -262,31 +264,109 @@ export default function RevisionActividadesDashboard() {
     }
   }
 
-  // Función para cargar actividades desde la API
+  // Función para cargar todos los reportes desde la API
   const loadActivities = async () => {
     try {
       setLoading(true)
-      console.log('🔄 Cargando actividades...')
-      const response = await activityService.getAllActivities()
+      console.log('🔄 Cargando todos los reportes...')
+      const response = await reportService.getAllReports()
       console.log('📊 Respuesta completa de la API:', response)
-      console.log('📋 Datos de actividades:', response.data)
       
-      // CORRECCIÓN: El backend retorna { message, data }, así que necesitamos response.data.data
-      const activitiesData = response.data?.data || response.data || []
-      setActivities(activitiesData)
+      // El backend retorna { message, data: { reportes: [], total, etc } }
+      const reportesData = response.data?.reportes || []
+      console.log('📋 Datos de reportes:', reportesData)
       
-      // Extraer categorías únicas de las actividades
-      const uniqueCategories = [...new Set(activitiesData
-        .map(activity => activity.categoria)
+      if (!Array.isArray(reportesData)) {
+        console.error('❌ Los datos de reportes no son un array:', reportesData)
+        setActivities([])
+        setCategories([])
+        return
+      }
+      
+      // Mapear usando las propiedades correctas que retorna el backend
+      const reportsFormatted = reportesData.map((report) => {
+        // Obtener la primera actividad si existe
+        const primeraActividad = report.actividades && report.actividades.length > 0 ? report.actividades[0] : null
+        
+        // Debug específico para cada reporte
+        const estadoMapeado = (() => {
+          const estadoOriginal = report.estado
+          let estadoFinal
+          
+          switch(estadoOriginal) {
+            case 'enviado': estadoFinal = 'pendiente'; break
+            case 'aprobado': estadoFinal = 'aprobado'; break
+            case 'revisado': estadoFinal = 'aprobado'; break  // Los reportes revisados se muestran como aprobados
+            case 'rechazado': estadoFinal = 'devuelto'; break  // Mantener consistencia con el backend
+            case 'devuelto': estadoFinal = 'devuelto'; break   // Mantener consistencia con el backend
+            case 'pendiente': estadoFinal = 'pendiente'; break
+            case 'borrador': estadoFinal = 'pendiente'; break  // Los borradores se muestran como pendientes
+            default: estadoFinal = 'pendiente'; break
+          }
+          
+          // Log específico para reportes que deberían estar en pendiente
+          if (estadoOriginal === 'pendiente' || estadoFinal === 'pendiente') {
+            console.log(`🔍 MAPEO ESTADO - Reporte ID ${report.id}: "${estadoOriginal}" → "${estadoFinal}"`)
+          }
+          
+          return estadoFinal
+        })()
+        
+        console.log(`🔍 Reporte ID ${report.id}: "${report.titulo}" | Estado BD: "${report.estado}" → Estado Frontend: "${estadoMapeado}"`)
+        
+        // Debug del ID del reporte
+        console.log('🔍 Debug ID del reporte:', { 
+          reportId: report.id, 
+          type: typeof report.id, 
+          isNumber: typeof report.id === 'number',
+          titulo: report.titulo 
+        })
+        
+        return {
+          id: Number(report.id), // Asegurar que sea un número
+          titulo: report.titulo,
+          usuario: {
+            nombre: report.usuario?.nombre || 'N/A',
+            apellido: report.usuario?.apellido || '',
+            email: report.usuario?.email || 'Sin email'
+          },
+          reporteId: Number(report.id), // Asegurar que sea un número
+          estado_realizado: estadoMapeado,
+          categoria: primeraActividad?.categoria || 'GENERAL',
+          fechaCreacion: report.createdAt,
+          fechaEnvio: report.fechaEnvio,
+          actividadesCount: report.actividades ? report.actividades.length : 0,
+          actividadPrincipal: primeraActividad,
+          archivo: report.archivo,
+          comentarios: report.comentariosRevision,
+          resumenEjecutivo: report.resumenEjecutivo,
+          actividades: report.actividades || [],
+          // Mantener el objeto reporte completo para referencia
+          reporte: report
+        }
+      })
+      
+      setActivities(reportsFormatted)
+      
+      // Extraer categorías únicas de los reportes
+      const uniqueCategories = [...new Set(reportsFormatted
+        .map(report => report.categoria)
         .filter(categoria => categoria && categoria.trim() !== '')
       )].sort()
       setCategories(uniqueCategories)
       
-      console.log('✅ Actividades cargadas correctamente:', activitiesData?.length || 0)
-      console.log('📂 Categorías encontradas:', uniqueCategories)
+      console.log('✅ Reportes cargados correctamente:', reportesData.length)
+       console.log('✅ Reportes formateados:', reportsFormatted.length)
+       console.log('📂 Categorías encontradas:', uniqueCategories)
+       
+       // Debug: mostrar estados de los reportes
+       const estadosOriginales = reportesData.map(r => r.estado)
+       const estadosMapeados = reportsFormatted.map(r => r.estado_realizado)
+       console.log('🔍 Estados originales del backend:', estadosOriginales)
+       console.log('🔍 Estados mapeados para frontend:', estadosMapeados)
     } catch (error) {
-      console.error('❌ Error al cargar actividades:', error)
-      toast.error('Error al cargar actividades: ' + error.message)
+      console.error('❌ Error al cargar reportes:', error)
+      toast.error('Error al cargar reportes: ' + error.message)
       setActivities([])
       setCategories([])
     } finally {
@@ -316,83 +396,217 @@ export default function RevisionActividadesDashboard() {
     }
   }, [dropdownOpen])
 
-  const filteredActivities = (activities || []).filter((activity) => {
-    const matchesSearch =
-      (activity.usuario?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (activity.titulo?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    const matchesCategory = filterCategory === "all" || activity.categoria?.toLowerCase() === filterCategory.toLowerCase()
-    return matchesSearch && matchesCategory
-  })
+  // Temporalmente sin filtros para debug
+  const filteredActivities = activities || []
+  
+  // const filteredActivities = (activities || []).filter((activity) => {
+  //   const matchesSearch =
+  //     (activity.usuario?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+  //     (activity.titulo?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+  //   const matchesCategory = filterCategory === "all" || activity.categoria?.toLowerCase() === filterCategory.toLowerCase()
+  //   return matchesSearch && matchesCategory
+  // })
+
+  // Debug: logs para verificar el filtrado
+  console.log('🔍 Debug filtrado:')
+  console.log('📊 Total activities:', activities?.length || 0)
+  console.log('🔍 SearchTerm:', searchTerm)
+  console.log('📂 FilterCategory:', filterCategory)
+  console.log('✅ Filtered activities:', filteredActivities?.length || 0)
 
   const getActivitiesByStatus = (status) => {
-    return filteredActivities.filter((activity) => activity.estado_realizado === status)
+    // console.log(`🔍 Buscando reportes con estado: "${status}"`)
+    // console.log('📋 filteredActivities:', filteredActivities?.length || 0, 'reportes')
+    
+    // Debug: mostrar todos los estados disponibles
+    // const estadosDisponibles = filteredActivities.map(activity => activity.estado_realizado)
+    // console.log('🎯 Estados disponibles:', estadosDisponibles)
+    
+    const result = filteredActivities.filter((activity) => activity.estado_realizado === status)
+    console.log(`📋 Estado "${status}": ${result.length} reportes`)
+    
+    // Debug: mostrar los IDs de los reportes encontrados
+    // if (result.length > 0) {
+    //   console.log(`📝 Reportes con estado "${status}":`, result.map(r => `ID ${r.id}: "${r.titulo}"`))
+    // }
+    
+    return result
   }
 
   // Función para aprobar reporte
-  const handleApproveReport = async () => {
+  const handleApproveReport = async (reporteId = null, comentario = 'Reporte aprobado') => {
     try {
-      if (!selectedActivity) return
+      const rawId = reporteId || selectedActivity?.id
+      const reportId = Number(rawId)
+      
+      console.log('🔍 Debug handleApproveReport:', { 
+        reporteId, 
+        selectedActivityId: selectedActivity?.id, 
+        rawId, 
+        reportId, 
+        selectedActivity 
+      })
+      
+      if (!reportId || isNaN(reportId)) {
+        console.error('❌ ID del reporte inválido:', { reporteId, selectedActivity, rawId, reportId })
+        toast.error('ID del reporte inválido')
+        return
+      }
       
       // Llamada a la API para aprobar el reporte
-      await activityService.approveActivity(selectedActivity.id, 'Reporte aprobado')
+      await reportService.approveReport(reportId, comentario)
       
-      // Actualizar el estado local
+      // Actualizar el estado local inmediatamente
+      const updatedActivity = { ...selectedActivity, estado_realizado: 'aprobado' }
+      
       setActivities(prev => prev.map(activity => 
-        activity.id === selectedActivity.id 
-          ? { ...activity, estado_realizado: 'aprobada' }
+        activity.id === reportId 
+          ? updatedActivity
           : activity
       ))
+      
+      // Actualizar selectedActivity inmediatamente para reflejar el cambio en la UI
+      setSelectedActivity(updatedActivity)
       
       toast.success('Reporte aprobado exitosamente')
       
       // Actualizar estadísticas del dashboard principal
       await fetchStats()
       
-      // Cerrar modales después de mostrar el toast
+      // Recargar datos para obtener estado actualizado
+      await loadActivities()
+      
+      // Cerrar modales después de un breve delay para mostrar el cambio
       setTimeout(() => {
         setIsApproveDialogOpen(false)
         setIsViewDialogOpen(false)
         setSelectedActivity(null)
-      }, 1500)
+      }, 1000)
     } catch (error) {
       console.error('Error al aprobar reporte:', error)
-      toast.error('Error al aprobar el reporte')
+      toast.error('Error al aprobar el reporte: ' + error.message)
     }
   }
 
-  // Función para solicitar revisión
-  const handleRequestRevision = async () => {
+  // Función para aprobar reporte rápidamente
+  const handleQuickApproveReport = async (reporteId = null) => {
     try {
-      if (!selectedActivity || !revisionComment.trim()) {
-        toast.error('Por favor, agrega un comentario para la revisión')
+      const rawId = reporteId || selectedActivity?.id
+      const reportId = Number(rawId)
+      
+      if (!reportId || isNaN(reportId)) {
+        console.error('❌ ID del reporte inválido:', { reporteId, selectedActivity, rawId, reportId })
+        toast.error('ID del reporte inválido')
         return
       }
       
-      // Llamada a la API para solicitar revisión (rechazar actividad)
-      await activityService.rejectActivity(selectedActivity.id, revisionComment)
+      // Llamada a la API para aprobar rápidamente el reporte
+      await reportService.quickApproveReport(reportId)
       
       // Actualizar el estado local
       setActivities(prev => prev.map(activity => 
-        activity.id === selectedActivity.id 
-          ? { ...activity, estado_realizado: 'devuelta', comentarios: revisionComment }
+        activity.id === reportId 
+          ? { ...activity, estado_realizado: 'aprobado' }
           : activity
       ))
       
-      toast.success('Solicitud de revisión enviada exitosamente')
-      setRevisionComment('')
+      toast.success('Reporte aprobado rápidamente')
       
       // Actualizar estadísticas del dashboard principal
       await fetchStats()
       
-      // Cerrar modales después de mostrar el toast
-      setTimeout(() => {
-        setIsRequestRevisionDialogOpen(false)
-        setIsViewDialogOpen(false)
-        setSelectedActivity(null)
-      }, 1500)
+      // Recargar datos para obtener estado actualizado
+      await loadActivities()
     } catch (error) {
-      console.error('Error al solicitar revisión:', error)
-      toast.error('Error al solicitar revisión')
+      console.error('Error al aprobar reporte rápidamente:', error)
+      toast.error('Error al aprobar rápidamente el reporte: ' + error.message)
+    }
+  }
+
+
+
+  // Función para devolver reporte a pendiente
+  const handleReturnToPending = async (reporteId = null, comentario = 'Devuelto a pendiente') => {
+    try {
+      const rawId = reporteId || selectedActivity?.id
+      const reportId = Number(rawId)
+      
+      if (!reportId || isNaN(reportId)) {
+        console.error('❌ ID del reporte inválido:', { reporteId, selectedActivity, rawId, reportId })
+        toast.error('ID del reporte inválido')
+        return
+      }
+      
+      console.log('🔄 ANTES - handleReturnToPending para reporte ID:', reportId)
+      console.log('🔄 Estado actual del selectedActivity:', selectedActivity?.estado_realizado)
+      
+      // Llamada a la API para devolver el reporte a pendiente
+      const response = await reportService.returnReportToPending(reportId, comentario)
+      console.log('✅ RESPUESTA del backend (returnReportToPending):', response)
+      
+      // Actualizar el estado local inmediatamente
+      const updatedActivity = { ...selectedActivity, estado_realizado: 'pendiente', comentarios: comentario }
+      
+      setActivities(prev => prev.map(activity => 
+        activity.id === reportId 
+          ? updatedActivity
+          : activity
+      ))
+      
+      // Actualizar selectedActivity inmediatamente para reflejar el cambio en la UI
+      setSelectedActivity(updatedActivity)
+      
+      toast.success('Reporte devuelto a pendiente')
+      
+      // Actualizar estadísticas del dashboard principal
+      await fetchStats()
+      
+      // Recargar datos para obtener estado actualizado
+      console.log('🔄 Recargando actividades desde handleReturnToPending...')
+      await loadActivities()
+    } catch (error) {
+      console.error('❌ Error al devolver reporte a pendiente (handleReturnToPending):', error)
+      toast.error('Error al devolver reporte a pendiente: ' + error.message)
+    }
+  }
+
+  // Función para devolver reporte a revisión
+  const handleReturnToReview = async (reporteId = null, comentario = 'Devuelto a revisión') => {
+    try {
+      const rawId = reporteId || selectedActivity?.id
+      const reportId = Number(rawId)
+      
+      if (!reportId || isNaN(reportId)) {
+        console.error('❌ ID del reporte inválido:', { reporteId, selectedActivity, rawId, reportId })
+        toast.error('ID del reporte inválido')
+        return
+      }
+      
+      // Llamada a la API para devolver el reporte a revisión
+      await reportService.returnReportToReview(reportId, comentario)
+      
+      // Actualizar el estado local inmediatamente
+      const updatedActivity = { ...selectedActivity, estado_realizado: 'enviado', comentarios: comentario }
+      
+      setActivities(prev => prev.map(activity => 
+        activity.id === reportId 
+          ? updatedActivity
+          : activity
+      ))
+      
+      // Actualizar selectedActivity inmediatamente para reflejar el cambio en la UI
+      setSelectedActivity(updatedActivity)
+      
+      toast.success('Reporte devuelto a revisión')
+      
+      // Actualizar estadísticas del dashboard principal
+      await fetchStats()
+      
+      // Recargar datos para obtener estado actualizado
+      await loadActivities()
+    } catch (error) {
+      console.error('Error al devolver reporte a revisión:', error)
+      toast.error('Error al devolver reporte a revisión: ' + error.message)
     }
   }
 
@@ -439,55 +653,81 @@ export default function RevisionActividadesDashboard() {
         return
       }
       
-      // Llamada a la API para devolver la actividad (rechazar actividad)
-      await activityService.rejectActivity(selectedActivity.id, returnComment)
+      const reportId = Number(selectedActivity.id)
       
-      // Actualizar el estado local
+      if (!reportId || isNaN(reportId)) {
+        console.error('❌ ID del reporte inválido:', { selectedActivity, reportId })
+        toast.error('ID del reporte inválido')
+        return
+      }
+      
+      // Debug logs
+      console.log('selectedActivity:', selectedActivity)
+      console.log('reportId:', reportId)
+      console.log('returnComment:', returnComment)
+      
+      // Llamada a la API para devolver el reporte (rechazar reporte)
+      await reportService.rejectReport(reportId, returnComment)
+      
+      // Actualizar el estado local inmediatamente
+      const updatedActivity = { ...selectedActivity, estado_realizado: 'devuelto', comentarios: returnComment }
+      
       setActivities(prev => prev.map(activity => 
-        activity.id === selectedActivity.id 
-          ? { ...activity, estado_realizado: 'devuelta', comentarios: returnComment }
+        activity.id === reportId 
+          ? updatedActivity
           : activity
       ))
       
-      toast.success('Actividad devuelta exitosamente')
+      // Actualizar selectedActivity inmediatamente para reflejar el cambio en la UI
+      setSelectedActivity(updatedActivity)
+      
+      toast.success('Reporte rechazado exitosamente')
       setReturnComment('')
       
       // Actualizar estadísticas del dashboard principal
       await fetchStats()
       
-      // Cerrar modales después de mostrar el toast
+      // Recargar datos para obtener estado actualizado
+      await loadActivities()
+      
+      // Cerrar modales después de un breve delay para mostrar el cambio
       setTimeout(() => {
         setIsReturnDialogOpen(false)
         setIsViewDialogOpen(false)
         setSelectedActivity(null)
-      }, 1500)
+      }, 1000)
     } catch (error) {
-      console.error('Error al devolver actividad:', error)
-      toast.error('Error al devolver actividad')
+      console.error('Error al rechazar reporte:', error)
+      toast.error('Error al rechazar reporte')
     }
   }
 
   const handleReviewActivity = async (activity, newStatus) => {
     try {
-      if (newStatus === "aprobada") {
-        await activityService.approveActivity(activity.id, reviewComment)
-        toast.success('Actividad aprobada exitosamente')
-      } else if (newStatus === "devuelta") {
-        if (!reviewComment.trim()) {
-          toast.error('Debe proporcionar comentarios para devolver la actividad')
-          return
-        }
-        await activityService.rejectActivity(activity.id, reviewComment)
-        toast.success('Actividad devuelta exitosamente')
+      if (!activity.reporteId) {
+        toast.error('No se encontró el reporte asociado')
+        return
       }
       
-      // Actualizar el estado local
+      if (newStatus === "aprobada") {
+        await reportService.approveReport(activity.reporteId, reviewComment || 'Reporte aprobado')
+        toast.success('Reporte aprobado exitosamente')
+      } else if (newStatus === "devuelto") {
+        if (!reviewComment.trim()) {
+          toast.error('Debe proporcionar comentarios para devolver el reporte')
+          return
+        }
+        await reportService.rejectReport(activity.reporteId, reviewComment)
+        toast.success('Reporte devuelto exitosamente')
+      }
+      
+      // Actualizar el estado local - todas las actividades del reporte
       setActivities((prev) =>
         prev.map((act) => 
-          act.id === activity.id 
+          act.reporteId === activity.reporteId 
             ? { ...act, estado_realizado: newStatus, comentarios_revision: reviewComment } 
             : act
-        ),
+        )
       )
       
       setReviewComment("")
@@ -504,7 +744,7 @@ export default function RevisionActividadesDashboard() {
       // Actualizar estadísticas del dashboard principal
       await fetchStats()
     } catch (error) {
-      console.error('Error al revisar actividad:', error)
+      console.error('Error al revisar reporte:', error)
       toast.error('Error al procesar la revisión: ' + error.message)
     }
   }
@@ -517,16 +757,16 @@ export default function RevisionActividadesDashboard() {
         text: 'Pendiente',
         pulse: true
       },
-      aprobada: {
+      aprobado: {  // Cambiado de 'aprobada' a 'aprobado'
         color: 'bg-green-100 text-green-800 border-green-300',
         icon: CheckCircle,
-        text: 'Aprobada',
+        text: 'Aprobado',
         pulse: false
       },
-      devuelta: {
+      devuelto: {  // Estado correcto para actividades devueltas
         color: 'bg-red-100 text-red-800 border-red-300',
         icon: AlertTriangle,
-        text: 'Devuelta',
+        text: 'Devuelto',
         pulse: false
       }
     }
@@ -545,8 +785,8 @@ export default function RevisionActividadesDashboard() {
   const ActivityTable = ({ activities }) => (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200">
       <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Lista de Actividades</h3>
-        <p className="text-sm text-gray-600 mt-1">Gestiona y revisa las actividades enviadas por los docentes</p>
+        <h3 className="text-lg font-semibold text-gray-900">Lista de Reportes</h3>
+        <p className="text-sm text-gray-600 mt-1">Gestiona y revisa los reportes enviados por los docentes</p>
       </div>
       <div className="overflow-x-auto overflow-y-visible">
         <table className="w-full divide-y divide-gray-200">
@@ -560,8 +800,8 @@ export default function RevisionActividadesDashboard() {
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[200px]">
                 <div className="flex items-center space-x-1">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Actividad</span>
+                  <FileText className="w-4 h-4" />
+                  <span>Reporte</span>
                 </div>
               </th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[100px]">
@@ -570,7 +810,7 @@ export default function RevisionActividadesDashboard() {
                   <span>Fecha</span>
                 </div>
               </th>
-              <th className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[100px]">Categoría</th>
+              <th className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[100px]">Tipo</th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[100px]">Estado</th>
               <th className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[120px]">Acciones</th>
             </tr>
@@ -580,9 +820,9 @@ export default function RevisionActividadesDashboard() {
                <tr>
                  <td colSpan="6" className="px-4 py-12 text-center">
                    <div className="flex flex-col items-center justify-center">
-                     <BookOpen className="w-12 h-12 text-gray-400 mb-4" />
-                     <h3 className="text-lg font-medium text-gray-900 mb-2">No hay actividades</h3>
-                     <p className="text-gray-500">No se encontraron actividades que coincidan con los filtros aplicados.</p>
+                     <FileText className="w-12 h-12 text-gray-400 mb-4" />
+                     <h3 className="text-lg font-medium text-gray-900 mb-2">No hay reportes</h3>
+                     <p className="text-gray-500">No se encontraron reportes que coincidan con los filtros aplicados.</p>
                    </div>
                  </td>
                </tr>
@@ -603,16 +843,16 @@ export default function RevisionActividadesDashboard() {
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <div className="text-sm text-gray-900 font-medium">{activity.titulo || 'N/A'}</div>
-                  <div className="text-xs text-gray-500 truncate max-w-xs">{activity.descripcion || 'Sin descripción'}</div>
+                  <div className="text-sm text-gray-900 font-medium">{activity.titulo || `Reporte #${activity.id}`}</div>
+                  <div className="text-xs text-gray-500 truncate max-w-xs">{activity.actividadesCount ? `${activity.actividadesCount} actividades` : 'Sin actividades'}</div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{activity.fechaInicio ? new Date(activity.fechaInicio).toLocaleDateString() : 'N/A'}</div>
-                  <div className="text-xs text-gray-500">{activity.fechaFin ? new Date(activity.fechaFin).toLocaleDateString() : ''}</div>
+                  <div className="text-sm text-gray-900">{activity.fechaEnvio ? new Date(activity.fechaEnvio).toLocaleDateString() : 'N/A'}</div>
+                  <div className="text-xs text-gray-500">Enviado</div>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {activity.categoria || 'N/A'}
+                    {activity.categoria || 'GENERAL'}
                   </span>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap">{getStatusBadge(activity.estado_realizado)}</td>
@@ -637,6 +877,7 @@ export default function RevisionActividadesDashboard() {
                         <div className="py-1" role="menu">
                           <button
                             onClick={() => {
+                              console.log('Seleccionando actividad:', activity)
                               setSelectedActivity(activity)
                               setIsViewDialogOpen(true)
                               setDropdownOpen(null)
@@ -660,18 +901,16 @@ export default function RevisionActividadesDashboard() {
                                 role="menuitem"
                               >
                                 <CheckCircle className="mr-3 h-4 w-4 text-blue-500" />
-                                Revisar actividad
+                                Revisar reporte
                               </button>
                               
                               <button
                                 onClick={async () => {
                                   try {
-                                    await activityService.approveActivity(activity.id, 'Aprobación rápida')
-                                    toast.success('Actividad aprobada exitosamente')
-                                    await loadActivities()
+                                    await handleQuickApproveReport(activity.reporteId)
                                     setDropdownOpen(null)
                                   } catch (error) {
-                                    toast.error('Error al aprobar actividad: ' + error.message)
+                                    toast.error('Error al aprobar reporte: ' + error.message)
                                   }
                                 }}
                                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -683,7 +922,7 @@ export default function RevisionActividadesDashboard() {
                             </>
                           )}
                           
-                          {activity.estado_realizado === "devuelta" && (
+                          {activity.estado_realizado === "devuelto" && (
                             <>
                               <button
                                 onClick={() => {
@@ -697,23 +936,7 @@ export default function RevisionActividadesDashboard() {
                                 <AlertTriangle className="mr-3 h-4 w-4 text-orange-500" />
                                 Ver comentarios
                               </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await activityService.updateActivityStatus(activity.id, 'pendiente')
-                                    toast.success('Actividad devuelta a pendiente exitosamente')
-                                    loadActivities()
-                                    setDropdownOpen(null)
-                                  } catch (error) {
-                                    toast.error('Error al devolver actividad a pendiente: ' + error.message)
-                                  }
-                                }}
-                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                role="menuitem"
-                              >
-                                <Clock className="mr-3 h-4 w-4 text-blue-500" />
-                                Devolver a Pendiente
-                              </button>
+
                             </>
                           )}
                           
@@ -721,12 +944,26 @@ export default function RevisionActividadesDashboard() {
                             <button
                               onClick={async () => {
                                 try {
-                                  await activityService.updateActivityStatus(activity.id, 'pendiente')
-                                  toast.success('Actividad devuelta a pendiente exitosamente')
-                                  loadActivities()
+                                  console.log('🔄 ANTES - Cambiando estado a pendiente para reporte ID:', activity.id)
+                                  console.log('🔄 Estado actual del reporte:', activity.estado_realizado)
+                                  
+                                  const response = await reportService.updateReportStatus(activity.id, 'pendiente', 'Devuelto a pendiente desde revisión')
+                                  console.log('✅ RESPUESTA del backend:', response)
+                                  
+                                  // Actualizar el estado local inmediatamente
+                                  setActivities(prev => prev.map(act => 
+                                    act.id === activity.id 
+                                      ? { ...act, estado_realizado: 'pendiente' }
+                                      : act
+                                  ))
+                                  
+                                  toast.success('Reporte devuelto a pendiente exitosamente')
+                                  console.log('🔄 Recargando actividades...')
+                                  await loadActivities()
                                   setDropdownOpen(null)
                                 } catch (error) {
-                                  toast.error('Error al devolver actividad a pendiente: ' + error.message)
+                                  console.error('❌ Error al devolver reporte a pendiente:', error)
+                                  toast.error('Error al devolver reporte a pendiente: ' + error.message)
                                 }
                               }}
                               className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -735,6 +972,48 @@ export default function RevisionActividadesDashboard() {
                               <Clock className="mr-3 h-4 w-4 text-blue-500" />
                               Devolver a Pendiente
                             </button>
+                          )}
+                          
+                          {activity.estado_realizado === "aprobado" && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await handleReturnToPending(activity.reporteId)
+                                    setDropdownOpen(null)
+                                  } catch (error) {
+                                    toast.error('Error al devolver reporte a pendiente: ' + error.message)
+                                  }
+                                }}
+                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                role="menuitem"
+                              >
+                                <Clock className="mr-3 h-4 w-4 text-orange-500" />
+                                Devolver a Pendiente
+                              </button>
+
+                            </>
+                          )}
+                          
+                          {activity.estado_realizado === "devuelto" && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await handleReturnToPending(activity.reporteId)
+                                    setDropdownOpen(null)
+                                  } catch (error) {
+                                    toast.error('Error al devolver reporte a pendiente: ' + error.message)
+                                  }
+                                }}
+                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                role="menuitem"
+                              >
+                                <Clock className="mr-3 h-4 w-4 text-orange-500" />
+                                Devolver a Pendiente
+                              </button>
+
+                            </>
                           )}
                           
                           {activity.archivo && (
@@ -869,7 +1148,7 @@ export default function RevisionActividadesDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Aprobadas</p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">{getActivitiesByStatus("aprobada").length}</p>
+                  <p className="text-3xl font-bold text-green-600 mt-2">{getActivitiesByStatus("aprobado").length}</p>
                   <p className="text-xs text-gray-500 mt-1">Completadas</p>
                 </div>
                 <div className="p-3 rounded-full bg-green-100 text-green-600">
@@ -883,7 +1162,7 @@ export default function RevisionActividadesDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Devueltas</p>
-                  <p className="text-3xl font-bold text-red-600 mt-2">{getActivitiesByStatus("devuelta").length}</p>
+                  <p className="text-3xl font-bold text-red-600 mt-2">{getActivitiesByStatus("devuelto").length}</p>
                   <p className="text-xs text-gray-500 mt-1">Requieren corrección</p>
                 </div>
                 <div className="p-3 rounded-full bg-red-100 text-red-600">
@@ -914,7 +1193,7 @@ export default function RevisionActividadesDashboard() {
                     onTabChange={setActiveTab}
                     className="rounded-md"
                   >
-                    Aprobadas ({getActivitiesByStatus("aprobada").length})
+                    Aprobadas ({getActivitiesByStatus("aprobado").length})
                   </TabsTrigger>
                   <TabsTrigger
                     value="devueltas"
@@ -922,7 +1201,7 @@ export default function RevisionActividadesDashboard() {
                     onTabChange={setActiveTab}
                     className="rounded-md"
                   >
-                    Devueltas ({getActivitiesByStatus("devuelta").length})
+                    Devueltas ({getActivitiesByStatus("devuelto").length})
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -932,12 +1211,11 @@ export default function RevisionActividadesDashboard() {
               </TabsContent>
 
               <TabsContent value="aprobadas" activeTab={activeTab}>
-                <ActivityTable activities={getActivitiesByStatus("aprobada")} />
-              </TabsContent>
-
-              <TabsContent value="devueltas" activeTab={activeTab}>
-                <ActivityTable activities={getActivitiesByStatus("devuelta")} />
-              </TabsContent>
+                    <ActivityTable activities={getActivitiesByStatus("aprobado")} />
+                  </TabsContent>
+                  <TabsContent value="devueltas" activeTab={activeTab}>
+                    <ActivityTable activities={getActivitiesByStatus("devuelto")} />
+                  </TabsContent>
             </Tabs>
           </div>
         </div>
@@ -1022,7 +1300,7 @@ export default function RevisionActividadesDashboard() {
 
                 {/* Tabs Section */}
                 <Tabs activeTab={activeDetailTab} onTabChange={setActiveDetailTab}>
-                  <TabsList className="grid grid-cols-3 bg-gray-100 rounded-md p-1">
+                  <TabsList className="grid grid-cols-4 bg-gray-100 rounded-md p-1">
                     <TabsTrigger
                       value="activities"
                       activeTab={activeDetailTab}
@@ -1030,6 +1308,14 @@ export default function RevisionActividadesDashboard() {
                       className="rounded-md data-[state=active]:bg-white data-[state=active]:text-green-700"
                     >
                       Actividades
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="summary"
+                      activeTab={activeDetailTab}
+                      onTabChange={setActiveDetailTab}
+                      className="rounded-md data-[state=active]:bg-white data-[state=active]:text-green-700"
+                    >
+                      Resumen Ejecutivo
                     </TabsTrigger>
                     <TabsTrigger
                       value="documents"
@@ -1045,12 +1331,36 @@ export default function RevisionActividadesDashboard() {
                       onTabChange={setActiveDetailTab}
                       className="rounded-md data-[state=active]:bg-white data-[state=active]:text-green-700"
                     >
-                      Comentarios
+                      Observaciones
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="activities" activeTab={activeDetailTab}>
                     <TeacherActivitiesTab selectedActivity={selectedActivity} />
+                  </TabsContent>
+
+                  <TabsContent value="summary" activeTab={activeDetailTab}>
+                    <div className="bg-white border border-gray-200 rounded-lg mt-4">
+                      <div className="border-b border-gray-200 p-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Resumen Ejecutivo del Período</h3>
+                      </div>
+                      <div className="p-4">
+                        {selectedActivity?.resumenEjecutivo ? (
+                          <div className="prose max-w-none">
+                            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                              {selectedActivity.resumenEjecutivo}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-500 italic">
+                              No hay resumen ejecutivo disponible para este reporte.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="documents" activeTab={activeDetailTab}>
@@ -1127,29 +1437,30 @@ export default function RevisionActividadesDashboard() {
                   <TabsContent value="comments" activeTab={activeDetailTab}>
                     <div className="bg-white border border-gray-200 rounded-lg mt-4">
                       <div className="border-b border-gray-200 p-4">
-                        <h3 className="text-lg font-semibold text-gray-900">Comentarios y Observaciones</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">Observaciones del Administrador</h3>
                       </div>
                       <div className="p-4">
                         <div className="space-y-4">
-                          {selectedActivity.comentarios ? (
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="text-gray-700">{selectedActivity.comentarios}</p>
-                              <p className="text-xs text-gray-500 mt-2">Comentario del administrador</p>
+                          {selectedActivity?.comentarios || selectedActivity?.comentariosRevision ? (
+                            <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+                              <p className="text-sm text-red-800">
+                                {selectedActivity.comentariosRevision || selectedActivity.comentarios}
+                              </p>
                             </div>
                           ) : (
                             <p className="text-gray-500 italic">
-                              No hay comentarios disponibles para esta actividad.
+                              Sin observaciones del administrador.
                             </p>
                           )}
 
                           <div className="border-t pt-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Agregar nuevo comentario
+                              Agregar observaciones
                             </label>
                             <textarea
                               value={newComment}
                               onChange={(e) => setNewComment(e.target.value)}
-                              placeholder="Escribe un comentario sobre esta actividad..."
+                              placeholder="Escribe observaciones sobre este reporte..."
                               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                               rows={4}
                             />
@@ -1166,20 +1477,17 @@ export default function RevisionActividadesDashboard() {
                   {selectedActivity?.estado_realizado === "pendiente" && (
                     <>
                       <button 
-                        onClick={() => setIsApproveDialogOpen(true)}
+                        onClick={() => {
+                          console.log('🔍 Abriendo modal aprobación:', { selectedActivity });
+                          setIsApproveDialogOpen(true);
+                        }}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Aprobar Reporte
                       </button>
 
-                      <button 
-                        onClick={() => setIsRequestRevisionDialogOpen(true)}
-                        className="inline-flex items-center px-4 py-2 border border-orange-200 text-sm font-medium rounded-md text-orange-600 bg-transparent hover:bg-orange-50 transition-colors"
-                      >
-                        <AlertTriangle className="w-4 h-4 mr-2" />
-                        Solicitar Revisión
-                      </button>
+
 
                       <button 
                         onClick={() => setIsReturnDialogOpen(true)}
@@ -1197,19 +1505,19 @@ export default function RevisionActividadesDashboard() {
                       <button 
                         onClick={async () => {
                           try {
-                            await activityService.updateActivityStatus(selectedActivity.id, 'pendiente')
+                            await reportService.updateReportStatus(selectedActivity.id, 'pendiente', 'Regresado a pendiente desde aprobado')
                             setActivities(prev => prev.map(activity => 
                               activity.id === selectedActivity.id 
                                 ? { ...activity, estado_realizado: 'pendiente' }
                                 : activity
                             ))
                             setSelectedActivity({ ...selectedActivity, estado_realizado: 'pendiente' })
-                            toast.success('Actividad regresada a pendiente exitosamente')
+                            toast.success('Reporte regresado a pendiente exitosamente')
                             setTimeout(() => {
                               setIsViewDialogOpen(false)
                             }, 1500)
                           } catch (error) {
-                            toast.error('Error al regresar actividad a pendiente: ' + error.message)
+                            toast.error('Error al regresar reporte a pendiente: ' + error.message)
                           }
                         }}
                         className="inline-flex items-center px-4 py-2 border border-blue-200 text-sm font-medium rounded-md text-blue-600 bg-transparent hover:bg-blue-50 transition-colors"
@@ -1221,10 +1529,13 @@ export default function RevisionActividadesDashboard() {
                   )}
 
                   {/* Botones para actividades DEVUELTAS */}
-                  {selectedActivity?.estado_realizado === "devuelta" && (
+                  {selectedActivity?.estado_realizado === "devuelto" && (
                     <>
                       <button 
-                        onClick={() => setIsApproveDialogOpen(true)}
+                        onClick={() => {
+                          console.log('🔍 Abriendo modal aprobación (devuelto):', { selectedActivity });
+                          setIsApproveDialogOpen(true);
+                        }}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
@@ -1234,19 +1545,29 @@ export default function RevisionActividadesDashboard() {
                       <button 
                         onClick={async () => {
                           try {
-                            await activityService.updateActivityStatus(selectedActivity.id, 'pendiente')
+                            console.log('🔄 ANTES - Regresando a pendiente desde devuelto para reporte ID:', selectedActivity.id)
+                            console.log('🔄 Estado actual del selectedActivity:', selectedActivity.estado_realizado)
+                            
+                            const response = await reportService.updateReportStatus(selectedActivity.id, 'pendiente', 'Regresado a pendiente desde devuelto')
+                            console.log('✅ RESPUESTA del backend (desde devuelto):', response)
+                            
                             setActivities(prev => prev.map(activity => 
                               activity.id === selectedActivity.id 
                                 ? { ...activity, estado_realizado: 'pendiente' }
                                 : activity
                             ))
                             setSelectedActivity({ ...selectedActivity, estado_realizado: 'pendiente' })
-                            toast.success('Actividad regresada a pendiente exitosamente')
+                            toast.success('Reporte regresado a pendiente exitosamente')
+                            
+                            console.log('🔄 Recargando actividades desde botón devuelto...')
+                            await loadActivities()
+                            
                             setTimeout(() => {
                               setIsViewDialogOpen(false)
                             }, 1500)
                           } catch (error) {
-                            toast.error('Error al regresar actividad a pendiente: ' + error.message)
+                            console.error('❌ Error al regresar reporte a pendiente (desde devuelto):', error)
+                            toast.error('Error al regresar reporte a pendiente: ' + error.message)
                           }
                         }}
                         className="inline-flex items-center px-4 py-2 border border-blue-200 text-sm font-medium rounded-md text-blue-600 bg-transparent hover:bg-blue-50 transition-colors"
@@ -1302,7 +1623,7 @@ export default function RevisionActividadesDashboard() {
             </div>
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => selectedActivity && handleReviewActivity(selectedActivity, "devuelta")}
+                onClick={() => selectedActivity && handleReviewActivity(selectedActivity, "devuelto")}
                 className="inline-flex items-center px-4 py-2 border border-red-200 text-sm font-medium rounded-md text-red-600 bg-transparent hover:bg-red-50 transition-colors"
               >
                 <XCircle className="w-4 h-4 mr-1" />
@@ -1390,7 +1711,10 @@ export default function RevisionActividadesDashboard() {
                 Cancelar
               </button>
               <button
-                onClick={handleApproveReport}
+                onClick={() => {
+                  console.log('🔍 Botón aprobación clickeado:', { selectedActivity });
+                  handleApproveReport(selectedActivity?.id);
+                }}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -1400,51 +1724,7 @@ export default function RevisionActividadesDashboard() {
           </div>
         </Modal>
 
-        {/* Request Revision Modal */}
-        <Modal isOpen={isRequestRevisionDialogOpen} onClose={() => setIsRequestRevisionDialogOpen(false)}>
-          <div className="p-6">
-            <div className="border-b border-gray-200 pb-4 mb-6">
-              <h2 className="text-xl font-bold text-orange-800">Solicitar Revisión</h2>
-              <p className="text-gray-600">
-                Solicita cambios en el reporte de {selectedActivity?.usuario?.nombre}
-              </p>
-            </div>
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comentarios para la revisión *
-                </label>
-                <textarea
-                  value={revisionComment}
-                  onChange={(e) => setRevisionComment(e.target.value)}
-                  placeholder="Describe los cambios necesarios o aspectos que requieren revisión..."
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  rows={4}
-                  required
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setIsRequestRevisionDialogOpen(false)
-                  setRevisionComment('')
-                }}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleRequestRevision}
-                disabled={!revisionComment.trim()}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Enviar Solicitud
-              </button>
-            </div>
-          </div>
-        </Modal>
+
 
         {/* Modal para Devolver Actividad */}
         <Modal isOpen={isReturnDialogOpen} onClose={() => setIsReturnDialogOpen(false)}>

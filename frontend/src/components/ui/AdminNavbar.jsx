@@ -65,14 +65,24 @@ export default function AdminNavbar() {
               Configuración Fechas
             </NavLink>
             <NavLink
-              to="/admin/correcciones"
+              to="/admin/revision-actividades"
               className={({ isActive }) =>
                 `hover:underline text-sm font-medium ${
                   isActive ? "underline" : ""
                 }`
               }
             >
-              Correcciones
+              Revisión de Reportes
+            </NavLink>
+            <NavLink
+              to="/admin/revision-reportes"
+              className={({ isActive }) =>
+                `hover:underline text-sm font-medium ${
+                  isActive ? "underline" : ""
+                }`
+              }
+            >
+              Revisión de Actividades
             </NavLink>
             <NotificacionesPanel />
             <div className="flex items-center space-x-2 text-sm font-medium">
@@ -121,11 +131,18 @@ export default function AdminNavbar() {
               Configuración Fechas
             </NavLink>
             <NavLink
-              to="/admin/correcciones"
+              to="/admin/revision-actividades"
               onClick={() => setIsOpen(false)}
               className="block px-2 py-1 text-sm font-medium hover:underline"
             >
-              Correcciones
+              Revisión de Reportes
+            </NavLink>
+            <NavLink
+              to="/admin/revision-reportes"
+              onClick={() => setIsOpen(false)}
+              className="block px-2 py-1 text-sm font-medium hover:underline"
+            >
+              Revisión de Actividades
             </NavLink>
             <div className="flex items-center space-x-2 px-2 py-1 text-sm font-medium border-t border-green-700 mt-2 pt-2">
               <User className="w-4 h-4" />

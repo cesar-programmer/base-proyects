@@ -627,6 +627,7 @@ class ReporteService {
       const completados = estadoCount['aprobado'] || 0;
       const pendientes = estadoCount['borrador'] || 0;
       const enRevision = estadoCount['enviado'] || 0;
+      const devueltos = estadoCount['devuelto'] || 0;
 
       // Calcular porcentajes
       const calcularPorcentaje = (cantidad) => {
@@ -638,10 +639,12 @@ class ReporteService {
         completados,
         pendientes,
         enRevision,
+        devueltos,
         porcentajes: {
           completados: calcularPorcentaje(completados),
           pendientes: calcularPorcentaje(pendientes),
-          enRevision: calcularPorcentaje(enRevision)
+          enRevision: calcularPorcentaje(enRevision),
+          devueltos: calcularPorcentaje(devueltos)
         },
         porEstado: reportesPorEstado
       };

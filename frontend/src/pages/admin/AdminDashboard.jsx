@@ -196,10 +196,10 @@ const DashboardFooter = () => (
 
 const adminSections = [
   {
-    title: "Revisión de Actividades",
-    description: "Revisa las actividades registradas por los docentes",
+    title: "Revisión de Reportes",
+    description: "Revisa los reportes registrados por los docentes",
     icon: ClipboardList,
-    buttonText: "Ver Revisión de Actividades",
+    buttonText: "Ver Revisión de Reportes",
     buttonAction: () => {},
     link: "/admin/revision-actividades",
   },
@@ -236,12 +236,12 @@ const adminSections = [
     link: "/admin/configuracion-recordatorio",
   },
   {
-    title: "Correcciones Pendientes",
-    description: "Consulta formularios devueltos para seguimiento y control",
+    title: "Revisión de Actividades",
+    description: "Revisa las actividades registradas por los docentes de manera centralizada",
     icon: RefreshCcw,
-    buttonText: "Ver Correcciones",
+    buttonText: "Ver Revisión de Actividades",
     buttonAction: () => {},
-    link: "/admin/correcciones",
+    link: "/admin/revision-reportes",
   },
 ];
 
@@ -278,10 +278,10 @@ export default function AdminDashboard() {
       // Transformar estadísticas de reportes
       const transformedReportData = [
         { 
-          label: "Reportes Completados", 
+          label: "Reportes Aprobados", 
           percentage: reportStatsResponse?.porcentajes?.completados || 0, 
-          color: "bg-blue-500", 
-          textColor: "text-blue-600",
+          color: "bg-green-500", 
+          textColor: "text-green-600",
           count: reportStatsResponse?.completados || 0
         },
         { 
@@ -292,11 +292,11 @@ export default function AdminDashboard() {
           count: reportStatsResponse?.pendientes || 0
         },
         { 
-          label: "Reportes En Revisión", 
-          percentage: reportStatsResponse?.porcentajes?.enRevision || 0, 
-          color: "bg-purple-500", 
-          textColor: "text-purple-600",
-          count: reportStatsResponse?.enRevision || 0
+          label: "Reportes Devueltos", 
+          percentage: reportStatsResponse?.porcentajes?.devueltos || 0, 
+          color: "bg-red-500", 
+          textColor: "text-red-600",
+          count: reportStatsResponse?.devueltos || 0
         },
       ];
       
@@ -308,9 +308,9 @@ export default function AdminDashboard() {
       setError('Error al cargar los datos del dashboard');
       setPendingReports([]);
       setReportComplianceData([
-        { label: "Reportes Completados", percentage: 0, color: "bg-blue-500", textColor: "text-blue-600", count: 0 },
+        { label: "Reportes Aprobados", percentage: 0, color: "bg-green-500", textColor: "text-green-600", count: 0 },
         { label: "Reportes Pendientes", percentage: 0, color: "bg-yellow-500", textColor: "text-yellow-600", count: 0 },
-        { label: "Reportes En Revisión", percentage: 0, color: "bg-purple-500", textColor: "text-purple-600", count: 0 },
+        { label: "Reportes Devueltos", percentage: 0, color: "bg-red-500", textColor: "text-red-600", count: 0 },
       ]);
     } finally {
       if (isManualRefresh) {

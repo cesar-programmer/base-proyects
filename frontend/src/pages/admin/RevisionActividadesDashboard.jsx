@@ -296,7 +296,7 @@ export default function RevisionActividadesDashboard() {
           switch(estadoOriginal) {
             case 'enviado': estadoFinal = 'pendiente'; break
             case 'aprobado': estadoFinal = 'aprobado'; break
-            case 'revisado': estadoFinal = 'aprobado'; break  // Los reportes revisados se muestran como aprobados
+            case 'revisado': estadoFinal = 'pendiente'; break  // Los reportes revisados están pendientes de aprobación final
             case 'rechazado': estadoFinal = 'devuelto'; break  // Mantener consistencia con el backend
             case 'devuelto': estadoFinal = 'devuelto'; break   // Mantener consistencia con el backend
             case 'pendiente': estadoFinal = 'pendiente'; break
@@ -335,6 +335,7 @@ export default function RevisionActividadesDashboard() {
           categoria: primeraActividad?.categoria || 'GENERAL',
           fechaCreacion: report.createdAt,
           fechaEnvio: report.fechaEnvio,
+          fechaActualizacion: report.updatedAt,
           actividadesCount: report.actividades ? report.actividades.length : 0,
           actividadPrincipal: primeraActividad,
           archivo: report.archivo,
@@ -1048,8 +1049,8 @@ export default function RevisionActividadesDashboard() {
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-green-800 mb-2">Revisión y Aprobación de Actividades</h1>
-          <p className="text-green-600">Revisa y aprueba las actividades registradas por los docentes</p>
+          <h1 className="text-3xl font-bold text-green-800 mb-2">Revisión y Aprobación de Reportes</h1>
+          <p className="text-green-600">Revisa y aprueba los reportes enviados por los docentes</p>
         </div>
 
         {/* Filters and Search */}
@@ -1105,7 +1106,7 @@ export default function RevisionActividadesDashboard() {
             </div>
             
             <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-              <span>Mostrando {filteredActivities.length} de {activities.length} actividades</span>
+              <span>Mostrando {filteredActivities.length} de {activities.length} reportes</span>
               <div className="flex items-center space-x-4">
                 <span>Última actualización: {new Date().toLocaleTimeString()}</span>
               </div>
@@ -1119,9 +1120,9 @@ export default function RevisionActividadesDashboard() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Actividades</p>
+                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Reportes</p>
                   <p className="text-3xl font-bold text-blue-600 mt-2">{filteredActivities.length}</p>
-                  <p className="text-xs text-gray-500 mt-1">Todas las actividades</p>
+                  <p className="text-xs text-gray-500 mt-1">Todos los reportes</p>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600">
                   <BookOpen className="w-8 h-8" />
@@ -1147,7 +1148,7 @@ export default function RevisionActividadesDashboard() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Aprobadas</p>
+                  <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Aprobados</p>
                   <p className="text-3xl font-bold text-green-600 mt-2">{getActivitiesByStatus("aprobado").length}</p>
                   <p className="text-xs text-gray-500 mt-1">Completadas</p>
                 </div>
@@ -1241,7 +1242,7 @@ export default function RevisionActividadesDashboard() {
           <div className="p-6">
             <div className="border-b border-green-200 pb-4 mb-6">
               <h2 className="text-2xl font-bold text-green-800">Reporte del Docente</h2>
-              <p className="text-green-600">Revisión y gestión del reporte de actividades</p>
+              <p className="text-green-600">Revisión y gestión del reporte</p>
             </div>
 
             {selectedActivity && (
@@ -1286,13 +1287,31 @@ export default function RevisionActividadesDashboard() {
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-gray-600">Última Actualización</p>
-                      <p className="text-2xl font-bold text-gray-900">{selectedActivity.fecha}</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {(() => {
+                          // Priorizar fechaActualizacion, luego fechaEnvio, luego fechaCreacion
+                          const fecha = selectedActivity.fechaActualizacion || 
+                                       selectedActivity.fechaEnvio || 
+                                       selectedActivity.fechaCreacion;
+                          
+                          if (fecha) {
+                            return new Date(fecha).toLocaleString('es-ES', {
+                              year: 'numeric',
+                              month: '2-digit', 
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+                          }
+                          return 'No disponible';
+                        })()}
+                      </p>
                     </div>
                   </div>
 
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-600">Actividades Totales</p>
+                      <p className="text-sm font-medium text-gray-600">Reportes Totales</p>
                       <p className="text-3xl font-bold text-gray-900">4</p>
                     </div>
                   </div>
@@ -1307,7 +1326,7 @@ export default function RevisionActividadesDashboard() {
                       onTabChange={setActiveDetailTab}
                       className="rounded-md data-[state=active]:bg-white data-[state=active]:text-green-700"
                     >
-                      Actividades
+                      Reportes
                     </TabsTrigger>
                     <TabsTrigger
                       value="summary"
@@ -1375,7 +1394,7 @@ export default function RevisionActividadesDashboard() {
                               <div className="flex items-center gap-3">
                                 <FileText className="w-6 h-6 text-blue-600" />
                                 <div>
-                                  <p className="font-medium text-gray-900">Reporte de Actividades</p>
+                                  <p className="font-medium text-gray-900">Reporte</p>
                                   <p className="text-sm text-gray-500">Documento PDF - {selectedActivity.fecha}</p>
                                 </div>
                               </div>
@@ -1545,23 +1564,7 @@ export default function RevisionActividadesDashboard() {
                       <button 
                         onClick={async () => {
                           try {
-                            console.log('🔄 ANTES - Regresando a pendiente desde devuelto para reporte ID:', selectedActivity.id)
-                            console.log('🔄 Estado actual del selectedActivity:', selectedActivity.estado_realizado)
-                            
-                            const response = await reportService.updateReportStatus(selectedActivity.id, 'pendiente', 'Regresado a pendiente desde devuelto')
-                            console.log('✅ RESPUESTA del backend (desde devuelto):', response)
-                            
-                            setActivities(prev => prev.map(activity => 
-                              activity.id === selectedActivity.id 
-                                ? { ...activity, estado_realizado: 'pendiente' }
-                                : activity
-                            ))
-                            setSelectedActivity({ ...selectedActivity, estado_realizado: 'pendiente' })
-                            toast.success('Reporte regresado a pendiente exitosamente')
-                            
-                            console.log('🔄 Recargando actividades desde botón devuelto...')
-                            await loadActivities()
-                            
+                            await handleReturnToPending(selectedActivity.id, 'Regresado a pendiente desde devuelto')
                             setTimeout(() => {
                               setIsViewDialogOpen(false)
                             }, 1500)
@@ -1646,7 +1649,7 @@ export default function RevisionActividadesDashboard() {
             <div className="border-b border-gray-200 pb-4 mb-6">
               <h2 className="text-xl font-bold text-green-800">Enviar Notificación</h2>
               <p className="text-gray-600">
-                Envía una notificación a los docentes sobre el estado de sus actividades
+                Envía una notificación a los docentes sobre el estado de sus reportes
               </p>
             </div>
             <div className="space-y-4 mb-6">
@@ -1658,9 +1661,9 @@ export default function RevisionActividadesDashboard() {
                   className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
                 >
                   <option value="">Seleccionar destinatarios</option>
-                  <option value="pending">Docentes con actividades pendientes</option>
+                  <option value="pending">Docentes con reportes pendientes</option>
                   <option value="all">Todos los docentes</option>
-                  <option value="returned">Docentes con actividades devueltas</option>
+                  <option value="returned">Docentes con reportes devueltos</option>
                 </select>
               </div>
               <div>

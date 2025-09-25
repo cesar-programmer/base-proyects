@@ -19,7 +19,7 @@ import {
   Send,
   History,
 } from "lucide-react"
-import activityService from "../../services/activityService"
+import reportService from "../../services/reportService"
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -748,11 +748,11 @@ export default function CorreccionesDashboard() {
 
   const { toast, ToastContainer } = useToast();
 
-  // Función para cargar datos reales
+  // Función para cargar reportes devueltos
   const loadReturnedActivities = async (filters = {}) => {
     try {
       setIsLoading(true);
-      const response = await activityService.getReturnedActivities({
+      const response = await reportService.getReturnedReports({
         page: currentPage,
         limit: pageSize,
         search: searchTerm,
@@ -764,9 +764,25 @@ export default function CorreccionesDashboard() {
 
       // El backend devuelve { message, data, pagination }
       if (response.data && Array.isArray(response.data)) {
-        setData(response.data);
-        setFilteredData(response.data);
-        setTotalRecords(response.pagination?.totalItems || 0);
+        // Mapear los datos de reportes al formato esperado por la UI
+        const mappedData = response.data.map(reporte => ({
+          id: reporte.id,
+          teacherName: `${reporte.usuario?.nombre || ''} ${reporte.usuario?.apellido || ''}`.trim(),
+          email: reporte.usuario?.email || '',
+          period: `${reporte.semestre || 'N/A'}`,
+          observations: reporte.comentariosRevision || 'Sin observaciones',
+          returnedDate: reporte.fechaRevision || reporte.updatedAt,
+          status: 'devuelto',
+          reportDetails: {
+            title: reporte.titulo,
+            submittedDate: reporte.fechaEnvio,
+            originalObservations: reporte.comentariosRevision
+          }
+        }));
+        
+        setData(mappedData);
+        setFilteredData(mappedData);
+        setTotalRecords(response.pagination?.totalItems || mappedData.length);
       } else {
         // Si no hay datos, establecer arrays vacíos
         setData([]);
@@ -774,10 +790,10 @@ export default function CorreccionesDashboard() {
         setTotalRecords(0);
       }
     } catch (error) {
-      console.error("Error loading returned activities:", error);
+      console.error("Error loading returned reports:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar las actividades devueltas",
+        description: "No se pudieron cargar los reportes devueltos",
         type: "error"
       });
       setData([]);
@@ -853,7 +869,7 @@ export default function CorreccionesDashboard() {
 
     try {
       setIsLoading(true);
-      const response = await activityService.approveActivity(selectedRecord.id, reviewComments);
+      const response = await reportService.approveReport(selectedRecord.id, reviewComments);
       
       // El backend devuelve { message, data }
       if (response.message && response.data) {
@@ -900,7 +916,7 @@ export default function CorreccionesDashboard() {
 
     try {
       setIsLoading(true);
-      const response = await activityService.rejectActivity(selectedRecord.id, reviewComments);
+      const response = await reportService.rejectReport(selectedRecord.id, reviewComments);
       
       // El backend devuelve { message, data }
       if (response.message && response.data) {

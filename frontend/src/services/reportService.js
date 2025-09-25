@@ -233,6 +233,26 @@ const reportService = {
     }
   },
 
+  // Obtener reportes devueltos para correcciones
+  getReturnedReports: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('estado', 'devuelto'); // Solo reportes devueltos
+      
+      if (filters.page) params.append('page', filters.page);
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.period) params.append('period', filters.period);
+      if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.append('dateTo', filters.dateTo);
+      
+      const response = await api.get(`/reportes?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener reportes devueltos');
+    }
+  },
+
 
 };
 

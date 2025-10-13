@@ -84,15 +84,18 @@ const ListaArchivosReporte = ({ archivos = [], titulo = "Archivos adjuntos" }) =
     );
   }
 
+  // Mostrar todos los archivos provistos (sin filtros adicionales)
+  const archivosParaMostrar = archivos;
+
   return (
     <div className="space-y-3">
       <h4 className="font-medium text-gray-900 flex items-center gap-2">
         <Paperclip className="w-4 h-4" />
-        {titulo} ({archivos.length})
+        {titulo} ({archivosParaMostrar.length})
       </h4>
       
       <div className="space-y-2">
-        {archivos.map((archivo, index) => (
+        {archivosParaMostrar.map((archivo, index) => (
           <div
             key={index}
             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors"

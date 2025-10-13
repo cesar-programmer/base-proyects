@@ -22,7 +22,16 @@ router.get('/actividad/:id_actividad', getArchivosByActividad);
 router.get('/:id', getArchivoById);
 router.get('/:id/info', getArchivoInfo);
 router.get('/:id/download', downloadArchivo);
-router.post('/upload', upload.single('archivo'), uploadArchivo);
+// Log de diagnóstico para rastrear el 404 en subida de archivos
+router.post('/upload', (req, res, next) => {
+  console.log('📨 [Archivos] POST /archivos/upload recibido', {
+    method: req.method,
+    url: req.originalUrl,
+    hasToken: !!req.headers.authorization,
+    contentType: req.headers['content-type']
+  });
+  next();
+}, upload.single('archivo'), uploadArchivo);
 router.delete('/:id', deleteArchivo);
 
 export default router;

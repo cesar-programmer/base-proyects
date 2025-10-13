@@ -72,37 +72,67 @@ export const getArchivosByActividad = async (req, res) => {
 // Subir un archivo
 export const uploadArchivo = async (req, res) => {
   try {
-    const { id_actividad } = req.body;
-    
+    const { descripcion = '', reporteId } = req.body;
+    const idActividadRaw = req.body?.id_actividad;
+    const categoriaBody = req.body?.categoria;
+    const id_actividad = (idActividadRaw !== undefined && idActividadRaw !== null && idActividadRaw !== '' && idActividadRaw !== 'null')
+      ? parseInt(idActividadRaw, 10)
+      : null;
+    const categoria = categoriaBody || 'evidencia';
+
+    console.log('📥 [uploadArchivo] Datos recibidos', {
+      hasFile: !!req.file,
+      field: req.file?.fieldname,
+      id_actividad_raw: idActividadRaw,
+      id_actividad,
+      reporteId,
+      categoria,
+      descripcion
+    });
+
     if (!req.file) {
       return res.status(400).json({ message: 'No se ha proporcionado ningún archivo' });
     }
-    
-    // Verificar que la actividad existe
-    const actividad = await Actividad.findByPk(id_actividad);
-    if (!actividad) {
-      return res.status(404).json({ message: 'Actividad no encontrada' });
+
+    // Verificar que la actividad existe solo si el ID es válido
+    if (Number.isInteger(id_actividad) && id_actividad > 0) {
+      const actividad = await Actividad.findByPk(id_actividad);
+      if (!actividad) {
+        return res.status(404).json({ message: 'Actividad no encontrada' });
+      }
     }
-    
+
+    // Normalizar a ruta absoluta dentro del proyecto
+    const rutaAbsoluta = path.join(process.cwd(), req.file.path);
+
     const archivo = await Archivo.create({
-      id_actividad,
+      actividadId: id_actividad || null,
+      reporteId: reporteId || null,
       nombre_original: req.file.originalname,
       nombre_almacenado: req.file.filename,
-      ruta_almacenamiento: req.file.path,
+      ruta_almacenamiento: rutaAbsoluta,
       tipo_mime: req.file.mimetype,
-      tamano_bytes: req.file.size
+      tamano_bytes: req.file.size,
+      descripcion,
+      categoria,
+      usuarioSubida: req.user?.id || null
     });
-    
+
     // Incluir la actividad en la respuesta
-    const archivoConActividad = await Archivo.findByPk(archivo.id_archivo, {
+    const archivoConActividad = await Archivo.findByPk(archivo.id, {
       include: [{
         model: Actividad,
         as: 'actividad'
       }]
     });
-    
+
     res.status(201).json(archivoConActividad);
   } catch (error) {
+    console.error('❌ [uploadArchivo] Error capturado:', {
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack
+    });
     handleError(res, error, 'Error al subir archivo');
   }
 };

@@ -285,6 +285,23 @@ function ReportDetailDialog({
 }) {
   const [activeTab, setActiveTab] = useState("actividades")
 
+  // Total de horas registradas: usa valor del backend si existe,
+  // si el total es 0 o no viene, suma horas dedicadas por actividad
+  const getHorasActividad = (a) => {
+    const raw = a?.horas_dedicadas ?? a?.horasDedicadas ?? a?.horas ?? null;
+    const num = raw != null ? Number(raw) : 0;
+    return isNaN(num) ? 0 : num;
+  };
+
+  const sumHorasActividades = Array.isArray(report?.actividades)
+    ? report.actividades.reduce((sum, a) => sum + getHorasActividad(a), 0)
+    : 0;
+
+  const totalBackendRaw = report?.totalHoras ?? report?.total_horas;
+  const horasRegistradas = (totalBackendRaw != null && Number(totalBackendRaw) > 0)
+    ? Number(totalBackendRaw)
+    : Number(sumHorasActividades);
+
   if (!open || !report) return null
 
   return (
@@ -362,7 +379,7 @@ function ReportDetailDialog({
             <div className="p-4">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-600">Horas Registradas</p>
-                <p className="text-2xl font-bold text-purple-600">240</p>
+                <p className="text-2xl font-bold text-purple-600">{horasRegistradas}</p>
                 <p className="text-xs text-gray-500">Horas académicas</p>
               </div>
             </div>
@@ -476,6 +493,11 @@ function ReportDetailDialog({
                             {a.estado_realizado === "COMPLETADA" ? "Completada" : 
                              a.estado_realizado === "EN_PROGRESO" ? "En Progreso" : "Planificada"}
                           </span>
+                          <div className="mt-1 space-x-2">
+                            <span className="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                              <Clock className="w-3 h-3" /> {getHorasActividad(a)}h dedicadas
+                            </span>
+                          </div>
                           {a.fechaInicio && (
                             <span className="text-xs text-gray-500 block mt-1">
                               {new Date(a.fechaInicio).toLocaleDateString()}
@@ -680,7 +702,8 @@ export default function PendingReports() {
       resumenEjecutivo: reporte.resumenEjecutivo, // Agregar el resumen ejecutivo
       comentariosRevision: reporte.comentariosRevision,
       actividades: reporte.actividades || [],
-      archivos: reporte.archivos || []
+      archivos: reporte.archivos || [],
+      totalHoras: Number(reporte.total_horas ?? reporte.totalHoras ?? 0)
     };
   };
 

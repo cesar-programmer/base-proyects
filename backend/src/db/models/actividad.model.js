@@ -62,6 +62,12 @@ const ActividadSchema = {
     type: DataTypes.INTEGER,
     field: 'participantesEsperados'
   },
+  horas_dedicadas: {
+    allowNull: true,
+    type: DataTypes.DECIMAL(5,2),
+    field: 'horas_dedicadas',
+    comment: 'Horas reales dedicadas a la actividad por el docente'
+  },
   objetivos: {
     allowNull: true,
     type: DataTypes.TEXT,

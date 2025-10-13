@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, FileText, Image, File, ExternalLink } from 'lucide-react';
 import fileService from '../services/fileService';
+import archivoService from '../services/archivoService';
 import { toast } from 'react-toastify';
 
 const ModalVisualizarArchivo = ({ isOpen, onClose, archivo }) => {
@@ -20,18 +21,33 @@ const ModalVisualizarArchivo = ({ isOpen, onClose, archivo }) => {
     };
   }, [isOpen, archivo]);
 
+  const resolveMimetype = (arch) => arch?.mimetype || arch?.tipo_mime;
+  const resolveName = (arch) => arch?.originalName || arch?.nombre_original || arch?.filename || 'Archivo';
+  const resolveSize = (arch) => arch?.size || arch?.tamaño;
+  const resolveFilename = (arch) => arch?.filename;
+
   const loadFile = async () => {
-    if (!archivo?.filename) return;
+    if (!archivo) return;
     
+    const mimetype = resolveMimetype(archivo);
     setLoading(true);
     setError(null);
     
     try {
       // Para PDFs e imágenes, cargar el archivo para visualización
-      if (isViewableFile(archivo.mimetype)) {
-        const blob = await fileService.viewFile(archivo.filename);
-        const url = URL.createObjectURL(blob);
-        setFileUrl(url);
+      if (isViewableFile(mimetype)) {
+        let blob;
+        if (archivo.id) {
+          blob = await archivoService.viewArchivo(archivo.id);
+        } else if (resolveFilename(archivo)) {
+          blob = await fileService.viewFile(resolveFilename(archivo));
+        }
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          setFileUrl(url);
+        } else {
+          setError('No se pudo obtener el archivo para visualizar');
+        }
       }
     } catch (error) {
       console.error('Error al cargar archivo:', error);
@@ -55,14 +71,20 @@ const ModalVisualizarArchivo = ({ isOpen, onClose, archivo }) => {
   };
 
   const handleDownload = async () => {
-    if (!archivo?.filename) return;
+    if (!archivo) return;
     
     try {
-      const blob = await fileService.downloadFile(archivo.filename);
+      let blob;
+      if (archivo.id) {
+        blob = await archivoService.downloadArchivo(archivo.id);
+      } else if (resolveFilename(archivo)) {
+        blob = await fileService.downloadFile(resolveFilename(archivo));
+      }
+      if (!blob) throw new Error('No se pudo descargar el archivo');
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = archivo.originalName || archivo.filename;
+      link.download = resolveName(archivo);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -89,17 +111,17 @@ const ModalVisualizarArchivo = ({ isOpen, onClose, archivo }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[85vh] max-h-[95vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-3">
-            {getFileIcon(archivo?.mimetype)}
+            {getFileIcon(resolveMimetype(archivo))}
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {archivo?.originalName || archivo?.filename || 'Archivo'}
+                {resolveName(archivo)}
               </h3>
               <p className="text-sm text-gray-500">
-                {formatFileSize(archivo?.size)} • {archivo?.mimetype || 'Tipo desconocido'}
+                {formatFileSize(resolveSize(archivo))} • {resolveMimetype(archivo) || 'Tipo desconocido'}
               </p>
             </div>
           </div>
@@ -147,33 +169,33 @@ const ModalVisualizarArchivo = ({ isOpen, onClose, archivo }) => {
           {!loading && !error && archivo && (
             <>
               {/* PDF Viewer */}
-              {isPDF(archivo.mimetype) && fileUrl && (
+              {isPDF(resolveMimetype(archivo)) && fileUrl && (
                 <div className="h-full">
                   <iframe
                     src={fileUrl}
                     className="w-full h-full border-0"
-                    title={archivo.originalName || archivo.filename}
+                    title={resolveName(archivo)}
                   />
                 </div>
               )}
 
               {/* Image Viewer */}
-              {isImage(archivo.mimetype) && fileUrl && (
+              {isImage(resolveMimetype(archivo)) && fileUrl && (
                 <div className="h-full flex items-center justify-center bg-gray-50 p-4">
                   <img
                     src={fileUrl}
-                    alt={archivo.originalName || archivo.filename}
+                    alt={resolveName(archivo)}
                     className="max-w-full max-h-full object-contain"
                   />
                 </div>
               )}
 
               {/* Non-viewable files */}
-              {!isViewableFile(archivo.mimetype) && (
+              {!isViewableFile(resolveMimetype(archivo)) && (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                  {getFileIcon(archivo.mimetype)}
+                  {getFileIcon(resolveMimetype(archivo))}
                   <p className="text-lg font-medium mt-4 mb-2">
-                    {archivo.originalName || archivo.filename}
+                    {resolveName(archivo)}
                   </p>
                   <p className="text-sm mb-4">
                     Este tipo de archivo no se puede visualizar en el navegador

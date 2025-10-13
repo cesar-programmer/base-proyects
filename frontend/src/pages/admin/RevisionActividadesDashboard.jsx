@@ -25,6 +25,7 @@ import { useStats } from '../../context/StatsContext'
 import activityService from '../../services/activityService'
 import reportService from '../../services/reportService'
 import { toast } from 'react-toastify'
+import ListaArchivosReporte from '../../components/ListaArchivosReporte'
 
 // Simple Modal Component
 const Modal = ({ isOpen, onClose, children }) => {
@@ -180,6 +181,11 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
                           {activity.categoria}
                         </span>
                       )}
+                      <div className="mt-1">
+                        <span className="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                          <Clock className="w-3 h-3" /> {Number(activity.horas_dedicadas ?? activity.horas ?? 0)}h dedicadas
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -339,6 +345,7 @@ export default function RevisionActividadesDashboard() {
           actividadesCount: report.actividades ? report.actividades.length : 0,
           actividadPrincipal: primeraActividad,
           archivo: report.archivo,
+          archivos: report.archivos || [],
           comentarios: report.comentariosRevision,
           resumenEjecutivo: report.resumenEjecutivo,
           actividades: report.actividades || [],
@@ -372,6 +379,42 @@ export default function RevisionActividadesDashboard() {
       setCategories([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Cargar detalles completos del reporte (incluyendo archivos) al abrir "Ver detalles"
+  const openReportDetails = async (activity) => {
+    try {
+      const reportId = Number(activity?.reporteId || activity?.id)
+      if (!reportId || isNaN(reportId)) {
+        setSelectedActivity(activity)
+        setIsViewDialogOpen(true)
+        return
+      }
+
+      const response = await reportService.getReportById(reportId)
+      const reporte = response?.data || response
+
+      const detalle = {
+        ...activity,
+        actividades: reporte?.actividades || activity?.actividades || [],
+        resumenEjecutivo: reporte?.resumenEjecutivo ?? activity?.resumenEjecutivo,
+        comentariosRevision: reporte?.comentariosRevision ?? activity?.comentariosRevision,
+        archivos: reporte?.archivos || activity?.archivos || [],
+        usuario: reporte?.usuario || activity?.usuario,
+        titulo: reporte?.titulo || activity?.titulo,
+        fechaEnvio: reporte?.fechaEnvio || activity?.fechaEnvio,
+        updatedAt: reporte?.updatedAt || activity?.updatedAt,
+        estado_realizado: activity?.estado_realizado
+      }
+
+      setSelectedActivity(detalle)
+      setIsViewDialogOpen(true)
+    } catch (error) {
+      console.error('Error al cargar detalles del reporte:', error)
+      toast.error('No se pudo cargar los detalles del reporte')
+      setSelectedActivity(activity)
+      setIsViewDialogOpen(true)
     }
   }
 
@@ -878,9 +921,7 @@ export default function RevisionActividadesDashboard() {
                         <div className="py-1" role="menu">
                           <button
                             onClick={() => {
-                              console.log('Seleccionando actividad:', activity)
-                              setSelectedActivity(activity)
-                              setIsViewDialogOpen(true)
+                              openReportDetails(activity)
                               setDropdownOpen(null)
                             }}
                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -1311,8 +1352,9 @@ export default function RevisionActividadesDashboard() {
 
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-600">Reportes Totales</p>
-                      <p className="text-3xl font-bold text-gray-900">4</p>
+                      <p className="text-sm font-medium text-gray-600">Horas Registradas</p>
+                      <p className="text-3xl font-bold text-purple-600">{Number(selectedActivity?.total_horas ?? selectedActivity?.totalHoras ?? (Array.isArray(selectedActivity?.actividades) ? selectedActivity.actividades.reduce((s,a)=> s + Number(a.horas_dedicadas ?? a.horas ?? 0), 0) : 0))}</p>
+                      <p className="text-xs text-gray-500">Horas académicas</p>
                     </div>
                   </div>
                 </div>
@@ -1387,68 +1429,11 @@ export default function RevisionActividadesDashboard() {
                       <div className="border-b border-gray-200 p-4">
                         <h3 className="text-lg font-semibold text-gray-900">Documentos Adjuntos</h3>
                       </div>
-                      <div className="p-4 space-y-4">
-                        {selectedActivity?.archivo ? (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-6 h-6 text-blue-600" />
-                                <div>
-                                  <p className="font-medium text-gray-900">Reporte</p>
-                                  <p className="text-sm text-gray-500">Documento PDF - {selectedActivity.fecha}</p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => window.open(`http://localhost:3000/uploads/${selectedActivity.archivo}`, '_blank')}
-                                  className="inline-flex items-center px-3 py-2 border border-blue-200 text-sm font-medium rounded-md text-blue-600 bg-transparent hover:bg-blue-100 transition-colors"
-                                >
-                                  <Eye className="w-4 h-4 mr-1" />
-                                  Ver
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    const link = document.createElement('a');
-                                    link.href = `http://localhost:3000/uploads/${selectedActivity.archivo}`;
-                                    link.download = selectedActivity.archivo;
-                                    link.click();
-                                  }}
-                                  className="inline-flex items-center px-3 py-2 border border-gray-200 text-sm font-medium rounded-md text-gray-600 bg-transparent hover:bg-gray-100 transition-colors"
-                                >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  Descargar
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {/* PDF Viewer */}
-                            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                              <div className="bg-gray-50 p-3 border-b border-gray-200">
-                                <h4 className="text-sm font-medium text-gray-700">Vista Previa del Documento</h4>
-                              </div>
-                              <div className="p-4">
-                                <iframe
-                                  src={`http://localhost:3000/uploads/${selectedActivity.archivo}`}
-                                  className="w-full h-96 border border-gray-300 rounded"
-                                  title="Vista previa del PDF"
-                                >
-                                  <p>Su navegador no soporta la visualización de PDFs. 
-                                    <a href={`http://localhost:3000/uploads/${selectedActivity.archivo}`} target="_blank" rel="noopener noreferrer">
-                                      Haga clic aquí para descargar el archivo.
-                                    </a>
-                                  </p>
-                                </iframe>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-center py-8">
-                            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 italic">
-                              No hay documentos adjuntos para esta actividad.
-                            </p>
-                          </div>
-                        )}
+                      <div className="p-4">
+                        <ListaArchivosReporte 
+                          archivos={selectedActivity?.archivos || []}
+                          titulo="Archivos adjuntos"
+                        />
                       </div>
                     </div>
                   </TabsContent>

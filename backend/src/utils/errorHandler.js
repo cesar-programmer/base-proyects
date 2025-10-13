@@ -1,54 +1,76 @@
 import boom from '@hapi/boom';
 
 /**
- * Maneja errores de forma consistente en los controladores
- * @param {Error} error - El error a manejar
- * @param {Function} next - Función next de Express
+ * Maneja errores de forma consistente en los controladores.
+ * Soporta dos firmas:
+ *  - handleError(error, next)
+ *  - handleError(res, error, [mensaje])
+ *
+ * @param {Error|import('express').Response} arg1 - Error o Response
+ * @param {Function|Error} arg2 - Next o Error
+ * @param {string} [defaultMessage] - Mensaje por defecto para respuesta directa
  */
-export const handleError = (error, next) => {
-  // Si ya es un error de Boom, pasarlo directamente
+export const handleError = (arg1, arg2, defaultMessage = 'Error interno del servidor') => {
+  const usingNext = typeof arg2 === 'function';
+  const error = usingNext ? arg1 : arg2;
+  const next = usingNext ? arg2 : null;
+  const res = usingNext ? null : arg1;
+
+  const respond = (statusCode, payload) => {
+    if (usingNext) {
+      return next(boom.boomify(new Error(payload.message || defaultMessage), { statusCode, data: payload.data }));
+    }
+    return res.status(statusCode).json(payload);
+  };
+
+  // Si ya es un error de Boom
   if (boom.isBoom(error)) {
-    return next(error);
+    if (usingNext) return next(error);
+    const { statusCode, payload } = error.output;
+    return res.status(statusCode).json(payload);
   }
 
   // Errores de validación de Sequelize
-  if (error.name === 'SequelizeValidationError') {
+  if (error?.name === 'SequelizeValidationError') {
     const validationErrors = error.errors.map(err => ({
       field: err.path,
       message: err.message
     }));
-    return next(boom.badRequest('Errores de validación', { errors: validationErrors }));
+    return respond(400, { message: 'Errores de validación', data: { errors: validationErrors } });
   }
 
   // Errores de clave única de Sequelize
-  if (error.name === 'SequelizeUniqueConstraintError') {
+  if (error?.name === 'SequelizeUniqueConstraintError') {
     const field = error.errors[0]?.path || 'campo';
-    return next(boom.conflict(`El ${field} ya existe`));
+    return respond(409, { message: `El ${field} ya existe` });
   }
 
   // Errores de clave foránea de Sequelize
-  if (error.name === 'SequelizeForeignKeyConstraintError') {
-    return next(boom.badRequest('Referencia inválida a otro registro'));
+  if (error?.name === 'SequelizeForeignKeyConstraintError') {
+    return respond(400, { message: 'Referencia inválida a otro registro' });
   }
 
   // Errores de base de datos de Sequelize
-  if (error.name === 'SequelizeDatabaseError') {
-    return next(boom.internal('Error en la base de datos'));
+  if (error?.name === 'SequelizeDatabaseError') {
+    return respond(500, { message: 'Error en la base de datos' });
   }
 
   // Error de conexión a la base de datos
-  if (error.name === 'SequelizeConnectionError') {
-    return next(boom.internal('Error de conexión a la base de datos'));
+  if (error?.name === 'SequelizeConnectionError') {
+    return respond(500, { message: 'Error de conexión a la base de datos' });
   }
 
   // Errores de timeout
-  if (error.name === 'SequelizeTimeoutError') {
-    return next(boom.internal('Timeout en la operación de base de datos'));
+  if (error?.name === 'SequelizeTimeoutError') {
+    return respond(504, { message: 'Timeout en la operación de base de datos' });
   }
 
   // Error genérico
   console.error('Error no manejado:', error);
-  return next(boom.internal('Error interno del servidor'));
+  if (usingNext) {
+    return next(boom.internal(defaultMessage));
+  }
+  return res.status(500).json({ message: defaultMessage });
 };
 
 /**

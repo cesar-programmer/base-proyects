@@ -27,16 +27,20 @@ createUploadDirs();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadPath = 'uploads/temp';
-    
-    // Determinar carpeta según el tipo de archivo
-    if (req.route.path.includes('reportes')) {
-      uploadPath = 'uploads/reportes';
-    } else if (req.route.path.includes('actividades')) {
+
+    // Determinar carpeta en función del cuerpo y asociaciones
+    const body = req.body || {};
+    const category = (body.category || body.categoria || '').toLowerCase();
+
+    // Preferir asociaciones explícitas
+    if (body.id_actividad) {
       uploadPath = 'uploads/actividades';
-    } else if (req.route.path.includes('evidencias')) {
+    } else if (body.reporteId) {
+      uploadPath = 'uploads/reportes';
+    } else if (category === 'evidencia') {
       uploadPath = 'uploads/evidencias';
     }
-    
+
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {

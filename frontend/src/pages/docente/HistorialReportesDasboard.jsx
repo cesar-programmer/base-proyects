@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Search, Eye, Download, MoreVertical, Filter, Calendar, FileText, TrendingUp, Clock, X } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
+import ListaArchivosReporte from '../../components/ListaArchivosReporte'
 import reportService from '../../services/reportService';
 import { toast } from 'react-toastify'
 
@@ -28,6 +29,50 @@ export default function HistorialReportesDashboard() {
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
+
+  // Total de horas registradas del reporte seleccionado: usa valor del backend si existe,
+  // si el total es 0 o no viene, suma las horas dedicadas de cada actividad
+  const getHorasActividadDetalle = (a) => {
+    const raw = a?.horas_dedicadas ?? a?.horasDedicadas ?? a?.horas ?? null;
+    const num = raw != null ? Number(raw) : 0;
+    return isNaN(num) ? 0 : num;
+  };
+
+  const sumHorasActividadesDetalle = Array.isArray(selectedReport?.actividades)
+    ? selectedReport.actividades.reduce((sum, a) => sum + getHorasActividadDetalle(a), 0)
+    : 0;
+
+  const totalBackendRawDetalle = selectedReport?.totalHoras ?? selectedReport?.total_horas;
+  const horasRegistradasDetalle = (totalBackendRawDetalle != null && Number(totalBackendRawDetalle) > 0)
+    ? Number(totalBackendRawDetalle)
+    : Number(sumHorasActividadesDetalle);
+
+  // Derivados reales para estadísticas del detalle
+  const actividadesDetalle = Array.isArray(selectedReport?.actividades) ? selectedReport.actividades : [];
+  const totalActividadesDetalle = actividadesDetalle.length;
+  const completadasDetalle = actividadesDetalle.filter((a) => {
+    const estado = a?.estado_realizado ?? a?.estadoRealizado ?? a?.estado;
+    return estado === true || estado === 'completado' || estado === 'realizado' || estado === 'completa';
+  }).length;
+  const progresoDetalle = totalActividadesDetalle > 0
+    ? Math.round((completadasDetalle / totalActividadesDetalle) * 100)
+    : 0;
+
+  const formatearFecha = (f) => {
+    if (!f) return '';
+    try { return new Date(f).toLocaleDateString('es-ES'); } catch { return String(f); }
+  };
+
+  const estadoActividadUI = (a) => {
+    const estado = a?.estado_realizado ?? a?.estadoRealizado ?? a?.estado;
+    if (estado === true || estado === 'completado' || estado === 'realizado' || estado === 'completa') {
+      return { label: 'Completada', className: 'text-green-600' };
+    }
+    if (estado === 'en_progreso' || estado === 'progreso' || estado === 'in_progress') {
+      return { label: 'En Progreso', className: 'text-yellow-600' };
+    }
+    return { label: 'Pendiente', className: 'text-blue-600' };
+  };
 
   useEffect(() => {
     loadReports();
@@ -75,11 +120,26 @@ export default function HistorialReportesDashboard() {
       }),
       semestre: reporte.semestre || '2024-1',
       descripcion: reporte.descripcion,
+      // Agregar el resumen ejecutivo desde el backend (camelCase o snake_case)
+      resumenEjecutivo: (
+        reporte.resumenEjecutivo ??
+        reporte.resumen_ejecutivo ??
+        null
+      ),
       fechaCreacion: new Date(reporte.createdAt).toLocaleDateString('es-ES', { 
         day: 'numeric', 
         month: 'long',
         year: 'numeric'
-      })
+      }),
+      totalHoras: Number(reporte.total_horas ?? reporte.totalHoras ?? 0),
+      actividades: reporte.actividades || [],
+      archivos: Array.isArray(reporte.archivos)
+        ? reporte.archivos
+        : Array.isArray(reporte.Archivos)
+          ? reporte.Archivos
+          : Array.isArray(reporte.files)
+            ? reporte.files
+            : []
     };
   };
 
@@ -287,9 +347,23 @@ export default function HistorialReportesDashboard() {
     setFilterStatus("all")
   }
 
-  const openReportDetails = (report) => {
-    setSelectedReport(report)
-    setIsDetailDialogOpen(true)
+  const openReportDetails = async (report) => {
+    // Abrir diálogo con datos básicos
+    setSelectedReport(report);
+    setIsDetailDialogOpen(true);
+
+    try {
+      // Obtener detalles completos del reporte (incluye archivos y actividades)
+      const fullResponse = await reportService.getReportById(report.id);
+      const fullData = fullResponse?.data || fullResponse; // Asegurar compatibilidad
+      if (fullData) {
+        const reporteDetallado = mapReporteFromBackend(fullData);
+        setSelectedReport(reporteDetallado);
+      }
+    } catch (error) {
+      console.error('Error al cargar detalles del reporte:', error);
+      toast.error('No se pudieron cargar los adjuntos del reporte');
+    }
   }
 
   const closeDialog = () => {
@@ -533,15 +607,15 @@ export default function HistorialReportesDashboard() {
                   </div>
                 </div>
 
-                {/* Statistics Cards */}
+                {/* Statistics Cards (dinámicas) */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-white border border-gray-200 rounded-lg">
                     <div className="p-4">
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-600">Progreso del Reporte</p>
-                        <p className="text-2xl font-bold text-green-600">85%</p>
+                        <p className="text-2xl font-bold text-green-600">{progresoDetalle}%</p>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-green-500 h-2 rounded-full" style={{ width: "85%" }}></div>
+                          <div className="bg-green-500 h-2 rounded-full" style={{ width: `${progresoDetalle}%` }}></div>
                         </div>
                       </div>
                     </div>
@@ -551,8 +625,8 @@ export default function HistorialReportesDashboard() {
                     <div className="p-4">
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-600">Actividades Registradas</p>
-                        <p className="text-2xl font-bold text-blue-600">12</p>
-                        <p className="text-xs text-gray-500">Total en el período</p>
+                        <p className="text-2xl font-bold text-blue-600">{totalActividadesDetalle}</p>
+                        <p className="text-xs text-gray-500">Total registradas</p>
                       </div>
                     </div>
                   </div>
@@ -561,8 +635,8 @@ export default function HistorialReportesDashboard() {
                     <div className="p-4">
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-600">Actividades Completadas</p>
-                        <p className="text-2xl font-bold text-green-600">10</p>
-                        <p className="text-xs text-gray-500">83% del total</p>
+                        <p className="text-2xl font-bold text-green-600">{completadasDetalle}</p>
+                        <p className="text-xs text-gray-500">{totalActividadesDetalle > 0 ? Math.round((completadasDetalle/totalActividadesDetalle)*100) : 0}% del total</p>
                       </div>
                     </div>
                   </div>
@@ -571,7 +645,7 @@ export default function HistorialReportesDashboard() {
                     <div className="p-4">
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-600">Horas Registradas</p>
-                        <p className="text-2xl font-bold text-purple-600">240</p>
+                        <p className="text-2xl font-bold text-purple-600">{horasRegistradasDetalle}</p>
                         <p className="text-xs text-gray-500">Horas académicas</p>
                       </div>
                     </div>
@@ -620,75 +694,35 @@ export default function HistorialReportesDashboard() {
                           <h3 className="text-lg font-semibold text-gray-900">Actividades del Período</h3>
                         </div>
                         <div className="p-6 space-y-4">
-                          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border-l-4 border-l-green-500">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                <FileText className="w-4 h-4 text-white" />
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-900 block">Preparación de material didáctico</span>
-                                <span className="text-sm text-gray-600">
-                                  Desarrollo de contenidos para Matemáticas Avanzadas
-                                </span>
-                              </div>
+                          {totalActividadesDetalle === 0 ? (
+                            <div className="bg-gray-50 rounded-lg p-4 text-center">
+                              <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-500 text-sm">No hay actividades registradas</p>
                             </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium text-green-600">Completada</span>
-                              <p className="text-xs text-gray-500">2023-05-10</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border-l-4 border-l-green-500">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                <Clock className="w-4 h-4 text-white" />
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-900 block">Asesoría a estudiantes</span>
-                                <span className="text-sm text-gray-600">Sesiones de tutoría académica individual</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium text-green-600">Completada</span>
-                              <p className="text-xs text-gray-500">2023-05-12</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border-l-4 border-l-yellow-500">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                                <TrendingUp className="w-4 h-4 text-white" />
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-900 block">Actualización de syllabus</span>
-                                <span className="text-sm text-gray-600">
-                                  Revisión y actualización de contenidos programáticos
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium text-yellow-600">En Progreso</span>
-                              <p className="text-xs text-gray-500">2023-05-15</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-l-4 border-l-blue-500">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                <Calendar className="w-4 h-4 text-white" />
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-900 block">Participación en congreso</span>
-                                <span className="text-sm text-gray-600">
-                                  Congreso Internacional de Educación Superior
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium text-blue-600">Programada</span>
-                              <p className="text-xs text-gray-500">2023-06-20</p>
-                            </div>
-                          </div>
+                          ) : (
+                            actividadesDetalle.map((act, idx) => {
+                              const estadoUI = estadoActividadUI(act);
+                              return (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-l-green-500">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                      <FileText className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-900 block">{act.titulo}</span>
+                                      {act.descripcion && (
+                                        <span className="text-sm text-gray-600">{act.descripcion}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`text-sm font-medium ${estadoUI.className}`}>{estadoUI.label}</span>
+                                    <p className="text-xs text-gray-500">{formatearFecha(act.fechaFin || act.fechaInicio)}</p>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
                     )}
@@ -700,35 +734,17 @@ export default function HistorialReportesDashboard() {
                         </div>
                         <div className="p-6 space-y-4">
                           <div className="prose max-w-none">
-                            <h4 className="text-md font-semibold text-gray-900 mb-3">Actividades de Docencia</h4>
-                            <p className="text-gray-700 mb-4">
-                              Durante el período reportado, se impartieron 3 materias correspondientes a la carga
-                              académica asignada, con un total de 240 horas de clase. Se desarrollaron nuevos materiales
-                              didácticos para mejorar el proceso de enseñanza-aprendizaje, incluyendo presentaciones
-                              interactivas y casos de estudio prácticos.
-                            </p>
-
-                            <h4 className="text-md font-semibold text-gray-900 mb-3">Actividades de Investigación</h4>
-                            <p className="text-gray-700 mb-4">
-                              Se continuó con el proyecto de investigación "Metodologías Innovadoras en Educación
-                              Superior", logrando avances significativos en la recolección de datos y análisis
-                              preliminares. Se presentaron resultados parciales en el Congreso Nacional de Educación.
-                            </p>
-
-                            <h4 className="text-md font-semibold text-gray-900 mb-3">Actividades de Tutoría</h4>
-                            <p className="text-gray-700 mb-4">
-                              Se brindó asesoría académica a 15 estudiantes de licenciatura y 3 de posgrado, con un
-                              enfoque personalizado para apoyar su desarrollo académico y profesional. Se implementaron
-                              estrategias de seguimiento continuo para mejorar el rendimiento estudiantil.
-                            </p>
-
-                            <h4 className="text-md font-semibold text-gray-900 mb-3">Logros Destacados</h4>
-                            <ul className="list-disc list-inside text-gray-700 space-y-2">
-                              <li>Publicación de artículo en revista indexada</li>
-                              <li>Participación como ponente en congreso internacional</li>
-                              <li>Implementación de nuevas tecnologías educativas</li>
-                              <li>Mejora del 15% en evaluaciones estudiantiles</li>
-                            </ul>
+                            {selectedReport?.resumenEjecutivo ? (
+                              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                                {selectedReport.resumenEjecutivo}
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-gray-500">
+                                <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                <p>No hay resumen ejecutivo disponible para este reporte.</p>
+                                <p className="text-sm mt-1">El resumen ejecutivo se puede agregar al editar el reporte.</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -737,54 +753,13 @@ export default function HistorialReportesDashboard() {
                     {activeTab === "documents" && (
                       <div className="bg-white rounded-lg border">
                         <div className="p-6 border-b">
-                          <h3 className="text-lg font-semibold text-gray-900">Documentos de Respaldo</h3>
+                          <h3 className="text-lg font-semibold text-gray-900">Documentos Adjuntos</h3>
                         </div>
                         <div className="p-6">
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-blue-600" />
-                                <div>
-                                  <span className="font-medium text-gray-900 block">Evidencias de Docencia.pdf</span>
-                                  <span className="text-sm text-gray-500">2.4 MB • Subido el 10 de marzo, 2024</span>
-                                </div>
-                              </div>
-                              <button className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center gap-2">
-                                <Download className="w-4 h-4" />
-                                Descargar
-                              </button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-green-600" />
-                                <div>
-                                  <span className="font-medium text-gray-900 block">
-                                    Certificado de Participación.pdf
-                                  </span>
-                                  <span className="text-sm text-gray-500">1.8 MB • Subido el 12 de marzo, 2024</span>
-                                </div>
-                              </div>
-                              <button className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center gap-2">
-                                <Download className="w-4 h-4" />
-                                Descargar
-                              </button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-purple-600" />
-                                <div>
-                                  <span className="font-medium text-gray-900 block">Evaluaciones Estudiantiles.xlsx</span>
-                                  <span className="text-sm text-gray-500">856 KB • Subido el 14 de marzo, 2024</span>
-                                </div>
-                              </div>
-                              <button className="px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center gap-2">
-                                <Download className="w-4 h-4" />
-                                Descargar
-                              </button>
-                            </div>
-                          </div>
+                          <ListaArchivosReporte
+                            archivos={selectedReport?.archivos || []}
+                            titulo="Adjuntos del reporte"
+                          />
                         </div>
                       </div>
                     )}

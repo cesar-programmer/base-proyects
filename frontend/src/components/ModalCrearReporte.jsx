@@ -6,6 +6,7 @@ import activityService from '../services/activityService';
 import periodoAcademicoService from '../services/periodoAcademicoService';
 import reportService from '../services/reportService';
 import fileService from '../services/fileService';
+import UploadManager from '../services/uploadManager';
 import { toast } from 'react-toastify';
 
 const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
@@ -27,6 +28,9 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
   });
   const [archivosSeleccionados, setArchivosSeleccionados] = useState([]);
   const [subiendoArchivos, setSubiendoArchivos] = useState(false);
+  const [progressByFile, setProgressByFile] = useState({});
+
+  const getFileId = (file) => `${file.name}-${file.size}-${file.lastModified}`;
 
   useEffect(() => {
     if (open && user) {
@@ -228,47 +232,8 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
 
     try {
       setLoading(true);
-      
-      let archivosSubidos = [];
-      
-      // Subir archivos si hay alguno seleccionado
-      if (archivosSeleccionados.length > 0) {
-        setSubiendoArchivos(true);
-        
-        // Toast de inicio de subida
-        toast.info(`📤 Subiendo ${archivosSeleccionados.length} archivo(s)...`);
-        
-        try {
-          const responseArchivos = await fileService.uploadMultipleFiles(
-            archivosSeleccionados,
-            `Evidencias del reporte: ${formData.titulo}`,
-            'evidencia'
-          );
-          
-          if (responseArchivos.success) {
-            archivosSubidos = responseArchivos.files || [];
-            toast.success(`📁 ¡Perfecto! ${archivosSubidos.length} archivo(s) subido(s) exitosamente`);
-          }
-        } catch (errorArchivos) {
-          console.error('Error al subir archivos:', errorArchivos);
-          toast.error(`❌ Error al subir archivos: ${errorArchivos.message}`);
-          // Continuar con la creación del reporte sin archivos
-        } finally {
-          setSubiendoArchivos(false);
-        }
-      }
-      
-      console.log('📝 Creando reporte con datos:', {
-        titulo: formData.titulo,
-        descripcion: formData.descripcion,
-        fechaRealizacion: formData.fechaRealizacion,
-        tipo: formData.tipo,
-        semestre: periodoActivo.nombre,
-        actividades: actividadesSeleccionadas,
-        archivos: archivosSubidos
-      });
-      
-      // Crear el reporte según el esquema del backend
+
+      // 1) Crear el reporte primero (sin archivos)
       const reporteData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
@@ -278,24 +243,49 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         resultados: formData.resultados,
         observaciones: formData.observaciones,
         recomendaciones: formData.recomendaciones,
-        tipo: formData.tipo, // ACTIVIDADES_PLANIFICADAS o ACTIVIDADES_REALIZADAS
-        semestre: periodoActivo.nombre, // Usar el nombre del período activo
-        estado: 'borrador', // Estado inicial
-        actividades: actividadesSeleccionadas, // Array de IDs de actividades
-        archivos: archivosSubidos.map(archivo => ({
-          filename: archivo.filename,
-          originalName: archivo.originalName,
-          size: archivo.size,
-          mimetype: archivo.mimetype
-        }))
+        tipo: formData.tipo,
+        semestre: periodoActivo.nombre,
+        estado: 'borrador',
+        actividades: actividadesSeleccionadas
       };
 
-      // Toast de inicio de creación
       toast.info('📝 Creando reporte...');
-
       const response = await reportService.createReport(reporteData);
       console.log('✅ Reporte creado exitosamente:', response);
-      
+
+      const nuevoReporte = response?.data || response; // Según reportService, retorna response.data
+      const reporteId = nuevoReporte?.id;
+
+      // 2) Subir archivos y asociarlos al reporte recién creado
+      if (archivosSeleccionados.length > 0 && reporteId) {
+        setSubiendoArchivos(true);
+        toast.info(`📤 Subiendo ${archivosSeleccionados.length} archivo(s) al reporte...`);
+
+        try {
+          const manager = new UploadManager({ concurrency: 3 });
+          const results = await manager.uploadFiles(archivosSeleccionados, {
+            actividadId: null,
+            reporteId,
+            descripcion: `Evidencias del reporte: ${formData.titulo}`,
+            categoria: 'evidencia',
+            onProgress: ({ file, percent, id }) => {
+              const key = id || getFileId(file);
+              setProgressByFile(prev => ({ ...prev, [key]: percent }));
+            }
+          });
+
+          const exitosos = results.filter(r => r.success).length;
+          const fallidos = results.length - exitosos;
+          if (exitosos > 0) toast.success(`📁 ${exitosos} archivo(s) subido(s) y asociados`);
+          if (fallidos > 0) toast.warn(`⚠️ ${fallidos} archivo(s) no se pudieron subir`);
+        } catch (errorArchivos) {
+          console.error('Error al subir archivos:', errorArchivos);
+          toast.error(`❌ Error al subir archivos: ${errorArchivos.message}`);
+        } finally {
+          setSubiendoArchivos(false);
+        }
+      }
+
       toast.success(`📋 ¡Excelente! Reporte "${formData.titulo}" creado exitosamente`);
       
       // Limpiar formulario
@@ -581,10 +571,10 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
               </label>
               <input
                 type="file"
-                multiple
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                 onChange={handleFileSelect}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                multiple
               />
               <p className="text-xs text-gray-500">
                 Formatos permitidos: PDF, Word, Excel, imágenes (JPG, PNG)
@@ -598,7 +588,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                   </p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {archivosSeleccionados.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
+                      <div key={index} className="bg-gray-50 p-2 rounded border">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
                           <span className="text-sm text-gray-700 truncate">{file.name}</span>
@@ -606,13 +596,32 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                             ({(file.size / 1024 / 1024).toFixed(2)} MB)
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="ml-2 p-1 hover:bg-gray-200 rounded flex-shrink-0"
-                        >
-                          <X className="w-4 h-4 text-gray-500" />
-                        </button>
+                        {subiendoArchivos ? (
+                          <div className="mt-2">
+                            {(() => {
+                              const percent = progressByFile[getFileId(file)] || 0;
+                              return (
+                                <div className="w-full bg-gray-200 rounded h-2">
+                                  <div
+                                    className="bg-green-600 h-2 rounded"
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                  <div className="text-xs text-gray-500 mt-1">{percent}%</div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="ml-2 p-1 hover:bg-gray-200 rounded flex-shrink-0"
+                            >
+                              <X className="w-4 h-4 text-gray-500" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

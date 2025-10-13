@@ -31,6 +31,11 @@ const ReporteSchema = {
     allowNull: true,
     type: DataTypes.INTEGER
   },
+  total_horas: {
+    allowNull: true,
+    type: DataTypes.DECIMAL(6,2),
+    comment: 'Total de horas dedicadas sumadas de las actividades vinculadas'
+  },
   resultados: {
     allowNull: true,
     type: DataTypes.TEXT

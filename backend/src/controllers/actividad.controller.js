@@ -160,6 +160,7 @@ export const createActividadPlanificada = async (req, res, next) => {
       ubicacion,
       presupuesto: presupuesto ? parseFloat(presupuesto) : null,
       participantesEsperados: participantesEsperados ? parseInt(participantesEsperados) : null,
+      horas_dedicadas: horas_dedicadas !== undefined && horas_dedicadas !== null ? parseFloat(horas_dedicadas) : null,
       objetivos,
       recursos,
       observaciones_planificacion: observaciones,

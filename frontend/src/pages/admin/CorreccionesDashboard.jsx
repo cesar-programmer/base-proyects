@@ -745,10 +745,9 @@ const CorreccionesDashboard = () => {
                                 {activity.fechaInicio ? new Date(activity.fechaInicio).toLocaleDateString('es-ES') : 'Sin fecha'}
                               </span>
                             </div>
-                            <div className="flex items-center text-blue-700 bg-blue-50 px-2 py-1 rounded-md">
-                              <Clock className="w-4 h-4 mr-2" />
-                              <span className="text-xs font-medium">
-                                {activity.horas_estimadas || 0}h
+                            <div>
+                              <span className="inline-flex items-center text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded">
+                                <Clock className="w-3 h-3 mr-1" /> {Number(activity.horas_dedicadas ?? activity.horas ?? 0)}h dedicadas
                               </span>
                             </div>
                           </div>
@@ -957,7 +956,7 @@ const CorreccionesDashboard = () => {
                 <div className="space-y-2 text-sm">
                    <div className="flex justify-between">
                      <span className="text-gray-600">Horas Dedicadas:</span>
-                     <span className="font-medium">{selectedActivity.horas_estimadas || 0}h</span>
+                     <span className="font-medium">{Number(selectedActivity.horas_dedicadas ?? selectedActivity.horas ?? 0)}h</span>
                    </div>
                    {selectedActivity.ubicacion && (
                      <div className="flex justify-between">

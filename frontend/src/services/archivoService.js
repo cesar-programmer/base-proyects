@@ -70,18 +70,28 @@ const archivoService = {
     }
   },
 
-  // Subir archivo para actividad
-  uploadArchivo: async (file, actividadId, descripcion = '') => {
+  // Subir archivo para actividad o reporte (con opciones)
+  uploadArchivo: async (file, actividadId, descripcion = '', categoria = 'evidencia', options = {}) => {
     try {
       const formData = new FormData();
       formData.append('archivo', file);
-      formData.append('id_actividad', actividadId);
+      // Enviar id_actividad solo si es un valor válido
+      if (actividadId !== undefined && actividadId !== null && actividadId !== '') {
+        formData.append('id_actividad', actividadId);
+      }
       formData.append('descripcion', descripcion);
+      // Alinear nombre del campo con el backend
+      formData.append('categoria', categoria);
+      if (options?.reporteId) {
+        formData.append('reporteId', options.reporteId);
+      }
 
       const response = await api.post('/archivos/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: options.onUploadProgress,
+        signal: options.signal
       });
       return response.data;
     } catch (error) {

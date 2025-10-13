@@ -435,7 +435,7 @@ export default function PlannedActivities() {
 
   const actividadesArray = Array.isArray(actividades) ? actividades : []
   const totalActividades = actividadesArray.length
-  const totalHoras = actividadesArray.reduce((sum, a) => sum + (Number(a.horas) || 0), 0)
+  const totalHoras = actividadesArray.reduce((sum, a) => sum + (Number(a.horas_dedicadas ?? a.horas ?? 0) || 0), 0)
 
   // Función para limpiar localStorage
   const clearLocalStorage = () => {
@@ -474,6 +474,7 @@ export default function PlannedActivities() {
           categoria: cat,
           descripcion: preset.descripcion ?? "",
           horas: preset.horas ?? 4,
+          horas_dedicadas: preset.horas ?? 4,
         },
       ];
     })
@@ -499,6 +500,7 @@ export default function PlannedActivities() {
           participantesEsperados: 0,
           archivoAdjunto: "",
           horas: 2,
+          horas_dedicadas: 2,
   
           periodo_planificacion: "",
         },
@@ -518,7 +520,7 @@ export default function PlannedActivities() {
         categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
         fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
         fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        horas_dedicadas: activity.horas || 0,
+        horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
         ubicacion: activity.ubicacion || '',
         presupuesto: activity.presupuesto || 0,
         participantesEsperados: activity.participantesEsperados || 0,
@@ -544,7 +546,7 @@ export default function PlannedActivities() {
           categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
           fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
           fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          horas_dedicadas: activity.horas || 0,
+          horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
           ubicacion: activity.ubicacion || '',
           presupuesto: activity.presupuesto || 0,
           participantesEsperados: activity.participantesEsperados || 0,
@@ -609,7 +611,7 @@ export default function PlannedActivities() {
           categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
           fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
           fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          horas_dedicadas: activity.horas || 0,
+          horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
           ubicacion: activity.ubicacion || '',
           presupuesto: activity.presupuesto || 0,
           participantesEsperados: activity.participantesEsperados || 0,
@@ -627,7 +629,7 @@ export default function PlannedActivities() {
           categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
           fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
           fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          horas_dedicadas: activity.horas || 0,
+          horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
           ubicacion: activity.ubicacion || '',
           presupuesto: activity.presupuesto || 0,
           participantesEsperados: activity.participantesEsperados || 0,
@@ -737,7 +739,7 @@ export default function PlannedActivities() {
             categoria: actividad.categoria?.toUpperCase() || 'DOCENCIA',
             fecha_inicio: actividad.fechaInicio || new Date().toISOString().split('T')[0],
             fecha_fin: actividad.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            horas_dedicadas: actividad.horas || 0,
+            horas_dedicadas: Number(actividad.horas_dedicadas ?? actividad.horas ?? 0),
             ubicacion: actividad.ubicacion || '',
             presupuesto: actividad.presupuesto || 0,
             participantesEsperados: actividad.participantesEsperados || 0,
@@ -1030,8 +1032,8 @@ export default function PlannedActivities() {
                         <Input
                           type="number"
                           min={0}
-                          value={a.horas}
-                          onChange={(e) => updateActivity(a.id, "horas", Number(e.target.value || 0))}
+                          value={Number(a.horas_dedicadas ?? a.horas ?? 0)}
+                          onChange={(e) => updateActivity(a.id, "horas_dedicadas", Number(e.target.value || 0))}
                           disabled={disabled}
                         />
                       </div>

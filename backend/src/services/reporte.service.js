@@ -41,7 +41,7 @@ class ReporteService {
           {
             model: models.Actividad,
             as: 'actividades',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado_realizado', 'categoria'],
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado_realizado', 'categoria', 'horas_dedicadas'],
             required: false,
             through: { attributes: [] }
           }
@@ -83,7 +83,7 @@ class ReporteService {
           {
             model: models.Actividad,
             as: 'actividades',
-            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado_realizado', 'categoria'],
+            attributes: ['id', 'titulo', 'descripcion', 'fechaInicio', 'fechaFin', 'estado_realizado', 'categoria', 'horas_dedicadas'],
             required: false,
             through: { attributes: [] } // Excluir atributos de la tabla intermedia
           },
@@ -91,7 +91,8 @@ class ReporteService {
             model: models.Archivo,
             as: 'archivos',
             attributes: ['id', 'nombre_original', 'nombre_almacenado', 'ruta_almacenamiento', 'tipo_mime'],
-            required: false
+            required: false,
+            where: { reporteId: id }
           }
         ]
       });
@@ -142,6 +143,21 @@ class ReporteService {
             orden: i + 1
           });
         }
+
+        // Calcular total_horas automáticamente a partir de horas_dedicadas de actividades
+        try {
+          const actividadesData = await models.Actividad.findAll({
+            where: { id: actividades },
+            attributes: ['horas_dedicadas']
+          });
+          const totalHoras = actividadesData.reduce((sum, act) => {
+            const val = act.horas_dedicadas != null ? parseFloat(act.horas_dedicadas) : 0;
+            return sum + (isNaN(val) ? 0 : val);
+          }, 0);
+          await newReporte.update({ total_horas: totalHoras });
+        } catch (calcErr) {
+          console.warn('No se pudo calcular total_horas automáticamente:', calcErr);
+        }
       }
 
       // Si hay archivos, asociarlos al reporte
@@ -180,7 +196,48 @@ class ReporteService {
     try {
       const reporte = await this.findOne(id);
       
-      await reporte.update(reporteData);
+      // Extraer actividades si se envían para actualizar vínculos
+      const { actividades, ...reporteDataSinActividades } = reporteData || {};
+      await reporte.update(reporteDataSinActividades || {});
+
+      // Actualizar asociaciones de actividades si se proporcionan
+      if (Array.isArray(actividades)) {
+        // Reemplazar asociaciones existentes
+        await models.ReporteActividad.destroy({ where: { reporteId: id } });
+        for (let i = 0; i < actividades.length; i++) {
+          const actividadId = actividades[i];
+          await models.ReporteActividad.create({
+            reporteId: id,
+            actividadId,
+            orden: i + 1
+          });
+        }
+      }
+
+      // Recalcular total_horas basado en actividades asociadas actuales
+      try {
+        const links = await models.ReporteActividad.findAll({
+          where: { reporteId: id },
+          attributes: ['actividadId']
+        });
+        const actividadIds = links.map(l => l.actividadId);
+        if (actividadIds.length > 0) {
+          const actividadesData = await models.Actividad.findAll({
+            where: { id: actividadIds },
+            attributes: ['horas_dedicadas']
+          });
+          const totalHoras = actividadesData.reduce((sum, act) => {
+            const val = act.horas_dedicadas != null ? parseFloat(act.horas_dedicadas) : 0;
+            return sum + (isNaN(val) ? 0 : val);
+          }, 0);
+          await reporte.update({ total_horas: totalHoras });
+        } else {
+          // Sin actividades asociadas
+          await reporte.update({ total_horas: 0 });
+        }
+      } catch (calcErr) {
+        console.warn('No se pudo recalcular total_horas automáticamente:', calcErr);
+      }
 
       // Si hay archivos nuevos, agregarlos
       if (archivos && archivos.length > 0) {

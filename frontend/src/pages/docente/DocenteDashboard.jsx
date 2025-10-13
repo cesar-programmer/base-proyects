@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext';
 import activityService from '../../services/activityService';
 import reportService from '../../services/reportService';
+import { fechaLimiteService } from '../../services/fechaLimiteService';
 import { toast } from 'react-toastify';
 
 // Componentes reutilizables
@@ -136,10 +137,11 @@ export default function DocenteDashboard() {
   const [stats, setStats] = useState({
     actividadesPlanificadas: 0,
     reportesCompletados: 0,
-    reportesPendientes: 0,
+    reportesEnRevision: 0,
     progresoGeneral: 0
   });
   const [loading, setLoading] = useState(true);
+  const [upcomingReminders, setUpcomingReminders] = useState([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -151,24 +153,51 @@ export default function DocenteDashboard() {
     try {
       setLoading(true);
       
-      // Cargar actividades del docente
-      const activitiesResponse = await activityService.getActivitiesByTeacher(user.id);
-      const activities = Array.isArray(activitiesResponse?.data) ? activitiesResponse.data : [];
+      // Cargar actividades del docente del período académico activo
+      let activities = [];
+      try {
+        const activitiesResponse = await activityService.getActivitiesByUserCurrentPeriod(user.id);
+        const rawActivities = Array.isArray(activitiesResponse?.data)
+          ? activitiesResponse.data
+          : (Array.isArray(activitiesResponse) ? activitiesResponse : (Array.isArray(activitiesResponse?.items) ? activitiesResponse.items : []));
+        activities = rawActivities;
+      } catch (errActivitiesPeriod) {
+        console.warn('Fallo al obtener actividades del período activo, usando todas las actividades:', errActivitiesPeriod);
+        const fallbackActivitiesResponse = await activityService.getActivitiesByTeacher(user.id);
+        activities = Array.isArray(fallbackActivitiesResponse?.data) ? fallbackActivitiesResponse.data : [];
+      }
       
       // Cargar reportes del docente
       const reportsResponse = await reportService.getReportsByTeacher(user.id);
       const reports = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
+
+      // Cargar fechas límite próximas (recordatorios reales)
+      try {
+        const fechasResp = await fechaLimiteService.getFechasLimiteProximas(14);
+        const fechasList = Array.isArray(fechasResp?.data) ? fechasResp.data : (Array.isArray(fechasResp) ? fechasResp : []);
+        const reminders = fechasList.map((f) => ({
+          task: f.nombre || 'Fecha límite',
+          date: new Date(f.fecha_limite || f.fechaLimite).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
+        }));
+        setUpcomingReminders(reminders);
+      } catch (errFechas) {
+        console.warn('No se pudieron cargar las fechas límite próximas:', errFechas);
+        setUpcomingReminders([]);
+      }
       
-      // Calcular estadísticas
-      const actividadesPlanificadas = activities.filter(a => a.estado === 'planificada').length;
-      const reportesCompletados = reports.filter(r => r.estado === 'aprobado').length;
-      const reportesPendientes = reports.filter(r => r.estado === 'pendiente').length;
-      const progresoGeneral = activities.length > 0 ? Math.round((reportesCompletados / activities.length) * 100) : 0;
+      // Calcular estadísticas (alineadas con lógica de Reportes Pendientes)
+      const actividadesPlanificadas = activities.filter(a => (a.estado_planificacion ?? a.estadoPlanificacion)).length;
+      const reportesCompletados = reports.filter(r => (r.estado || '').toLowerCase() === 'aprobado').length;
+      const reportesEnRevision = reports.filter(r => {
+        const estado = (r.estado || '').toLowerCase();
+        return estado === 'enviado' || estado === 'revisado' || estado === 'en_revision';
+      }).length;
+      const progresoGeneral = reports.length > 0 ? Math.round((reportesCompletados / reports.length) * 100) : 0;
       
       setStats({
         actividadesPlanificadas,
         reportesCompletados,
-        reportesPendientes,
+        reportesEnRevision,
         progresoGeneral
       });
     } catch (error) {
@@ -178,7 +207,7 @@ export default function DocenteDashboard() {
       setStats({
         actividadesPlanificadas: 0,
         reportesCompletados: 0,
-        reportesPendientes: 0,
+        reportesEnRevision: 0,
         progresoGeneral: 0
       });
     } finally {
@@ -190,14 +219,11 @@ export default function DocenteDashboard() {
   const activitySummary = [
     { count: stats.actividadesPlanificadas, label: "Actividades Planificadas", color: "text-blue-600" },
     { count: stats.reportesCompletados, label: "Actividades Completadas", color: "text-green-600" },
-    { count: stats.reportesPendientes, label: "Actividades Pendientes", color: "text-orange-600" },
+    { count: stats.reportesEnRevision, label: "Reportes en Revisión", color: "text-orange-600" },
   ];
 
   // Próximos recordatorios
-  const upcomingReminders = [
-    { task: "Entrega de reporte mensual", date: "15 de Junio" },
-    { task: "Actualización de actividades realizadas", date: "30 de Junio" },
-  ];
+  // Se obtienen desde el backend en loadDashboardData; si no hay, se muestra vacío
 
   if (loading) {
     return (
@@ -232,8 +258,8 @@ export default function DocenteDashboard() {
             color="green"
           />
           <StatsCard 
-            title="Reportes Pendientes"
-            value={stats.reportesPendientes}
+            title="Reportes en Revisión"
+            value={stats.reportesEnRevision}
             icon={Clock}
             color="yellow"
           />
@@ -275,11 +301,15 @@ export default function DocenteDashboard() {
             </h2>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              {upcomingReminders.map((reminder, index) => (
-                <ReminderItem key={index} reminder={reminder} />
-              ))}
-            </div>
+            {upcomingReminders?.length > 0 ? (
+              <div className="space-y-4">
+                {upcomingReminders.map((reminder, index) => (
+                  <ReminderItem key={index} reminder={reminder} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">No hay recordatorios próximos.</div>
+            )}
           </div>
         </Card>
       </div>

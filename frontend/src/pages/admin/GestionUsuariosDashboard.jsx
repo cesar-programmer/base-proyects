@@ -352,7 +352,7 @@ export default function GestionUsuariosDashboard() {
                 />
               </div>
               <div className="mb-4">
-                <Label htmlFor="cedula">Cédula</Label>
+                <Label htmlFor="cedula">Matricula</Label>
                 <Input
                   id="cedula"
                   type="text"
@@ -445,7 +445,7 @@ export default function GestionUsuariosDashboard() {
                 />
               </div>
               <div className="mb-4">
-                <Label htmlFor="edit-cedula">Cédula</Label>
+                <Label htmlFor="edit-cedula">Matricula</Label>
                 <Input
                   id="edit-cedula"
                   type="text"

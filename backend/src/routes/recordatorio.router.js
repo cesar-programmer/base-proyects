@@ -31,6 +31,15 @@ router.post('/enviar-manual',
   recordatorioController.enviarManual.bind(recordatorioController)
 );
 
+// Programar ejecución puntual y cancelar
+router.post('/programar',
+  recordatorioController.programar.bind(recordatorioController)
+);
+
+router.delete('/:id',
+  recordatorioController.cancelarProgramado.bind(recordatorioController)
+);
+
 // Rutas de control
 router.patch('/toggle',
   recordatorioController.toggle.bind(recordatorioController)

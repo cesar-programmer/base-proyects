@@ -99,7 +99,7 @@ export const createActividad = async (req, res, next) => {
     const actividadData = req.body;
     
     // Validar que el usuario tenga permisos para crear actividades en el reporte
-    if (actividadData.id_reporte) {
+    if (req.user.rol !== 'ADMINISTRADOR' && actividadData.id_reporte) {
       const reporte = await reporteService.findOne(actividadData.id_reporte);
       
       if (reporte.id_docente !== req.user.id) {
@@ -107,10 +107,13 @@ export const createActividad = async (req, res, next) => {
       }
     }
     
-    const newActividad = await actividadService.create({
-      ...actividadData,
-      usuarioId: req.user.id
-    });
+    const newActividad = await actividadService.create(
+      {
+        ...actividadData,
+        usuarioId: req.user.id
+      },
+      { bypassDeadline: req.user.rol === 'ADMINISTRADOR' }
+    );
     
     res.status(201).json({
       message: 'Actividad creada exitosamente',
@@ -185,6 +188,21 @@ export const updateActividad = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+
+    // Mapear campos del esquema (snake_case) al modelo (camelCase)
+    const mappedData = { ...updateData };
+    if (mappedData.nombre !== undefined) {
+      mappedData.titulo = mappedData.nombre;
+      delete mappedData.nombre;
+    }
+    if (mappedData.fecha_inicio !== undefined) {
+      mappedData.fechaInicio = mappedData.fecha_inicio;
+      delete mappedData.fecha_inicio;
+    }
+    if (mappedData.fecha_fin !== undefined) {
+      mappedData.fechaFin = mappedData.fecha_fin;
+      delete mappedData.fecha_fin;
+    }
     
     // Verificar que la actividad existe y el usuario tiene permisos
     const actividad = await actividadService.findOne(id);
@@ -193,7 +211,7 @@ export const updateActividad = async (req, res, next) => {
       throw boom.forbidden('No tienes permisos para actualizar esta actividad');
     }
     
-    const updatedActividad = await actividadService.update(id, updateData);
+    const updatedActividad = await actividadService.update(id, mappedData);
     
     res.json({
       message: 'Actividad actualizada exitosamente',
@@ -379,6 +397,52 @@ export const enviarPlanificacion = async (req, res, next) => {
   } catch (error) {
     console.log('❌ [enviarPlanificacion] Error capturado:', error);
     console.log('❌ [enviarPlanificacion] Error stack:', error.stack);
+    handleError(error, next);
+  }
+};
+
+// Agrupar actividades de un usuario por período académico (admin o propietario)
+export const getActividadesAgrupadasPorPeriodo = async (req, res, next) => {
+  try {
+    const { usuarioId } = req.params;
+
+    if (req.user.rol !== 'ADMINISTRADOR' && parseInt(usuarioId) !== req.user.id) {
+      return res.status(403).json({ message: 'No tienes permisos para ver estas actividades' });
+    }
+
+    const data = await actividadService.findByUsuarioGroupedByPeriodo(parseInt(usuarioId));
+    res.json({ message: 'Actividades agrupadas por período', data });
+  } catch (error) {
+    handleError(error, next);
+  }
+};
+
+// Docente: ver actividades del período académico activo
+export const getMisActividadesPeriodoActivo = async (req, res, next) => {
+  try {
+    const periodoActivo = await PeriodoAcademico.findOne({ where: { activo: true } });
+    if (!periodoActivo) {
+      return res.status(404).json({ message: 'No hay período académico activo configurado' });
+    }
+
+    const { page = 1, limit = 1000 } = req.query;
+    const actividades = await actividadService.findByUsuario(req.user.id, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      periodoAcademicoId: periodoActivo.id
+    });
+
+    res.json({
+      message: 'Mis actividades del período activo obtenidas exitosamente',
+      periodo: {
+        id: periodoActivo.id,
+        nombre: periodoActivo.nombre,
+        fechaInicio: periodoActivo.fechaInicio,
+        fechaFin: periodoActivo.fechaFin
+      },
+      data: actividades
+    });
+  } catch (error) {
     handleError(error, next);
   }
 };

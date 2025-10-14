@@ -200,7 +200,12 @@ class ReporteController {
         throw boom.forbidden('No tienes permisos para cambiar el estado del reporte');
       }
       
-      const updatedReporte = await reporteService.changeStatus(id, estado, comentariosRevision);
+      const updatedReporte = await reporteService.changeStatus(
+        id,
+        estado,
+        comentariosRevision,
+        { bypassDeadline: true }
+      );
       
       res.json({
         message: 'Estado del reporte actualizado exitosamente',

@@ -10,7 +10,7 @@ class NotificacionService {
           {
             model: models.User,
             as: 'usuario_destino',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
             model: models.FechaLimite,
@@ -78,7 +78,7 @@ class NotificacionService {
           {
             model: models.User,
             as: 'usuario_destino',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email']
           }
         ],
         order: [['fecha_creacion', 'DESC']]
@@ -97,7 +97,7 @@ class NotificacionService {
           {
             model: models.User,
             as: 'usuario_destino',
-            attributes: ['id_usuario', 'nombre_completo', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email']
           },
           {
             model: models.FechaLimite,

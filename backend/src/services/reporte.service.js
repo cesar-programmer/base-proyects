@@ -362,9 +362,42 @@ class ReporteService {
   }
 
   // Cambiar estado del reporte
-  async changeStatus(id, estado, comentariosRevision = null) {
+  async changeStatus(id, estado, comentariosRevision = null, options = {}) {
     try {
       const reporte = await this.findOne(id);
+      
+      // Validar ventana de ENTREGA al intentar enviar el reporte
+      if (estado === 'enviado' && !options.bypassDeadline) {
+        try {
+          const periodoService = new PeriodoAcademicoService();
+          const fechaLimiteService = new FechaLimiteService();
+          const periodoActivo = await periodoService.findActive();
+          
+          if (!periodoActivo) {
+            throw boom.badRequest('No hay período académico activo para enviar reportes');
+          }
+          
+          const fechasEntrega = await fechaLimiteService.findByCategory('ENTREGA');
+          const fechasDelPeriodo = (fechasEntrega || []).filter(f => f.periodo && f.periodo.id === periodoActivo.id);
+          
+          if (!fechasDelPeriodo || fechasDelPeriodo.length === 0) {
+            throw boom.badRequest('No hay fecha límite activa de ENTREGA para el período académico actual');
+          }
+          
+          // Tomar la fecha de cierre más tardía dentro del período
+          const cierreEntrega = fechasDelPeriodo
+            .map(f => new Date(f.fecha_limite))
+            .reduce((max, cur) => (cur > max ? cur : max), new Date(fechasDelPeriodo[0].fecha_limite));
+          
+          const ahora = new Date();
+          if (ahora > cierreEntrega) {
+            throw boom.badRequest('La ventana de entrega de reportes ha cerrado');
+          }
+        } catch (e) {
+          if (boom.isBoom(e)) throw e;
+          throw boom.internal('Error al validar fecha límite de entrega');
+        }
+      }
       
       const updateData = { 
         estado,

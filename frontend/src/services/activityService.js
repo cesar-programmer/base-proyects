@@ -75,6 +75,31 @@ const activityService = {
     }
   },
 
+  // Obtener actividades agrupadas por período para un usuario (admin o propietario)
+  getActivitiesGroupedByPeriodo: async (usuarioId) => {
+    try {
+      const response = await api.get(`/actividades/usuario/${usuarioId}/agrupadas`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener actividades agrupadas por período');
+    }
+  },
+
+  // Obtener mis actividades del período activo directamente (docente)
+  getMyActivitiesCurrentPeriod: async (options = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (options.page) params.append('page', options.page);
+      if (options.limit) params.append('limit', options.limit);
+      const query = params.toString();
+      const url = query ? `/actividades/mis/periodo-activo?${query}` : '/actividades/mis/periodo-activo';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al obtener mis actividades del período activo');
+    }
+  },
+
   // Crear nueva actividad
   createActivity: async (activityData) => {
     try {

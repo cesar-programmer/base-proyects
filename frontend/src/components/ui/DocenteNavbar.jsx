@@ -42,6 +42,16 @@ export default function DocenteNavbar() {
               Actividades Planificadas
             </NavLink>
             <NavLink
+              to="/docente/mis-actividades-periodo"
+              className={({ isActive }) =>
+                `hover:underline text-sm font-medium ${
+                  isActive ? "underline" : ""
+                }`
+              }
+            >
+              Mis Actividades (Período Activo)
+            </NavLink>
+            <NavLink
               to="/docente/reportes-pendientes"
               className={({ isActive }) =>
                 `hover:underline text-sm font-medium ${
@@ -61,16 +71,7 @@ export default function DocenteNavbar() {
             >
               Historial de Reportes
             </NavLink>
-            <NavLink
-              to="/docente/estadisticas"
-              className={({ isActive }) =>
-                `hover:underline text-sm font-medium ${
-                  isActive ? "underline" : ""
-                }`
-              }
-            >
-              Estadísticas
-            </NavLink>
+            {/* Estadísticas removidas del menú del docente */}
             <button
               onClick={handleLogout}
               className="text-sm font-medium hover:underline flex items-center gap-2"
@@ -106,6 +107,13 @@ export default function DocenteNavbar() {
               Actividades Planificadas
             </NavLink>
             <NavLink
+              to="/docente/mis-actividades-periodo"
+              onClick={() => setIsOpen(false)}
+              className="block px-2 py-1 text-sm font-medium hover:underline"
+            >
+              Mis Actividades (Período Activo)
+            </NavLink>
+            <NavLink
               to="/docente/reportes-pendientes"
               onClick={() => setIsOpen(false)}
               className="block px-2 py-1 text-sm font-medium hover:underline"
@@ -119,13 +127,7 @@ export default function DocenteNavbar() {
             >
               Historial de Reportes
             </NavLink>
-            <NavLink
-              to="/docente/estadisticas"
-              onClick={() => setIsOpen(false)}
-              className="block px-2 py-1 text-sm font-medium hover:underline"
-            >
-              Estadísticas
-            </NavLink>
+            {/* Estadísticas removidas del menú móvil del docente */}
             <button
               onClick={() => {
                 setIsOpen(false);

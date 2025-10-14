@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from 'react';
-import { Calendar, FileText, BarChart3, ClipboardList, Bell, User, Activity, CheckCircle, Clock } from "lucide-react"
+import { Calendar, FileText, ClipboardList, Bell, Activity, CheckCircle, Clock, BarChart3 } from "lucide-react"
 import { Link } from "react-router-dom";
 import { useAuth } from '../../context/AuthContext';
 import activityService from '../../services/activityService';
@@ -123,11 +123,11 @@ const docenteSections = [
     Link: "/docente/reportes-pendientes",
   },
   {
-    title: "Estadísticas",
-    description: "Visualiza tu progreso y rendimiento",
-    icon: BarChart3,
-    buttonText: "Ver Estadísticas",
-    Link: "/docente/estadisticas",
+    title: "Mis Actividades (Período Activo)",
+    description: "Consulta tus actividades ligadas al período actual",
+    icon: Activity,
+    buttonText: "Ver Mis Actividades",
+    Link: "/docente/mis-actividades-periodo",
   },
 ];
 

@@ -12,9 +12,7 @@ const createFechaLimiteSchema = Joi.object({
   fecha_limite: Joi.date().iso().required(),
   categoria: Joi.string().valid(
     'REGISTRO',
-    'ENTREGA',
-    'REVISION',
-    'EVALUACION'
+    'ENTREGA'
   ).required(),
   id_periodo: Joi.number().integer().positive().required(),
   semestre: Joi.string().max(10).allow('', null),
@@ -29,9 +27,7 @@ const updateFechaLimiteSchema = Joi.object({
   fecha_limite: Joi.date().iso(),
   categoria: Joi.string().valid(
     'REGISTRO',
-    'ENTREGA',
-    'REVISION',
-    'EVALUACION'
+    'ENTREGA'
   ),
   id_periodo: Joi.number().integer().positive(),
   semestre: Joi.string().max(10).allow('', null),

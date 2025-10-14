@@ -5,6 +5,7 @@ import path from 'path';
 import routerApi from './routes/index.js';
 import { logErrors, errorHandler, boomErrorHandler, queryErrorHandler } from './middleware/error.handler.js';
 import { generalSecurityMiddleware, securityHeaders } from './config/security.js';
+import { initReminderScheduler } from './scheduler/recordatorio.scheduler.js';
 
 // Configurar variables de entorno
 dotenv.config();
@@ -72,6 +73,11 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
     console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  });
+
+  // Inicializar scheduler de recordatorios
+  initReminderScheduler().catch(err => {
+    console.error('❌ Error inicializando el scheduler de recordatorios:', err);
   });
 
   // Manejo graceful de cierre

@@ -1,5 +1,6 @@
 import boom from '@hapi/boom';
 import { models, sequelize } from '../db/models/index.js';
+import FechaLimiteService from './fechaLimite.service.js';
 
 class ActividadService {
   // Obtener todas las actividades
@@ -102,8 +103,57 @@ class ActividadService {
     }
   }
 
+  // Agrupar actividades de un usuario por período académico
+  async findByUsuarioGroupedByPeriodo(usuarioId) {
+    try {
+      const actividades = await models.Actividad.findAll({
+        where: { usuarioId },
+        include: [
+          {
+            model: models.User,
+            as: 'usuario',
+            attributes: ['id', 'nombre', 'apellido', 'email']
+          },
+          {
+            model: models.PeriodoAcademico,
+            as: 'periodoAcademico',
+            attributes: ['id', 'nombre', 'fechaInicio', 'fechaFin']
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+
+      const grupos = {};
+      for (const act of actividades) {
+        const periodoId = act.periodoAcademicoId || 'SIN_PERIODO';
+        if (!grupos[periodoId]) {
+          grupos[periodoId] = {
+            periodoAcademicoId: act.periodoAcademicoId || null,
+            periodoNombre: act.periodoAcademico?.nombre || 'Sin período',
+            fechaInicio: act.periodoAcademico?.fechaInicio || null,
+            fechaFin: act.periodoAcademico?.fechaFin || null,
+            actividades: [],
+            resumen: { total: 0, aprobadas: 0, devueltas: 0, pendientes: 0 }
+          };
+        }
+
+        grupos[periodoId].actividades.push(act);
+        grupos[periodoId].resumen.total += 1;
+
+        const estado = (act.estado_realizado || act.estado_planificacion || '').toLowerCase();
+        if (estado === 'aprobado' || estado === 'aprobada') grupos[periodoId].resumen.aprobadas += 1;
+        else if (estado === 'devuelto' || estado === 'rechazado') grupos[periodoId].resumen.devueltas += 1;
+        else grupos[periodoId].resumen.pendientes += 1;
+      }
+
+      return Object.values(grupos);
+    } catch (error) {
+      throw boom.internal('Error al agrupar actividades por período');
+    }
+  }
+
   // Crear una nueva actividad
-  async create(actividadData) {
+  async create(actividadData, options = {}) {
     try {
       // Verificar que el usuario existe
       const usuario = await models.User.findByPk(actividadData.usuarioId);
@@ -115,6 +165,33 @@ class ActividadService {
       const periodo = await models.PeriodoAcademico.findByPk(actividadData.periodoAcademicoId);
       if (!periodo) {
         throw boom.notFound('Periodo académico no encontrado');
+      }
+
+      // Validar ventana de REGISTRO (creación de actividades) para el período
+      // Requiere una fecha límite activa de categoría 'REGISTRO' del período activo y que no esté vencida
+      if (!options.bypassDeadline) {
+        try {
+          const fechaLimiteService = new FechaLimiteService();
+          const fechasRegistro = await fechaLimiteService.findByCategory('REGISTRO');
+          const fechasDelPeriodo = (fechasRegistro || []).filter(f => f.periodo && f.periodo.id === periodo.id);
+
+          if (!fechasDelPeriodo || fechasDelPeriodo.length === 0) {
+            throw boom.badRequest('No hay fecha límite activa de REGISTRO para el período académico actual');
+          }
+
+          // Tomar la fecha de cierre más tardía dentro del período
+          const cierreRegistro = fechasDelPeriodo
+            .map(f => new Date(f.fecha_limite))
+            .reduce((max, cur) => (cur > max ? cur : max), new Date(fechasDelPeriodo[0].fecha_limite));
+
+          const ahora = new Date();
+          if (ahora > cierreRegistro) {
+            throw boom.badRequest('La ventana de registro de actividades ha cerrado');
+          }
+        } catch (e) {
+          if (boom.isBoom(e)) throw e;
+          throw boom.internal('Error al validar fecha límite de registro');
+        }
       }
 
       const newActividad = await models.Actividad.create(actividadData);

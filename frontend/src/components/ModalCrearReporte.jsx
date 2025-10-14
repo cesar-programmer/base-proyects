@@ -19,7 +19,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
     titulo: '',
     descripcion: '',
     resumenEjecutivo: '',
-    tipo: 'ACTIVIDADES_PLANIFICADAS',
+    tipo: 'ACTIVIDADES_REALIZADAS',
     fechaRealizacion: new Date().toISOString().split('T')[0],
     participantesReales: '',
     resultados: '',
@@ -243,7 +243,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         resultados: formData.resultados,
         observaciones: formData.observaciones,
         recomendaciones: formData.recomendaciones,
-        tipo: formData.tipo,
+        tipo: 'ACTIVIDADES_REALIZADAS',
         semestre: periodoActivo.nombre,
         estado: 'borrador',
         actividades: actividadesSeleccionadas
@@ -293,7 +293,7 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         titulo: '',
         descripcion: '',
         resumenEjecutivo: '',
-        tipo: 'ACTIVIDADES_PLANIFICADAS',
+        tipo: 'ACTIVIDADES_REALIZADAS',
         fechaRealizacion: new Date().toISOString().split('T')[0],
         participantesReales: '',
         resultados: '',
@@ -365,15 +365,13 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
                 <label className="block text-sm font-medium text-gray-700">
                   Tipo de Reporte
                 </label>
-                <select
+                <input
+                  type="text"
                   name="tipo"
-                  value={formData.tipo}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="ACTIVIDADES_PLANIFICADAS">Actividades Planificadas</option>
-                  <option value="ACTIVIDADES_REALIZADAS">Actividades Realizadas</option>
-                </select>
+                  value={"Actividades Realizadas"}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                  disabled
+                />
               </div>
 
               <div className="space-y-2">

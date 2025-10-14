@@ -8,7 +8,7 @@ export default function DocenteLayout({ children }) {
   return (
     <div>
       <DocenteNavbar />
-      <div className="p-4">
+      <div className="p-4 max-w-7xl mx-auto w-full">
         <Outlet />
       </div>
     </div>

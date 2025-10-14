@@ -96,3 +96,6 @@ netlify.toml
 
 # Local Netlify folder
 .netlify
+
+
+/backend/uploads/

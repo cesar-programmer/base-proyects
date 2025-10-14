@@ -186,11 +186,9 @@ const CategoryBadge = ({ category }) => {
   const categoryConfig = {
     registro: { label: "Registro", className: "bg-blue-100 text-blue-800" },
     entrega: { label: "Entrega", className: "bg-green-100 text-green-800" },
-    revision: { label: "Revisión", className: "bg-yellow-100 text-yellow-800" },
-    evaluacion: { label: "Evaluación", className: "bg-purple-100 text-purple-800" },
   };
 
-  const config = categoryConfig[category];
+  const config = categoryConfig[category] || { label: (category || 'Otro'), className: "bg-gray-100 text-gray-800" };
   return <Badge className={config.className}>{config.label}</Badge>;
 };
 
@@ -446,8 +444,6 @@ const AddDeadlineModal = ({ isOpen, onClose, newDeadline, setNewDeadline, handle
           >
             <option value="registro">Registro</option>
             <option value="entrega">Entrega</option>
-            <option value="revision">Revisión</option>
-            <option value="evaluacion">Evaluación</option>
           </Select>
         </div>
         

@@ -160,7 +160,6 @@ const CorreccionesDashboard = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [reviewComment, setReviewComment] = useState("");
-  const [reviewStatus, setReviewStatus] = useState("");
   
   const { toast, ToastContainer } = useToast();
 
@@ -291,7 +290,6 @@ const CorreccionesDashboard = () => {
   const handleOpenReviewModal = (activity) => {
     setSelectedActivity(activity);
     setReviewComment("");
-    setReviewStatus(activity.estado_realizado || "pendiente");
     setIsReviewModalOpen(true);
   };
 
@@ -300,15 +298,14 @@ const CorreccionesDashboard = () => {
     setIsReviewModalOpen(false);
     setSelectedActivity(null);
     setReviewComment("");
-    setReviewStatus("");
   };
 
   // Función para enviar revisión
   const handleSubmitReview = async () => {
-    if (!selectedActivity || !reviewStatus) {
+    if (!selectedActivity) {
       toast({
         title: "Error",
-        description: "Debe seleccionar un estado para la actividad",
+        description: "No hay actividad seleccionada",
         type: "error"
       });
       return;
@@ -317,7 +314,6 @@ const CorreccionesDashboard = () => {
     try {
       // Aquí iría la llamada a la API para actualizar el estado de la actividad
       // await activityService.updateActivityStatus(selectedActivity.id, {
-      //   estado: reviewStatus,
       //   comentarios: reviewComment
       // });
 
@@ -354,46 +350,13 @@ const CorreccionesDashboard = () => {
   };
 
   // Función para obtener el color del estado
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'aprobada':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'devuelta':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const getStatusColor = () => '';
 
   // Función para obtener el icono del estado
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'aprobada':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'pendiente':
-        return <Clock className="w-4 h-4" />;
-      case 'devuelta':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <AlertTriangle className="w-4 h-4" />;
-    }
-  };
+  const getStatusIcon = () => null;
 
   // Función para obtener el texto del estado
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'aprobada':
-        return 'Aprobada';
-      case 'pendiente':
-        return 'Pendiente';
-      case 'devuelta':
-        return 'Devuelta';
-      default:
-        return status || 'Sin estado';
-    }
-  };
+  const getStatusText = () => '';
 
   // Calcular paginación
   const totalPages = Math.ceil(totalRecords / pageSize);
@@ -895,22 +858,7 @@ const CorreccionesDashboard = () => {
                   <span className="bg-white px-2 py-1 rounded-md">ID: {selectedActivity.id}</span>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 shrink-0">
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedActivity.estado_realizado)}`}>
-                  {getStatusIcon(selectedActivity.estado_realizado)}
-                  <span className="ml-2">{getStatusText(selectedActivity.estado_realizado)}</span>
-                </div>
-                {selectedActivity.estado_planificacion && (
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    selectedActivity.estado_planificacion === 'aprobada' ? 'bg-green-100 text-green-800' :
-                    selectedActivity.estado_planificacion === 'enviada' ? 'bg-blue-100 text-blue-800' :
-                    selectedActivity.estado_planificacion === 'rechazada' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    <span>Plan: {selectedActivity.estado_planificacion}</span>
-                  </div>
-                )}
-              </div>
+              <div className="flex flex-col gap-2 shrink-0"></div>
             </div>
 
             {/* Información detallada de la actividad */}
@@ -1031,25 +979,8 @@ const CorreccionesDashboard = () => {
               </div>
             )}
 
-            {/* Formulario de revisión */}
+            {/* Formulario de revisión (solo comentarios) */}
             <div className="space-y-3">
-              <div>
-                <Label htmlFor="review-status" className="text-sm font-medium text-gray-700 mb-1 block">
-                  Nuevo Estado *
-                </Label>
-                <Select
-                  id="review-status"
-                  value={reviewStatus}
-                  onChange={(e) => setReviewStatus(e.target.value)}
-                  className="w-full text-sm"
-                >
-                  <option value="">Seleccionar estado...</option>
-                  <option value="aprobada">✅ Aprobada</option>
-                  <option value="pendiente">⏳ Pendiente</option>
-                  <option value="devuelta">🔄 Devuelta para corrección</option>
-                </Select>
-              </div>
-
               <div>
                 <Label htmlFor="review-comment" className="text-sm font-medium text-gray-700 mb-1 block">
                   Comentarios de revisión
@@ -1072,13 +1003,6 @@ const CorreccionesDashboard = () => {
                 className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 text-sm"
               >
                 Cancelar
-              </Button>
-              <Button
-                onClick={handleSubmitReview}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 text-sm"
-              >
-                <Send className="w-3.5 h-3.5 mr-1.5" />
-                Guardar Revisión
               </Button>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import boom from '@hapi/boom';
 import { models } from '../db/models/index.js';
-import NotificacionService from '../services/notificacion.service.js';
+import ReminderService from '../services/reminders/ReminderService.js';
+import { reloadSchedule, scheduleOneOff, cancelOneOff } from '../scheduler/recordatorio.scheduler.js';
 
-const notificacionService = new NotificacionService();
+const reminderService = new ReminderService();
 
 class RecordatorioController {
   // Obtener configuración de recordatorios
@@ -65,6 +66,9 @@ class RecordatorioController {
         });
       }
 
+      // Recargar programación con la nueva configuración
+      await reloadSchedule();
+
       res.json({
         success: true,
         message: 'Configuración actualizada correctamente',
@@ -80,51 +84,17 @@ class RecordatorioController {
   // Enviar recordatorio manual
   async enviarManual(req, res, next) {
     try {
-      const { mensaje, destinatarios } = req.body;
+      const { mensaje, destinatarios, usuarioId, email, limit } = req.body;
 
-      let usuarios = [];
-
-      if (destinatarios === 'todos') {
-        // Obtener todos los usuarios activos
-        usuarios = await models.User.findAll({
-          where: { activo: true },
-          attributes: ['id', 'nombre', 'apellido', 'email']
-        });
-      } else if (destinatarios === 'pendientes') {
-        // Obtener usuarios con reportes pendientes
-        usuarios = await models.User.findAll({
-          where: { 
-            activo: true,
-            // Aquí podrías agregar lógica para usuarios con pendientes
-          },
-          attributes: ['id', 'nombre', 'apellido', 'email']
-        });
-      }
-
-      const notificacionesCreadas = [];
-
-      // Crear notificación para cada usuario
-      for (const usuario of usuarios) {
-        const notificacionData = {
-          id_usuario_destino: usuario.id,
-          mensaje: mensaje,
-          tipo: 'RECORDATORIO'
-        };
-
-        const notificacion = await notificacionService.create(notificacionData);
-        notificacionesCreadas.push(notificacion);
-      }
+      const result = await reminderService.sendReminder({ mensaje, destinatarios, usuarioId, email, limit });
 
       res.json({
         success: true,
-        message: `Recordatorio enviado a ${notificacionesCreadas.length} usuarios`,
+        message: `Recordatorio enviado a ${result.recipients?.length || 0} usuarios`,
         data: {
-          enviados: notificacionesCreadas.length,
-          destinatarios: usuarios.map(u => ({
-            id: u.id,
-            nombre: `${u.nombre} ${u.apellido}`,
-            email: u.email
-          }))
+          enviados: result.recipients?.length || 0,
+          destinatarios: result.recipients || [],
+          provider: result.provider || 'notification'
         }
       });
     } catch (error) {
@@ -152,6 +122,9 @@ class RecordatorioController {
       await configuracion.update({
         valor: JSON.stringify(config)
       });
+
+      // Recargar programación al cambiar estado
+      await reloadSchedule();
 
       res.json({
         success: true,
@@ -270,6 +243,33 @@ class RecordatorioController {
       });
     } catch (error) {
       next(boom.internal('Error al obtener estadísticas de recordatorios'));
+    }
+  }
+
+  // Programar ejecución puntual de un recordatorio
+  async programar(req, res, next) {
+    try {
+      const { fecha_ejecucion, frecuencia, dia_semana, hora, destinatarios, mensaje } = req.body;
+      if (!fecha_ejecucion) return next(boom.badRequest('fecha_ejecucion es obligatoria'));
+
+      const config = { frecuencia, dia_semana, hora, destinatarios, mensaje };
+      const { id, fecha } = scheduleOneOff(config, fecha_ejecucion);
+
+      res.json({ success: true, data: { id, fecha } });
+    } catch (error) {
+      next(boom.internal('Error al programar recordatorio'));
+    }
+  }
+
+  // Cancelar una ejecución puntual programada
+  async cancelarProgramado(req, res, next) {
+    try {
+      const { id } = req.params;
+      const ok = cancelOneOff(id);
+      if (!ok) return next(boom.notFound('Programación no encontrada'));
+      res.json({ success: true, message: 'Programación cancelada' });
+    } catch (error) {
+      next(boom.internal('Error al cancelar programación'));
     }
   }
 }

@@ -34,7 +34,7 @@ module.exports = {
         fecha_limite: '2025-03-30',
         categoria: 'REVISION',
         id_periodo: periodos[0].id,
-        semestre: 1,
+        semestre: '2025-1',
         dias_recordatorio: 14,
         activo: true,
         fecha_creacion: new Date(),

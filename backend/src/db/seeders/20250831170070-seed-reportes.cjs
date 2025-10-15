@@ -3,57 +3,34 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Obtener actividades y usuarios existentes
-    const actividades = await queryInterface.sequelize.query(
-      'SELECT id FROM Actividades ORDER BY id',
-      { type: Sequelize.QueryTypes.SELECT }
-    );
-
+    // Obtener IDs de usuarios y actividades
     const usuarios = await queryInterface.sequelize.query(
-      'SELECT id FROM Usuarios ORDER BY id',
+      'SELECT id FROM Usuarios ORDER BY id ASC',
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+    const actividades = await queryInterface.sequelize.query(
+      'SELECT id FROM Actividades ORDER BY id ASC',
       { type: Sequelize.QueryTypes.SELECT }
     );
 
-    if (actividades.length === 0 || usuarios.length === 0) {
-      console.log('No hay actividades o usuarios disponibles para crear reportes');
-      return;
-    }
+    const u = (i) => usuarios?.[i]?.id ?? usuarios?.[0]?.id ?? null;
+    const a = (i) => actividades?.[i]?.id ?? null;
 
     await queryInterface.bulkInsert('Reportes', [
       {
-        titulo: 'Reporte de Clases de Matemáticas Avanzadas - Primer Parcial',
-        descripcion: 'Informe del desarrollo de las clases de matemáticas avanzadas durante el primer parcial del semestre',
-        fechaRealizacion: '2024-10-15',
-        participantesReales: 28,
-        resultados: 'Se completó el 85% del contenido programado. Los estudiantes mostraron buen rendimiento en cálculo diferencial.',
-        observaciones: 'Algunos estudiantes requieren refuerzo en conceptos básicos de límites',
-        recomendaciones: 'Implementar sesiones de tutoría adicionales para estudiantes con dificultades',
+        titulo: 'Reporte de Actividades de Agosto',
+        descripcion: 'Resumen de actividades realizadas durante agosto 2024',
+        fechaRealizacion: '2024-08-31',
+        participantesReales: 12,
+        resultados: 'Se completaron 4 actividades clave con alta participación',
+        observaciones: 'Buena recepción en la comunidad universitaria',
+        recomendaciones: 'Mantener el ritmo de ejecución y seguimiento',
         estado: 'enviado',
-        evidencias: JSON.stringify(['examenes_parciales.pdf', 'lista_asistencia.xlsx']),
-        fechaEnvio: '2024-10-16',
-        resumenEjecutivo: 'Las clases de matemáticas avanzadas han mostrado un progreso satisfactorio con un 85% de cumplimiento del contenido programado. La participación estudiantil ha sido alta con 28 de 30 estudiantes asistiendo regularmente. Se identificaron áreas de mejora en conceptos básicos que requieren refuerzo adicional.',
-        actividadId: actividades[0].id,
-        usuarioId: usuarios[0].id,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        titulo: 'Avance del Proyecto de Investigación en IA - Fase 1',
-        descripcion: 'Reporte de progreso de la primera fase del proyecto de investigación en inteligencia artificial',
-        fechaRealizacion: '2024-11-30',
-        participantesReales: 3,
-        resultados: 'Se completó la revisión bibliográfica y se definió la arquitectura del modelo de NLP',
-        observaciones: 'El acceso a datasets especializados ha sido limitado',
-        recomendaciones: 'Gestionar acceso a bases de datos académicas adicionales',
-        estado: 'aprobado',
-        evidencias: JSON.stringify(['revision_bibliografica.pdf', 'arquitectura_modelo.docx']),
-        fechaEnvio: '2024-12-01',
-        fechaRevision: '2024-12-05',
-        comentariosRevision: 'Excelente progreso en la fase inicial. Continuar según lo planificado.',
-        resumenEjecutivo: 'La primera fase del proyecto de investigación en IA ha sido completada exitosamente. Se logró una revisión bibliográfica exhaustiva y se estableció la arquitectura base del modelo de procesamiento de lenguaje natural. El equipo de 3 investigadores ha demostrado excelente coordinación y productividad.',
-        actividadId: actividades[1].id,
-        usuarioId: usuarios[1].id,
-        revisadoPorId: usuarios[0].id,
+        evidencias: JSON.stringify(['reporte_actividades_agosto_2024.pdf']),
+        fechaEnvio: '2024-09-01',
+        resumenEjecutivo: 'Las actividades de agosto cumplieron los objetivos y generaron impacto positivo.',
+        actividadId: a(0),
+        usuarioId: u(0),
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -62,31 +39,31 @@ module.exports = {
         descripcion: 'Informe mensual del progreso de las tutorías de tesis de grado',
         fechaRealizacion: '2024-10-31',
         participantesReales: 5,
-        resultados: '3 estudiantes completaron el marco teórico, 2 están en fase de metodología',
+        resultados: '3 estudiantes completaron el marco teórico, 2 en fase de metodología',
         observaciones: 'Un estudiante presenta retraso significativo en su cronograma',
         recomendaciones: 'Intensificar el acompañamiento al estudiante con retraso',
         estado: 'revisado',
         evidencias: JSON.stringify(['cronogramas_estudiantes.xlsx', 'avances_tesis.zip']),
         fechaEnvio: '2024-11-01',
-        resumenEjecutivo: 'El proceso de tutorías de tesis muestra un avance general positivo con 3 de 5 estudiantes completando el marco teórico según cronograma. Se requiere atención especial para un estudiante con retrasos significativos. La calidad del trabajo presentado ha sido satisfactoria.',
-        actividadId: actividades[2].id,
-        usuarioId: usuarios[2].id,
+        resumenEjecutivo: 'El proceso de tutorías muestra avance general positivo; se requiere atención especial en un caso.',
+        actividadId: a(2),
+        usuarioId: u(2),
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
         titulo: 'Reporte de Capacitación en Nuevas Tecnologías',
-        descripcion: 'Informe de participación en el curso de actualización tecnológica',
+        descripcion: 'Informe de participación en curso de actualización tecnológica',
         fechaRealizacion: '2024-12-20',
         participantesReales: 1,
-        resultados: 'Completado exitosamente el curso con certificación en tecnologías emergentes',
+        resultados: 'Curso completado con certificación en tecnologías emergentes',
         observaciones: 'El contenido del curso superó las expectativas iniciales',
         recomendaciones: 'Compartir conocimientos adquiridos con el equipo docente',
         estado: 'borrador',
         evidencias: JSON.stringify(['certificado_curso.pdf', 'notas_aprendizaje.docx']),
-        resumenEjecutivo: 'La capacitación en nuevas tecnologías fue completada exitosamente, obteniendo certificación oficial. Los conocimientos adquiridos en tecnologías emergentes representan una valiosa actualización profesional que beneficiará tanto al docente como a los futuros estudiantes.',
-        actividadId: actividades[4].id,
-        usuarioId: usuarios[1].id,
+        resumenEjecutivo: 'Actualización profesional valiosa que beneficiará la práctica docente.',
+        actividadId: a(Math.min(4, (actividades.length || 1) - 1)),
+        usuarioId: u(1),
         createdAt: new Date(),
         updatedAt: new Date()
       }

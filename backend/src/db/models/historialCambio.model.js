@@ -18,7 +18,7 @@ const HistorialCambioSchema = {
     field: 'id_reporte',
     references: {
       model: REPORTES_TABLE,
-      key: 'id_reporte'
+      key: 'id'
     },
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE'
@@ -29,7 +29,7 @@ const HistorialCambioSchema = {
     field: 'id_usuario_modificador',
     references: {
       model: USUARIOS_TABLE,
-      key: 'id_usuario'
+      key: 'id'
     },
     onUpdate: 'CASCADE',
     onDelete: 'RESTRICT'

@@ -25,16 +25,39 @@ export const StatsProvider = ({ children }) => {
     
     try {
       // ⭐ Ahora obtenemos TODAS las estadísticas de una vez
+      console.log('🟢 [StatsContext] Iniciando fetch de dashboard stats...');
       const dashboardData = await estadisticaService.getDashboardStats();
+      console.log('📦 [StatsContext] Datos completos del dashboard (response.data.data):', dashboardData);
+      if (dashboardData?.general) {
+        const g = dashboardData.general;
+        console.log('🔹 [StatsContext] General:', {
+          totalUsuarios: g.totalUsuarios,
+          usuariosActivos: g.usuariosActivos,
+          totalReportes: g.totalReportes,
+          totalActividades: g.totalActividades,
+          totalNotificaciones: g.totalNotificaciones,
+        });
+      }
+      if (dashboardData?.actividades) {
+        const a = dashboardData.actividades;
+        console.log('🔹 [StatsContext] Actividades:', {
+          total: a.total,
+          aprobadas: a.aprobadas,
+          pendientes: a.pendientes,
+          devueltas: a.devueltas,
+        });
+      }
       
       // Transformamos para mantener compatibilidad con el código existente
       const transformedStats = estadisticaService.transformActivityStatsForDashboard(dashboardData);
+      console.log('🧮 [StatsContext] Stats transformadas para gráfico:', transformedStats);
       
       // Guardamos tanto los datos transformados como los completos
       setStats({
         ...transformedStats,
         _fullDashboardData: dashboardData // Datos completos disponibles si se necesitan
       });
+      console.log('✅ [StatsContext] Stats guardadas en contexto.');
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
       setError('Error al cargar las estadísticas del dashboard');

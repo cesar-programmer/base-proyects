@@ -217,9 +217,21 @@ const reportService = {
       const response = await api.get(`/reportes/${id}/pdf`, {
         responseType: 'blob'
       });
-      return response.data;
+      const blob = response.data;
+      const contentType = response.headers?.['content-type'] || '';
+      
+      // Validar que sea un PDF y que tenga contenido
+      if (!blob || blob.size === 0 || !contentType.includes('application/pdf')) {
+        let errorText = '';
+        try {
+          errorText = await blob.text();
+        } catch (_) {}
+        throw new Error(errorText || 'El contenido recibido no es un PDF válido o está vacío');
+      }
+
+      return blob;
     } catch (error) {
-      throw new Error(error.response?.data?.message || 'Error al descargar reporte en PDF');
+      throw new Error(error.message || error.response?.data?.message || 'Error al descargar reporte en PDF');
     }
   },
 

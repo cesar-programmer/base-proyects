@@ -99,7 +99,7 @@ export const createActividad = async (req, res, next) => {
     const actividadData = req.body;
     
     // Validar que el usuario tenga permisos para crear actividades en el reporte
-    if (req.user.rol !== 'ADMINISTRADOR' && actividadData.id_reporte) {
+    if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && actividadData.id_reporte) {
       const reporte = await reporteService.findOne(actividadData.id_reporte);
       
       if (reporte.id_docente !== req.user.id) {
@@ -112,7 +112,7 @@ export const createActividad = async (req, res, next) => {
         ...actividadData,
         usuarioId: req.user.id
       },
-      { bypassDeadline: req.user.rol === 'ADMINISTRADOR' }
+      { bypassDeadline: req.user.rol === 'ADMINISTRADOR' || req.user.rol === 'COORDINADOR' }
     );
     
     res.status(201).json({
@@ -207,7 +207,7 @@ export const updateActividad = async (req, res, next) => {
     // Verificar que la actividad existe y el usuario tiene permisos
     const actividad = await actividadService.findOne(id);
     
-    if (actividad.usuarioId !== req.user.id && req.user.rol !== 'admin') {
+    if (actividad.usuarioId !== req.user.id && req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR') {
       throw boom.forbidden('No tienes permisos para actualizar esta actividad');
     }
     
@@ -230,7 +230,7 @@ export const deleteActividad = async (req, res, next) => {
     // Verificar que la actividad existe y el usuario tiene permisos
     const actividad = await actividadService.findOne(id);
     
-    if (actividad.usuarioId !== req.user.id && req.user.rol !== 'admin') {
+    if (actividad.usuarioId !== req.user.id && req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR') {
       throw boom.forbidden('No tienes permisos para eliminar esta actividad');
     }
     
@@ -406,7 +406,7 @@ export const getActividadesAgrupadasPorPeriodo = async (req, res, next) => {
   try {
     const { usuarioId } = req.params;
 
-    if (req.user.rol !== 'ADMINISTRADOR' && parseInt(usuarioId) !== req.user.id) {
+    if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && parseInt(usuarioId) !== req.user.id) {
       return res.status(403).json({ message: 'No tienes permisos para ver estas actividades' });
     }
 

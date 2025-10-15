@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import reportService from '../../services/reportService';
+import UploadManager from '../../services/uploadManager';
 import { toast } from 'react-toastify'
 import ModalCrearReporte from '../../components/ModalCrearReporte';
 import ListaArchivosReporte from '../../components/ListaArchivosReporte';
@@ -342,19 +343,7 @@ function ReportDetailDialog({
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white border border-gray-200 rounded-lg">
-            <div className="p-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-600">Progreso del Reporte</p>
-                <p className="text-2xl font-bold text-green-600">70%</p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: "70%" }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white border border-gray-200 rounded-lg">
             <div className="p-4">
               <div className="space-y-2">
@@ -365,15 +354,6 @@ function ReportDetailDialog({
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg">
-            <div className="p-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-600">Actividades Completadas</p>
-                <p className="text-2xl font-bold text-green-600">{report.actividades?.filter(a => a.estado === "Completada").length || 0}</p>
-                <p className="text-xs text-gray-500">{report.actividades?.length ? Math.round((report.actividades.filter(a => a.estado === "Completada").length / report.actividades.length) * 100) : 0}% del total</p>
-              </div>
-            </div>
-          </div>
 
           <div className="bg-white border border-gray-200 rounded-lg">
             <div className="p-4">
@@ -670,7 +650,8 @@ export default function PendingReports() {
       'enviado': 'En revisión',
       'revisado': 'En revisión',
       'aprobado': 'Completado',
-      'rechazado': 'Devuelto'
+      'rechazado': 'Devuelto',
+      'devuelto': 'Devuelto'
     };
 
     const tipoMap = {
@@ -729,8 +710,12 @@ export default function PendingReports() {
   const [openSolicitud, setOpenSolicitud] = useState(false)
   const [mensajeSolicitud, setMensajeSolicitud] = useState("")
   const [openCorreccion, setOpenCorreccion] = useState(false)
+  const [tituloCorreccion, setTituloCorreccion] = useState("")
   const [resumenCorreccion, setResumenCorreccion] = useState("")
+  const [resumenEjecutivoCorreccion, setResumenEjecutivoCorreccion] = useState("")
+  const [archivosCorreccion, setArchivosCorreccion] = useState([])
   const [openCrearReporte, setOpenCrearReporte] = useState(false)
+  const [enviando, setEnviando] = useState(false)
 
   const abrirDetalle = async (rep) => {
     try {
@@ -777,24 +762,50 @@ export default function PendingReports() {
 
   const abrirCorreccion = (rep) => {
     setReporteSeleccionado(rep)
+    setTituloCorreccion(rep.titulo || "")
     setResumenCorreccion(rep.resumen || "")
+    setResumenEjecutivoCorreccion(rep.resumenEjecutivo || "")
+    setArchivosCorreccion([])
     setOpenCorreccion(true)
     setDropdownOpen(null)
   }
 
-  const reenviarCorreccion = () => {
-    if (!reporteSeleccionado) return
-    const hoy = new Date()
-    const fecha = hoy.toLocaleDateString("es-MX", { day: "2-digit", month: "long" })
-    setReportes((prev) => {
-      const currentReports = Array.isArray(prev) ? prev : [];
-      return currentReports.map((r) =>
-        r.id === reporteSeleccionado.id
-          ? { ...r, estado: "En revisión", ultimaActualizacion: fecha, resumen: resumenCorreccion }
-          : r,
-      );
-    })
-    setOpenCorreccion(false)
+  const reenviarCorreccion = async () => {
+    if (!reporteSeleccionado?.id || enviando) return
+    const toastId = toast.loading('Reenviando reporte...')
+    setEnviando(true)
+    try {
+      // 1) Actualizar título, descripción y resumen ejecutivo
+      await reportService.updateReport(reporteSeleccionado.id, {
+        titulo: tituloCorreccion,
+        descripcion: resumenCorreccion,
+        resumenEjecutivo: resumenEjecutivoCorreccion
+      })
+
+      // 2) Subir evidencias seleccionadas y asociarlas al reporte
+      if (archivosCorreccion && archivosCorreccion.length > 0) {
+        const manager = new UploadManager({ concurrency: 3 })
+        await manager.uploadFiles(Array.from(archivosCorreccion), {
+          actividadId: null,
+          reporteId: reporteSeleccionado.id,
+          descripcion: `Evidencias de corrección del reporte: ${tituloCorreccion}`,
+          categoria: 'evidencia'
+        })
+      }
+
+      // 3) Enviar nuevamente a revisión
+      await reportService.sendReport(reporteSeleccionado.id)
+      toast.update(toastId, { render: 'Reporte reenviado para revisión', type: 'success', isLoading: false, autoClose: 1500 })
+      setOpenCorreccion(false)
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (error) {
+      console.error('Error al reenviar reporte:', error)
+      toast.update(toastId, { render: 'Error al reenviar el reporte', type: 'error', isLoading: false, autoClose: 3000 })
+    } finally {
+      setEnviando(false)
+    }
   }
 
   // Función para mapear estados del frontend al backend
@@ -803,28 +814,28 @@ export default function PendingReports() {
       'Pendiente': 'borrador',
       'En revisión': 'enviado',
       'Aprobado': 'aprobado',
-      'Devuelto': 'rechazado'
+      'Devuelto': 'devuelto'
     };
     return estadoMap[estadoFrontend] || 'borrador';
   };
 
   const enviarReporte = async (rep) => {
+    if (!rep?.id || enviando) return
+    const toastId = toast.loading('Enviando reporte...')
+    setEnviando(true)
     try {
       setDropdownOpen(null)
-      
-      // Enviar el reporte usando el nuevo endpoint específico para docentes
-      const resultado = await reportService.sendReport(rep.id)
-      
-      toast.success('Reporte enviado para revisión exitosamente')
-      
-      // Recargar los reportes desde el servidor para asegurar que el estado esté actualizado
+      await reportService.sendReport(rep.id)
+      toast.update(toastId, { render: 'Reporte enviado para revisión', type: 'success', isLoading: false, autoClose: 1500 })
+      setOpenDetalle(false)
       setTimeout(() => {
-        loadReports();
-      }, 1000); // Esperar 1 segundo para que el toast se muestre antes del reload
-      
+        window.location.reload()
+      }, 1500)
     } catch (error) {
       console.error('Error al enviar reporte:', error)
-      toast.error('Error al enviar el reporte para revisión')
+      toast.update(toastId, { render: 'Error al enviar el reporte', type: 'error', isLoading: false, autoClose: 3000 })
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -964,9 +975,9 @@ export default function PendingReports() {
                         </DropdownMenuItem>
 
                         {r.estado === "Pendiente" && (
-                          <DropdownMenuItem onClick={() => enviarReporte(r)}>
+                          <DropdownMenuItem onClick={() => !enviando && enviarReporte(r)} className={enviando ? 'opacity-50 cursor-not-allowed' : ''}>
                             <Send className="w-4 h-4 mr-2 text-blue-600" />
-                            Enviar para revisión
+                            {enviando ? 'Enviando…' : 'Enviar para revisión'}
                           </DropdownMenuItem>
                         )}
 
@@ -1020,10 +1031,11 @@ export default function PendingReports() {
               {reporteSeleccionado?.estado === "Pendiente" && (
                 <Button
                   onClick={() => enviarReporte(reporteSeleccionado)}
-                  className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors focus:ring-green-500"
+                  disabled={enviando}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  Enviar para revisión
+                  {enviando ? 'Enviando…' : 'Enviar para revisión'}
                 </Button>
               )}
               {reporteSeleccionado?.estado === "En revisión" && (
@@ -1109,6 +1121,19 @@ export default function PendingReports() {
               </div>
             )}
             <div className="space-y-2">
+              <label htmlFor="titulo" className="block text-sm font-medium text-gray-700">
+                Título del reporte
+              </label>
+              <input
+                id="titulo"
+                type="text"
+                value={tituloCorreccion}
+                onChange={(e) => setTituloCorreccion(e.target.value)}
+                placeholder="Actualiza el título del reporte..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+            <div className="space-y-2">
               <label htmlFor="resumen" className="block text-sm font-medium text-gray-700">
                 Resumen del reporte
               </label>
@@ -1122,13 +1147,36 @@ export default function PendingReports() {
               />
             </div>
             <div className="space-y-2">
+              <label htmlFor="resumenEjecutivo" className="block text-sm font-medium text-gray-700">
+                Resumen ejecutivo (actualizado)
+              </label>
+              <textarea
+                id="resumenEjecutivo"
+                value={resumenEjecutivoCorreccion}
+                onChange={(e) => setResumenEjecutivoCorreccion(e.target.value)}
+                placeholder="Actualiza el resumen ejecutivo del reporte..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Evidencias (opcional)</label>
               <input
                 type="file"
                 multiple
+                onChange={(e) => setArchivosCorreccion(e.target.files)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500">Puedes adjuntar PDF, imágenes o Excel como respaldo.</p>
+              {archivosCorreccion && archivosCorreccion.length > 0 && (
+                <p className="text-xs text-gray-600">{archivosCorreccion.length} archivo(s) seleccionado(s)</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Archivos actuales del reporte</label>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <ListaArchivosReporte archivos={reporteSeleccionado?.archivos || []} titulo="Archivos actuales del reporte" />
+              </div>
             </div>
           </div>
 
@@ -1142,10 +1190,10 @@ export default function PendingReports() {
             </Button>
             <Button
               onClick={reenviarCorreccion}
-              disabled={!resumenCorreccion.trim()}
+              disabled={!tituloCorreccion.trim() || !resumenCorreccion.trim() || enviando}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-green-500"
             >
-              Reenviar para revisión
+              {enviando ? 'Reenviando…' : 'Reenviar para revisión'}
             </Button>
           </div>
         </Modal>

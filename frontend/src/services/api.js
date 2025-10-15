@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuración base de Axios
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -17,6 +17,11 @@ api.interceptors.request.use(
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Evitar caché en peticiones GET durante desarrollo
+    if ((config.method || 'get').toLowerCase() === 'get') {
+      // Opcional: bust de caché simple
+      config.params = { ...(config.params || {}), _ts: Date.now() };
     }
     return config;
   },

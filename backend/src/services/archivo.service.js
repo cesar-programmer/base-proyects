@@ -311,7 +311,7 @@ class ArchivoService {
       const archivo = await this.findById(archivoId);
       
       // Los administradores pueden acceder a cualquier archivo
-      if (rolUsuario === 'admin') {
+      if (rolUsuario === 'ADMINISTRADOR' || rolUsuario === 'COORDINADOR') {
         return true;
       }
 

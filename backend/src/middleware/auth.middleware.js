@@ -76,8 +76,8 @@ const checkRole = (...allowedRoles) => {
   };
 };
 
-// Middleware para verificar que es administrador
-const checkAdmin = checkRole('ADMINISTRADOR');
+// Middleware para verificar que es administrador (incluye coordinadores)
+const checkAdmin = checkRole('ADMINISTRADOR', 'COORDINADOR');
 
 // Middleware para verificar que es docente o administrador
 const checkDocenteOrAdmin = checkRole('DOCENTE', 'ADMINISTRADOR');
@@ -93,8 +93,8 @@ const checkOwnershipOrAdmin = (getResourceOwnerId) => {
         throw boom.unauthorized('Usuario no autenticado');
       }
 
-      // Si es administrador, permitir acceso
-      if (req.user.rol === 'ADMINISTRADOR') {
+      // Si es administrador o coordinador, permitir acceso
+      if (req.user.rol === 'ADMINISTRADOR' || req.user.rol === 'COORDINADOR') {
         return next();
       }
 

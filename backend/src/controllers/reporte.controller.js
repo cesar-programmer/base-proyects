@@ -15,8 +15,8 @@ class ReporteController {
       if (actividadId) filters.actividadId = parseInt(actividadId);
       if (usuarioId) filters.usuarioId = parseInt(usuarioId);
 
-      // Si es administrador, solo mostrar reportes que han sido enviados (tienen fechaEnvio)
-      if (req.user.rol === 'ADMINISTRADOR') {
+      // Si es administrador o coordinador, solo mostrar reportes que han sido enviados (tienen fechaEnvio)
+      if (req.user.rol === 'ADMINISTRADOR' || req.user.rol === 'COORDINADOR') {
         filters.onlySubmitted = true;
       }
 
@@ -55,8 +55,8 @@ class ReporteController {
     try {
       const reporteData = req.body;
       
-      // Si no es admin, asignar el ID del usuario autenticado
-      if (req.user.rol !== 'ADMINISTRADOR') {
+      // Si no es admin o coordinador, asignar el ID del usuario autenticado
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR') {
         reporteData.usuarioId = req.user.id;
       }
       
@@ -82,7 +82,7 @@ class ReporteController {
       
       // Verificar permisos: solo el usuario propietario o admin pueden actualizar
       const reporte = await reporteService.findOne(id);
-      if (req.user.rol !== 'ADMINISTRADOR' && reporte.usuarioId !== req.user.id) {
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && reporte.usuarioId !== req.user.id) {
         throw boom.forbidden('No tienes permisos para actualizar este reporte');
       }
       
@@ -107,7 +107,7 @@ class ReporteController {
       
       // Verificar permisos
       const reporte = await reporteService.findOne(id);
-      if (req.user.rol !== 'ADMINISTRADOR' && reporte.usuarioId !== req.user.id) {
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && reporte.usuarioId !== req.user.id) {
         throw boom.forbidden('No tienes permisos para eliminar este reporte');
       }
       
@@ -128,7 +128,7 @@ class ReporteController {
       
       // Verificar permisos: solo el usuario propietario o admin pueden eliminar archivos
       const reporte = await reporteService.findOne(id);
-      if (req.user.rol !== 'ADMINISTRADOR' && reporte.usuarioId !== req.user.id) {
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && reporte.usuarioId !== req.user.id) {
         throw boom.forbidden('No tienes permisos para eliminar archivos de este reporte');
       }
       
@@ -150,7 +150,7 @@ class ReporteController {
       const { estado, actividadId } = req.query;
       
       // Verificar permisos: solo el usuario propietario o admin pueden ver
-      if (req.user.rol !== 'ADMINISTRADOR' && parseInt(docenteId) !== req.user.id) {
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && parseInt(docenteId) !== req.user.id) {
         throw boom.forbidden('No tienes permisos para ver estos reportes');
       }
       
@@ -195,8 +195,8 @@ class ReporteController {
       const { id } = req.params;
       const { estado, comentariosRevision } = req.body;
       
-      // Solo administradores pueden cambiar el estado
-      if (req.user.rol !== 'ADMINISTRADOR') {
+      // Solo administradores o coordinadores pueden cambiar el estado
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR') {
         throw boom.forbidden('No tienes permisos para cambiar el estado del reporte');
       }
       
@@ -222,16 +222,17 @@ class ReporteController {
       const { id } = req.params;
       const userId = req.user.id;
       
-      // Verificar que el reporte pertenece al docente (si no es administrador)
-      if (req.user.rol !== 'ADMINISTRADOR') {
+      // Verificar que el reporte pertenece al docente (si no es administrador o coordinador)
+      if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR') {
         const reporte = await reporteService.findOne(id);
         if (reporte.usuarioId !== userId) {
           throw boom.forbidden('No tienes permisos para enviar este reporte');
         }
         
-        // Verificar que el reporte esté en estado borrador o pendiente
-        if (reporte.estado !== 'pendiente' && reporte.estado !== 'borrador') {
-          throw boom.badRequest('Solo se pueden enviar reportes en estado Borrador o Pendiente');
+        // Verificar que el reporte esté en un estado permitido para enviar
+        const estadosPermitidosParaEnviar = ['borrador', 'pendiente', 'devuelto'];
+        if (!estadosPermitidosParaEnviar.includes(reporte.estado)) {
+          throw boom.badRequest('Solo se pueden enviar reportes en estado Borrador, Pendiente o Devuelto');
         }
       }
       
@@ -353,8 +354,11 @@ class ReporteController {
         estado: reporte.estado
       });
 
-      // Generar HTML del reporte
-      const htmlContent = this.generateReporteHTML(reporte);
+      // Obtener información adicional del período activo y fecha límite
+      const deadlineInfo = await reporteService.getReportDeadlineInfo();
+
+      // Generar HTML del reporte (plantilla formal)
+      const htmlContent = this.generateReporteHTMLFormal(reporte, deadlineInfo);
       
       // Configurar puppeteer
       const browser = await puppeteer.launch({
@@ -365,26 +369,47 @@ class ReporteController {
       const page = await browser.newPage();
       await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
       
+      // Plantillas de encabezado y pie para numeración y metadatos
+      const headerTemplate = `
+        <div style="font-size:8pt; color:#334155; width:100%; padding:5mm 10mm; display:flex; justify-content:space-between;">
+          <span>Sistema de Reportes Académicos</span>
+          <span>${reporte.titulo || 'Reporte'}</span>
+        </div>`;
+
+      const footerTemplate = `
+        <div style="font-size:8pt; color:#334155; width:100%; padding:0 10mm; display:flex; justify-content:space-between;">
+          <span>Generado ${new Date().toLocaleDateString('es-ES')}</span>
+          <span><span class="pageNumber"></span>/<span class="totalPages"></span></span>
+        </div>`;
+
       // Generar PDF
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate,
+        footerTemplate,
         margin: {
-          top: '20mm',
+          top: '25mm',
           right: '20mm',
-          bottom: '20mm',
+          bottom: '15mm',
           left: '20mm'
         }
       });
       
       await browser.close();
       
-      // Configurar headers para descarga
+      // Validar buffer generado
+      if (!pdfBuffer || pdfBuffer.length === 0) {
+        return res.status(500).json({ message: 'Error generando PDF del reporte' });
+      }
+
+      // Configurar headers para descarga y enviar binario explícito
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="Reporte_${reporte.titulo || reporte.id}_${new Date().toISOString().split('T')[0]}.pdf"`);
       res.setHeader('Content-Length', pdfBuffer.length);
-      
-      res.send(pdfBuffer);
+
+      res.status(200).end(pdfBuffer);
     } catch (error) {
       next(error);
     }
@@ -575,6 +600,137 @@ class ReporteController {
         <div class="footer">
           <p>Sistema de Reportes Académicos - Generado automáticamente</p>
           <p>Este documento contiene información confidencial del sistema académico</p>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  // Generar HTML del reporte con presentación formal
+  generateReporteHTMLFormal(reporte, deadlineInfo = {}) {
+    const nombreCompleto = reporte.usuario ? `${reporte.usuario.nombre || ''} ${reporte.usuario.apellido || ''}`.trim() : 'No especificado';
+    const fechaGeneracion = `${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`;
+    const estadoClase = reporte.estado ? reporte.estado.toLowerCase().replace(' ', '') : 'pendiente';
+
+    // Campos derivados y correcciones
+    const tipoReporte = reporte.titulo || 'Reporte';
+    const fechaCreacion = reporte.createdAt ? new Date(reporte.createdAt).toLocaleDateString('es-ES') : 'No especificada';
+    const semestre = deadlineInfo.semestre && deadlineInfo.semestre !== 'N/A' ? deadlineInfo.semestre : 'No especificado';
+    const anio = (deadlineInfo.semestre && deadlineInfo.semestre !== 'N/A') 
+      ? String(deadlineInfo.semestre).split('-')[0]
+      : (reporte.createdAt ? String(new Date(reporte.createdAt).getFullYear()) : 'No especificado');
+    const fechaLimite = (deadlineInfo.fechaLimite && deadlineInfo.fechaLimite !== 'N/A')
+      ? new Date(deadlineInfo.fechaLimite).toLocaleDateString('es-ES')
+      : 'No especificada';
+    return `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reporte - ${reporte.titulo}</title>
+        <style>
+          @page { size: A4; margin: 20mm; }
+          body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; }
+          .container { width: 100%; }
+          .brand-header { display:flex; align-items:center; justify-content:space-between; border-bottom:1.5pt solid #0f172a; padding-bottom:12pt; margin-bottom:18pt; }
+          .brand-title { font-weight:700; letter-spacing:0.5pt; font-size:14pt; }
+          .doc-title { font-size:18pt; margin:0; font-weight:700; }
+          .meta { font-size:10pt; color:#475569; }
+          .kv-table { width:100%; border:0.75pt solid #cbd5e1; border-collapse:collapse; margin-bottom:14pt; }
+          .kv-table th, .kv-table td { border:0.75pt solid #cbd5e1; padding:6pt 8pt; vertical-align:top; }
+          .kv-table th { background:#f1f5f9; text-align:left; font-weight:700; }
+          .section-title { font-size:12pt; font-weight:700; border-bottom:0.75pt solid #cbd5e1; margin:18pt 0 8pt; padding-bottom:6pt; }
+          .paragraph { text-align: justify; }
+          .table { width:100%; border-collapse:collapse; margin-top:6pt; border:0.75pt solid #cbd5e1; }
+          .table th, .table td { border:0.75pt solid #cbd5e1; padding:6pt 8pt; }
+          .table thead th { background:#f1f5f9; font-weight:700; text-align:left; }
+          .estado { font-weight:700; }
+          .estado.pendiente { color:#92400e; } .estado.revision { color:#1e40af; }
+          .estado.aprobado, .estado.aprobada { color:#065f46; } .estado.devuelto, .estado.devuelta { color:#991b1b; }
+          .signatures { display:grid; grid-template-columns:1fr 1fr; gap:24pt; margin-top:24pt; }
+          .sig { text-align:center; }
+          .line { border-top:0.75pt solid #0f172a; margin:32pt 0 6pt; }
+          .small { font-size:10pt; color:#475569; }
+          .footer-note { margin-top:18pt; font-size:10pt; color:#475569; border-top:0.75pt solid #cbd5e1; padding-top:10pt; text-align:center; }
+          .no-break { page-break-inside: avoid; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="brand-header">
+            <div>
+              <div class="brand-title">Sistema de Reportes Académicos</div>
+              <div class="meta">Generado: ${fechaGeneracion}</div>
+            </div>
+            <div class="doc-title">${reporte.titulo}</div>
+          </div>
+
+          <table class="kv-table no-break">
+            <tbody>
+              <tr><th style="width:25%">Tipo de reporte</th><td>${tipoReporte}</td></tr>
+              <tr><th>Docente</th><td>${nombreCompleto}</td></tr>
+              <tr><th>Semestre</th><td>${semestre}</td></tr>
+              <tr><th>Año</th><td>${anio}</td></tr>
+              <tr><th>Fecha de creación</th><td>${fechaCreacion}</td></tr>
+              <tr><th>Fecha límite</th><td>${fechaLimite}</td></tr>
+              <tr><th>Última actualización</th><td>${reporte.updatedAt ? new Date(reporte.updatedAt).toLocaleDateString('es-ES') : 'No disponible'}</td></tr>
+            </tbody>
+          </table>
+
+          ${reporte.resumenEjecutivo ? `
+          <div class="no-break">
+            <div class="section-title">Resumen ejecutivo</div>
+            <p class="paragraph">${reporte.resumenEjecutivo}</p>
+          </div>
+          ` : ''}
+
+          ${reporte.actividades && reporte.actividades.length > 0 ? `
+          <div>
+            <div class="section-title">Actividades registradas (${reporte.actividades.length})</div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width:38%">Actividad</th>
+                  <th style="width:20%">Categoría</th>
+                  <th style="width:28%">Periodo</th>
+                  <th style="width:14%">Horas</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reporte.actividades.map(actividad => `
+                  <tr>
+                    <td><strong>${actividad.titulo || 'Sin título'}</strong><br>${actividad.descripcion || ''}</td>
+                    <td>${actividad.categoria || 'No especificada'}</td>
+                    <td>${actividad.fechaInicio ? new Date(actividad.fechaInicio).toLocaleDateString('es-ES') : 'No especificada'} — ${actividad.fechaFin ? new Date(actividad.fechaFin).toLocaleDateString('es-ES') : 'No especificada'}</td>
+                    <td>${typeof actividad.horas_dedicadas === 'number' ? actividad.horas_dedicadas : (actividad.horas || actividad.horas_dedicadas || '—')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : `
+          <div class="no-break">
+            <div class="section-title">Actividades registradas</div>
+            <p class="paragraph">No hay actividades registradas para este reporte.</p>
+          </div>
+          `}
+
+          ${reporte.observaciones ? `
+          <div class="no-break">
+            <div class="section-title">Observaciones</div>
+            <p class="paragraph">${reporte.observaciones}</p>
+          </div>
+          ` : ''}
+
+          ${reporte.comentariosRevision ? `
+          <div class="no-break">
+            <div class="section-title">Comentarios de revisión</div>
+            <p class="paragraph">${reporte.comentariosRevision}</p>
+          </div>
+          ` : ''}
+
+          
         </div>
       </body>
       </html>

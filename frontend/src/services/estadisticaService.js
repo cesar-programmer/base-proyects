@@ -5,6 +5,8 @@ class EstadisticaService {
   async getDashboardStats() {
     try {
       const response = await api.get('/estadisticas/dashboard');
+      console.log('📥 [EstadisticaService] Respuesta /estadisticas/dashboard (response.data):', response?.data);
+      console.log('📥 [EstadisticaService] Extrayendo response.data.data:', response?.data?.data);
       return response.data.data;
     } catch (error) {
       console.error('Error al obtener estadísticas del dashboard:', error);
@@ -96,6 +98,7 @@ class EstadisticaService {
   // Método de transformación para compatibilidad con el código existente
   transformActivityStatsForDashboard(dashboardStats) {
     if (!dashboardStats?.actividades) {
+      console.warn('⚠️ [EstadisticaService] dashboardStats.actividades vacío o indefinido. Asignando ceros.');
       return {
         completadas: 0,
         pendientes: 0,
@@ -124,13 +127,15 @@ class EstadisticaService {
       devueltas: total > 0 ? Math.round((devueltas / total) * 100) : 0
     };
     
-    return {
+    const transformed = {
       completadas,
       pendientes,
       devueltas,
       total,
       porcentajes
     };
+    console.log('🧭 [EstadisticaService] transformActivityStatsForDashboard resultado:', transformed);
+    return transformed;
   }
 }
 

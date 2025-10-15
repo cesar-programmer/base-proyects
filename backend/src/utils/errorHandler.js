@@ -105,7 +105,7 @@ export const validateRecordExists = (record, message = 'Registro no encontrado')
  * @param {string} message - Mensaje personalizado de error
  */
 export const validateOwnership = (user, resourceOwnerId, message = 'No tienes permisos para acceder a este recurso') => {
-  if (user.rol !== 'ADMINISTRADOR' && user.id !== resourceOwnerId) {
+  if (user.rol !== 'ADMINISTRADOR' && user.rol !== 'COORDINADOR' && user.id !== resourceOwnerId) {
     throw boom.forbidden(message);
   }
 };

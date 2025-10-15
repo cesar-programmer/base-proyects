@@ -47,7 +47,7 @@ class AuthService {
   // Verificar si el usuario es administrador
   isAdmin() {
     const user = this.getCurrentUser();
-    return user?.rol?.nombre === 'ADMINISTRADOR';
+    return user?.rol?.nombre === 'ADMINISTRADOR' || user?.rol?.nombre === 'COORDINADOR';
   }
 
   // Verificar si el usuario es docente

@@ -179,6 +179,12 @@ const updateReporteSchema = Joi.object({
     .messages({
       'string.base': 'La descripción debe ser texto'
     }),
+  resumenEjecutivo: Joi.string()
+    .max(3000)
+    .allow('', null)
+    .messages({
+      'string.max': 'El resumen ejecutivo no puede exceder 3000 caracteres'
+    }),
   fechaRealizacion: Joi.date()
     .messages({
       'date.base': 'La fecha de realización debe ser una fecha válida'

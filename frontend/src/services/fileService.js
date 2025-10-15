@@ -70,13 +70,13 @@ const fileService = {
 
   // Obtener URL para visualizar archivo
   getViewUrl: (filename) => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+    const baseUrl = api?.defaults?.baseURL || (import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1');
     return `${baseUrl}/files/view/${filename}`;
   },
 
   // Obtener URL para descargar archivo
   getDownloadUrl: (filename) => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+    const baseUrl = api?.defaults?.baseURL || (import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1');
     return `${baseUrl}/files/download/${filename}`;
   },
 

@@ -1,6 +1,9 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
-import { useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
+import { useStats } from "../../context/StatsContext"
+import api from "../../services/api"
+import { downloadNodeAsPng, downloadNodeAsSvg, downloadNodeAsJpeg, downloadSvgElement } from "../../utils/domCapture"
 
 // Componentes reutilizables
 const Button = ({ children, className, ...props }) => (
@@ -49,14 +52,25 @@ const Select = ({ label, value, onChange, options, className }) => (
 );
 
 // Componente de barra del gráfico
-const ChartBar = ({ item, maxValue }) => (
-  <div className="flex flex-col items-center flex-1 mx-2">
-    <div 
-      className={`${item.color} w-full max-w-16 rounded-t transition-all duration-500 hover:opacity-80`}
-      style={{ height: `${(item.value / maxValue) * 100}%` }}
-    ></div>
-  </div>
-);
+const ChartBar = ({ item, maxValue }) => {
+  const valueNum = Number(item?.value ?? 0);
+  const safeMax = Number(maxValue ?? 0);
+  const heightPercent = safeMax > 0 && valueNum > 0
+    ? Math.round((valueNum / safeMax) * 100)
+    : 0;
+
+  // Asegurar que las barras sean visibles cuando hay valores pequeños
+  const visiblePercent = heightPercent > 0 ? Math.max(heightPercent, 5) : 0;
+
+  return (
+    <div className="flex flex-col justify-end items-center flex-1 mx-2 h-full">
+      <div 
+        className={`${item.color} w-full max-w-16 rounded-t transition-all duration-500 hover:opacity-80`}
+        style={{ height: `${visiblePercent}%`, minHeight: valueNum > 0 ? '6px' : 0 }}
+      ></div>
+    </div>
+  );
+};
 
 // Componente de fila de tabla de cumplimiento
 const ComplianceTableRow = ({ item }) => (
@@ -81,6 +95,7 @@ const ComplianceTableRow = ({ item }) => (
 // Componente de botón de descarga
 const DownloadButton = ({ format, onClick }) => (
   <Button 
+    data-no-export="true"
     onClick={onClick}
     className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-50"
   >
@@ -135,7 +150,7 @@ const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSel
 );
 
 // Componente de gráfico de barras
-const BarChart = ({ chartData, maxValue }) => (
+const BarChart = ({ chartData, maxValue, legendLabel = "Actividades Completadas" }) => (
   <Card className="p-6">
     <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
     
@@ -172,12 +187,112 @@ const BarChart = ({ chartData, maxValue }) => (
       <div className="flex justify-center mt-4">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-500 rounded"></div>
-          <span className="text-sm text-gray-600">Actividades Completadas</span>
+          <span className="text-sm text-gray-600">{legendLabel}</span>
         </div>
       </div>
     </div>
   </Card>
 );
+
+// Componente de gráfico de líneas simple (SVG)
+const LineChart = ({ chartData, maxValue, legendLabel = "Actividades Completadas" }) => {
+  const width = 800;
+  const height = 320;
+  const paddingLeft = 40;
+  const paddingBottom = 30;
+
+  const points = chartData.map((item, idx) => {
+    const x = paddingLeft + (idx * (width - paddingLeft) / Math.max(chartData.length - 1, 1));
+    const valueNum = Number(item?.value ?? 0);
+    const yRatio = maxValue > 0 ? (valueNum / maxValue) : 0;
+    const y = (height - paddingBottom) - yRatio * (height - paddingBottom - 10);
+    return { x, y, name: item.name, color: item.color };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+  return (
+    <Card className="p-6">
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
+      <div className="space-y-4">
+        <div className="border rounded">
+          <svg width={width} height={height} className="w-full h-80">
+            {/* Ejes simples */}
+            <line x1={paddingLeft} y1={height - paddingBottom} x2={width} y2={height - paddingBottom} stroke="#D1D5DB" />
+            <line x1={paddingLeft} y1={10} x2={paddingLeft} y2={height - paddingBottom} stroke="#D1D5DB" />
+            {/* Línea */}
+            <path d={pathD} fill="none" stroke="#10B981" strokeWidth="2" />
+            {/* Puntos */}
+            {points.map((p, idx) => (
+              <circle key={idx} cx={p.x} cy={p.y} r={4} fill="#10B981" />
+            ))}
+          </svg>
+        </div>
+
+        {/* Etiquetas X */}
+        <div className="flex ml-10">
+          {chartData.map((item, index) => (
+            <div key={index} className="flex-1 mx-2 text-xs text-center text-gray-600">
+              <div className="break-words">{item.name}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Leyenda */}
+        <div className="flex justify-center mt-2">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-500 rounded"></div>
+            <span className="text-sm text-gray-600">{legendLabel}</span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// Componente de gráfico circular simple (conic-gradient)
+const PieChart = ({ chartData, legendLabel = "Actividades Completadas" }) => {
+  const total = chartData.reduce((sum, item) => sum + Number(item?.value ?? 0), 0);
+  let current = 0;
+  const slices = chartData.map((item) => {
+    const value = Number(item?.value ?? 0);
+    const start = current / Math.max(total, 1) * 360;
+    const end = (current + value) / Math.max(total, 1) * 360;
+    current += value;
+    return { start, end, color: item.color, name: item.name, value };
+  });
+
+  const gradient = slices.map(s => `${s.color.replace('bg-', '')} ${s.start}deg ${s.end}deg`).join(', ');
+
+  // Mapeo básico de clases tailwind a colores hex para conic-gradient
+  const colorMap = {
+    'green-500': '#10B981',
+    'yellow-500': '#F59E0B',
+    'red-500': '#EF4444',
+    'blue-500': '#3B82F6',
+    'purple-500': '#8B5CF6'
+  };
+  const gradientCss = slices.map(s => `${colorMap[s.color.replace('bg-', '')] || '#10B981'} ${s.start}deg ${s.end}deg`).join(', ');
+
+  return (
+    <Card className="p-6">
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+        <div className="w-64 h-64 rounded-full" style={{ backgroundImage: `conic-gradient(${gradientCss})` }} />
+        <div className="space-y-2">
+          <div className="text-sm text-gray-600 mb-2">{legendLabel} (distribución)</div>
+          {chartData.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 text-sm text-gray-800">
+              <span className={`inline-block w-3 h-3 rounded ${item.color}`}></span>
+              <span className="font-medium">{item.name}</span>
+              <span className="text-gray-500">— {item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 // Componente de tabla de cumplimiento
 const ComplianceTable = ({ complianceData, downloadFile }) => (
@@ -211,63 +326,190 @@ const ComplianceTable = ({ complianceData, downloadFile }) => (
   </Card>
 );
 
-// Datos estáticos
-const chartData = [
-  { name: "Dr. Juan Pérez", value: 15, color: "bg-green-500" },
-  { name: "Dra. María González", value: 12, color: "bg-green-500" },
-  { name: "Mtro. Carlos Rodríguez", value: 9, color: "bg-green-500" },
-  { name: "Lic. Ana Martínez", value: 18, color: "bg-green-500" },
-  { name: "Dr. Roberto Sánchez", value: 13, color: "bg-green-500" }
-];
-
-const complianceData = [
-  { 
-    docente: "Dr. Juan Pérez", 
-    completadas: 15, 
-    pendientes: 3, 
-    porcentaje: 83,
-    color: "bg-green-500"
-  },
-  { 
-    docente: "Dra. María González", 
-    completadas: 12, 
-    pendientes: 5, 
-    porcentaje: 71,
-    color: "bg-green-500"
-  },
-  { 
-    docente: "Mtro. Carlos Rodríguez", 
-    completadas: 10, 
-    pendientes: 2, 
-    porcentaje: 83,
-    color: "bg-green-500"
-  },
-  { 
-    docente: "Lic. Ana Martínez", 
-    completadas: 18, 
-    pendientes: 1, 
-    porcentaje: 95,
-    color: "bg-green-500"
-  },
-  { 
-    docente: "Dr. Roberto Sánchez", 
-    completadas: 14, 
-    pendientes: 4, 
-    porcentaje: 78,
-    color: "bg-green-500"
-  }
-];
+// Helpers
+const getComplianceColor = (pct) => {
+  if (pct >= 70) return "bg-green-500";
+  if (pct >= 40) return "bg-yellow-500";
+  return "bg-red-500";
+};
 
 // Componente principal
 export default function EstadisticasDashboard() {
   const [selectedDate, setSelectedDate] = useState('fecha');
   const [selectedMetric, setSelectedMetric] = useState('Actividades Completadas');
   const [selectedChart, setSelectedChart] = useState('Grafico de Barras');
+  const [complianceData, setComplianceData] = useState([]);
+  const [loadingCompliance, setLoadingCompliance] = useState(false);
+  const [errorCompliance, setErrorCompliance] = useState(null);
+  const chartRef = useRef(null);
+  const tableRef = useRef(null);
 
-  const maxValue = Math.max(...chartData.map(item => item.value));
+  // Stats generales del dashboard (actividades)
+  const { stats, loading: loadingStats, error: errorStats, fetchStats } = useStats();
 
-  const downloadFile = (format) => {
-    console.log(`Descargando archivo en formato: ${format}`);
+  useEffect(() => {
+    // Cargar stats del dashboard si no existen
+    if (!stats) {
+      fetchStats();
+    }
+  }, [stats, fetchStats]);
+
+  // Log de stats cuando cambian
+  useEffect(() => {
+    if (stats) {
+      console.log('📊 [EstadisticasDashboard] Stats desde contexto:', stats);
+      console.log('📊 [EstadisticasDashboard] Valores para gráfico:', {
+        completadas: stats.completadas,
+        pendientes: stats.pendientes,
+        devueltas: stats.devueltas,
+        total: stats.total,
+      });
+    }
+  }, [stats]);
+
+  // Construir data del gráfico desde stats
+  const chartData = useMemo(() => {
+    // Si tenemos cumplimiento por docente, construimos el gráfico por docente según la métrica seleccionada
+    if (complianceData && complianceData.length > 0) {
+      const colorForMetric = selectedMetric === 'Porcentaje Cumplimiento'
+        ? 'bg-blue-500'
+        : selectedMetric === 'Actividades Pendientes'
+          ? 'bg-yellow-500'
+          : 'bg-green-500';
+      return complianceData.map((row) => ({
+        name: row.docente,
+        value: selectedMetric === 'Porcentaje Cumplimiento' ? row.porcentaje : (selectedMetric === 'Actividades Pendientes' ? row.pendientes : row.completadas),
+        color: colorForMetric
+      }));
+    }
+    // Fallback a estadísticas generales por estado
+    if (!stats) return [];
+    return [
+      { name: "Completadas", value: stats.completadas || 0, color: "bg-green-500" },
+      { name: "Pendientes", value: stats.pendientes || 0, color: "bg-yellow-500" },
+      { name: "Devueltas", value: stats.devueltas || 0, color: "bg-red-500" }
+    ];
+  }, [stats, complianceData, selectedMetric]);
+
+  const maxValue = useMemo(() => {
+    return chartData.length ? Math.max(...chartData.map(item => Number(item.value ?? 0))) : 0;
+  }, [chartData]);
+
+  // Cargar cumplimiento por docente usando estadísticas de reportes por usuario
+  useEffect(() => {
+    const loadCompliance = async () => {
+      setLoadingCompliance(true);
+      setErrorCompliance(null);
+      try {
+        // 1) Obtener roles y localizar IDs de DOCENTE y COORDINADOR (case-insensitive)
+        const rolesRes = await api.get('/roles');
+        const roles = rolesRes.data?.data || [];
+        console.log('🧩 [EstadisticasDashboard] /roles response.data:', rolesRes.data);
+        console.log('🧩 [EstadisticasDashboard] Roles encontrados:', roles.length);
+        const docenteRole = roles.find(r => String(r?.nombre || '').toUpperCase() === 'DOCENTE');
+        const coordinadorRole = roles.find(r => String(r?.nombre || '').toUpperCase() === 'COORDINADOR');
+        const roleIds = [];
+        if (docenteRole?.id) roleIds.push(docenteRole.id);
+        if (!docenteRole?.id) console.warn('⚠️ [EstadisticasDashboard] Rol DOCENTE no encontrado por nombre, se intentará incluir COORDINADOR');
+        if (coordinadorRole?.id) roleIds.push(coordinadorRole.id);
+        if (roleIds.length === 0) throw new Error('No se encontraron roles DOCENTE/COORDINADOR');
+
+        // 2) Obtener docentes activos para los roles identificados y combinar sin duplicados
+        const docentesList = [];
+        for (const roleId of roleIds) {
+          const docentesRes = await api.get(`/users/by-role/${roleId}`, { params: { activo: true } });
+          const arr = docentesRes.data?.data || [];
+          console.log(`👩‍🏫 [EstadisticasDashboard] /users/by-role/${roleId} response.data:`, docentesRes.data);
+          console.log(`👩‍🏫 [EstadisticasDashboard] Usuarios activos para rol ${roleId}:`, arr.length);
+          docentesList.push(...arr);
+        }
+        // Unificar y eliminar duplicados por id
+        const seen = new Set();
+        const docentes = docentesList.filter(d => {
+          const id = d?.id;
+          if (!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        console.log('👩‍🏫 [EstadisticasDashboard] Docentes combinados únicos:', docentes.map(d => d.id));
+
+        // Limitar a los primeros 5 docentes para el dashboard
+        const topDocentes = docentes.slice(0, 5);
+        console.log('👥 [EstadisticasDashboard] Top docentes (limit 5):', topDocentes.map(d => d.id));
+
+        // 3) Para cada docente, obtener estadísticas de reportes
+        const rows = [];
+        for (const docente of topDocentes) {
+          const nombreCompleto = `${docente.nombre} ${docente.apellido}`.trim();
+          const statsRes = await api.get('/reportes/stats/general', { params: { usuarioId: docente.id } });
+          const s = statsRes.data?.data || {};
+          console.log(`📈 [EstadisticasDashboard] Stats de reportes para docente ${docente.id}:`, statsRes.data);
+          const completadas = s.completados || 0;
+          const pendientes = (s.pendientes || 0) + (s.enRevision || 0) + (s.devueltos || 0);
+          const porcentaje = s.porcentajes?.completados ?? (s.total > 0 ? Math.round((completadas / s.total) * 100) : 0);
+          const row = {
+            docente: nombreCompleto || docente.email || `Usuario ${docente.id}`,
+            completadas,
+            pendientes,
+            porcentaje,
+            color: getComplianceColor(porcentaje)
+          };
+          console.log('➡️ [EstadisticasDashboard] Row calculada:', row);
+          rows.push(row);
+        }
+
+        // Ordenar por porcentaje de cumplimiento descendente
+        rows.sort((a, b) => b.porcentaje - a.porcentaje);
+        setComplianceData(rows);
+        console.log('✅ [EstadisticasDashboard] Cumplimiento por docente (rows):', rows);
+      } catch (err) {
+        console.error('❌ [EstadisticasDashboard] Error cargando cumplimiento por docente:', err);
+        setErrorCompliance(err?.response?.data?.message || err?.message || 'Error al cargar cumplimiento por docente');
+      } finally {
+        setLoadingCompliance(false);
+      }
+    };
+
+    loadCompliance();
+  }, []);
+
+  const downloadChart = async (format) => {
+    const node = chartRef.current;
+    if (!node) return;
+    const filename = `grafico-${String(selectedChart).replace(/\s+/g, '-').toLowerCase()}`;
+    try {
+      if (format === 'PNG') {
+        await downloadNodeAsPng(node, `${filename}.png`);
+      } else if (format === 'SVG') {
+        const svgEl = node.querySelector('svg');
+        if (svgEl) {
+          await downloadSvgElement(svgEl, `${filename}.svg`);
+        } else {
+          await downloadNodeAsSvg(node, `${filename}.svg`);
+        }
+      } else if (format === 'JPG') {
+        await downloadNodeAsJpeg(node, `${filename}.jpg`);
+      }
+    } catch (err) {
+      console.error('❌ Error al descargar gráfico:', err);
+    }
+  };
+
+  const downloadFile = async (format) => {
+    const node = tableRef.current;
+    if (!node) return;
+    const filename = 'tabla-cumplimiento';
+    try {
+      if (format === 'PNG') {
+        await downloadNodeAsPng(node, `${filename}.png`);
+      } else if (format === 'SVG') {
+        await downloadNodeAsSvg(node, `${filename}.svg`);
+      } else if (format === 'JPG') {
+        await downloadNodeAsJpeg(node, `${filename}.jpg`);
+      }
+    } catch (err) {
+      console.error('❌ Error al descargar tabla:', err);
+    }
   };
 
   return (
@@ -281,10 +523,59 @@ export default function EstadisticasDashboard() {
           selectedChart={selectedChart}
           setSelectedChart={setSelectedChart}
         />
-        
-        <BarChart chartData={chartData} maxValue={maxValue} />
-        
-        <ComplianceTable complianceData={complianceData} downloadFile={downloadFile} />
+        {/* Gráfico dinámico (actividades) */}
+        {loadingStats ? (
+          <Card className="p-6">
+            <div className="animate-pulse h-6 w-48 bg-gray-200 rounded mb-4" />
+            <div className="h-80 bg-gray-100 rounded" />
+          </Card>
+        ) : errorStats ? (
+          <Card className="p-6">
+            <p className="text-red-600">{errorStats}</p>
+          </Card>
+        ) : (
+          <>
+            <div ref={chartRef}>
+              {selectedChart === 'Grafico de Barras' ? (
+                <BarChart chartData={chartData} maxValue={maxValue} legendLabel={selectedMetric} />
+              ) : selectedChart === 'Grafico de Lineas' ? (
+                <LineChart chartData={chartData} maxValue={maxValue} legendLabel={selectedMetric} />
+              ) : (
+                <PieChart chartData={chartData} legendLabel={selectedMetric} />
+              )}
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <DownloadButton format="PNG" onClick={() => downloadChart('PNG')} />
+              <DownloadButton format="SVG" onClick={() => downloadChart('SVG')} />
+            </div>
+          </>
+        )}
+
+        {/* Tabla dinámica (cumplimiento por docente basado en reportes) */}
+        {loadingCompliance ? (
+          <Card className="p-6">
+            <div className="animate-pulse h-6 w-64 bg-gray-200 rounded mb-4" />
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-10 bg-gray-100 rounded" />
+              ))}
+            </div>
+          </Card>
+        ) : errorCompliance ? (
+          <Card className="p-6">
+            <p className="text-red-600">{errorCompliance}</p>
+          </Card>
+        ) : (
+          complianceData.length === 0 ? (
+            <Card className="p-6">
+              <p className="text-gray-600">No hay datos de cumplimiento para mostrar.</p>
+            </Card>
+          ) : (
+            <div ref={tableRef}>
+              <ComplianceTable complianceData={complianceData} downloadFile={downloadFile} />
+            </div>
+          )
+        )}
       </div>
     </div>
   );

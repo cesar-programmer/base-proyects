@@ -22,6 +22,14 @@ function routerApi(app) {
   const router = express.Router();
   app.use('/api/v1', router);
 
+  // Desactivar caché para todas las respuestas de la API
+  router.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
+
   // Configurar todas las rutas disponibles
   router.use('/auth', authRoutes);
   router.use('/users', userRoutes);

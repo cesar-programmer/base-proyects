@@ -58,9 +58,11 @@ export default function LoginPageAdmin() {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        // Verificar que el usuario sea administrador
-        if (result.user.rol?.nombre === 'ADMINISTRADOR') {
-          toast.success('¡Bienvenido, Administrador!');
+        // Verificar que el usuario sea administrador o coordinador
+        const roleName = result.user.rol?.nombre;
+        if (roleName === 'ADMINISTRADOR' || roleName === 'COORDINADOR') {
+          const rolDisplay = roleName === 'COORDINADOR' ? 'Coordinador' : 'Administrador';
+          toast.success(`¡Bienvenido, ${rolDisplay}!`);
           navigate('/admin/dashboard');
         } else {
           setError('No tienes permisos de administrador');

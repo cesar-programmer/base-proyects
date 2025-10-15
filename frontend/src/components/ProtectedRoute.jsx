@@ -24,13 +24,19 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   // Si se requiere un rol específico, verificarlo
-  if (requiredRole && user?.rol?.nombre !== requiredRole) {
-    if (requiredRole === 'ADMINISTRADOR') {
+  if (requiredRole) {
+    const roleName = user?.rol?.nombre;
+    const isAdminEquivalent = roleName === 'ADMINISTRADOR' || roleName === 'COORDINADOR';
+
+    // Para rutas de administrador, permitir también coordinadores
+    if (requiredRole === 'ADMINISTRADOR' && !isAdminEquivalent) {
       return <Navigate to="/admin/login" replace />;
-    } else if (requiredRole === 'DOCENTE') {
+    }
+
+    // Para rutas de docente, verificar rol docente
+    if (requiredRole === 'DOCENTE' && roleName !== 'DOCENTE') {
       return <Navigate to="/docente/login" replace />;
     }
-    return <Navigate to="/" replace />;
   }
 
   return children;

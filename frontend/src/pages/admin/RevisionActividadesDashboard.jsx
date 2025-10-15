@@ -18,11 +18,9 @@ import {
   BookOpen,
   ChevronDown,
   X,
-  Bell,
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import { useStats } from '../../context/StatsContext'
-import activityService from '../../services/activityService'
 import reportService from '../../services/reportService'
 import { toast } from 'react-toastify'
 import ListaArchivosReporte from '../../components/ListaArchivosReporte'
@@ -654,38 +652,32 @@ export default function RevisionActividadesDashboard() {
     }
   }
 
-  // Función para enviar recordatorio
-  const handleSendReminder = async () => {
-    try {
-      if (!selectedActivity) return
-      
-      // Aquí iría la llamada a la API para enviar recordatorio
-      // await activityService.sendReminder(selectedActivity.id)
-      
-      toast.success('Recordatorio enviado exitosamente')
-    } catch (error) {
-      console.error('Error al enviar recordatorio:', error)
-      toast.error('Error al enviar recordatorio')
-    }
-  }
+  // Botón de enviar recordatorio retirado por simplicidad de la interfaz
 
   // Función para descargar reporte
   const handleDownloadReport = async () => {
     try {
-      if (!selectedActivity) return
-      
-      // Aquí iría la llamada a la API para generar y descargar PDF
-      // const pdfBlob = await activityService.downloadReport(selectedActivity.id)
-      // const url = window.URL.createObjectURL(pdfBlob)
-      // const a = document.createElement('a')
-      // a.href = url
-      // a.download = `reporte-${selectedActivity.usuario?.nombre}-${selectedActivity.id}.pdf`
-      // a.click()
-      
-      toast.success('Descarga iniciada')
+      if (!selectedActivity?.id) {
+        toast.error('No hay reporte seleccionado')
+        return
+      }
+
+      const blob = await reportService.downloadReportPDF(selectedActivity.id)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const fileName = `Reporte_${selectedActivity.titulo || selectedActivity.id}_${new Date().toISOString().split('T')[0]}.pdf`
+
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+
+      toast.success('Reporte descargado exitosamente')
     } catch (error) {
       console.error('Error al descargar reporte:', error)
-      toast.error('Error al descargar reporte')
+      toast.error(error.message || 'Error al descargar reporte')
     }
   }
 
@@ -1314,17 +1306,7 @@ export default function RevisionActividadesDashboard() {
                 </div>
 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-600">Tasa de Cumplimiento</p>
-                      <p className="text-3xl font-bold text-green-600">75%</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: "75%" }}></div>
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-gray-600">Última Actualización</p>
@@ -1566,14 +1548,7 @@ export default function RevisionActividadesDashboard() {
                     </>
                   )}
 
-                  {/* Botones comunes para todos los estados */}
-                  <button 
-                    onClick={handleSendReminder}
-                    className="inline-flex items-center px-4 py-2 border border-blue-200 text-sm font-medium rounded-md text-blue-600 bg-transparent hover:bg-blue-50 transition-colors"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Enviar Recordatorio
-                  </button>
+                  {/* Botón de enviar recordatorio retirado */}
 
                   <button 
                     onClick={handleDownloadReport}

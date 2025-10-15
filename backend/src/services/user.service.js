@@ -232,6 +232,34 @@ class UserService {
       throw boom.internal('Error al cambiar la contraseña');
     }
   }
+
+  // Obtener usuarios por rol
+  async findByRole(roleId, activo = undefined) {
+    try {
+      const where = { rolId: parseInt(roleId) };
+      if (activo !== undefined) {
+        where.activo = !!activo;
+      }
+
+      const users = await models.User.findAll({
+        where,
+        include: [
+          {
+            model: models.Role,
+            as: 'rol',
+            attributes: ['id', 'nombre', 'descripcion']
+          }
+        ],
+        attributes: { exclude: ['password'] },
+        order: [['nombre', 'ASC']]
+      });
+
+      return users;
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al obtener usuarios por rol');
+    }
+  }
 }
 
 export default UserService;

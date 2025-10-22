@@ -93,6 +93,23 @@ const ReporteSchema = {
       key: 'id'
     }
   },
+  archivado: {
+    allowNull: false,
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  archivadoAt: {
+    allowNull: true,
+    type: DataTypes.DATE
+  },
+  archivadoPorId: {
+    allowNull: true,
+    type: DataTypes.INTEGER,
+    references: {
+      model: USUARIOS_TABLE,
+      key: 'id'
+    }
+  },
 
 };
 

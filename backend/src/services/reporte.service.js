@@ -9,13 +9,14 @@ class ReporteService {
   // Obtener todos los reportes con filtros y paginación
   async find(options = {}) {
     try {
-      const { page = 1, limit = 10, estado, actividadId, usuarioId, onlySubmitted = false } = options;
+      const { page = 1, limit = 10, estado, actividadId, usuarioId, onlySubmitted = false, includeArchivados = false } = options;
       const offset = (page - 1) * limit;
       
       const whereClause = {};
       if (estado) whereClause.estado = estado;
       if (actividadId) whereClause.actividadId = actividadId;
       if (usuarioId) whereClause.usuarioId = usuarioId;
+      if (!includeArchivados) whereClause.archivado = false;
       
       // Filtrar solo reportes que han sido enviados (tienen fechaEnvio)
       if (onlySubmitted) {
@@ -306,6 +307,7 @@ class ReporteService {
       
       if (filters.estado) whereClause.estado = filters.estado;
       if (filters.actividadId) whereClause.actividadId = filters.actividadId;
+      if (filters.excludeArchivados) whereClause.archivado = false;
 
       const reportes = await models.Reporte.findAll({
         where: whereClause,
@@ -314,6 +316,14 @@ class ReporteService {
             model: models.User,
             as: 'usuario',
             attributes: ['id', 'nombre', 'email']
+          },
+          {
+            model: models.Actividad,
+            as: 'actividades',
+            attributes: ['id', 'titulo', 'descripcion', 'periodoAcademicoId'],
+            required: !!filters.periodoAcademicoId,
+            where: filters.periodoAcademicoId ? { periodoAcademicoId: parseInt(filters.periodoAcademicoId) } : undefined,
+            through: { attributes: [] }
           },
           {
             model: models.Actividad,
@@ -692,10 +702,10 @@ class ReporteService {
       
       if (filters.actividadId) whereClause.actividadId = filters.actividadId;
       if (filters.usuarioId) whereClause.usuarioId = filters.usuarioId;
+      if (!filters.includeArchivados) whereClause.archivado = false;
 
       const totalReportes = await models.Reporte.count({ where: whereClause });
       
-      // Obtener reportes para contar por estado
       const reportes = await models.Reporte.findAll({
         attributes: ['estado'],
         where: whereClause
@@ -747,16 +757,15 @@ class ReporteService {
   // Obtener reportes pendientes para el dashboard
   async getPendingForDashboard() {
     try {
-      // Obtener reportes que están pendientes de revisión
-      // Solo mostrar reportes que han sido enviados (tienen fechaEnvio) - mismo filtro que usa la vista de revisión
       const reportesPendientes = await models.Reporte.findAll({
         where: {
           estado: {
-            [Op.in]: ['enviado', 'pendiente'] // Solo estados enviados, excluyendo 'borrador'
+            [Op.in]: ['enviado', 'pendiente']
           },
           fechaEnvio: {
-            [Op.ne]: null // Solo reportes que han sido enviados (mismo filtro que getReportes para admin)
-          }
+            [Op.ne]: null
+          },
+          archivado: false
         },
         include: [
           {
@@ -765,18 +774,19 @@ class ReporteService {
             attributes: ['id', 'nombre', 'apellido', 'email']
           }
         ],
-        order: [['updatedAt', 'DESC']], // Los más recientes primero
-        limit: 10 // Limitar a los 10 más recientes para el dashboard
+        order: [['updatedAt', 'DESC']],
+        limit: 10
       });
 
       const totalPendientes = await models.Reporte.count({
         where: {
           estado: {
-            [Op.in]: ['enviado', 'pendiente'] // Solo estados enviados, excluyendo 'borrador'
+            [Op.in]: ['enviado', 'pendiente']
           },
           fechaEnvio: {
-            [Op.ne]: null // Solo reportes que han sido enviados
-          }
+            [Op.ne]: null
+          },
+          archivado: false
         }
       });
 
@@ -790,7 +800,15 @@ class ReporteService {
     }
   }
 
-
+  async archive(id, archivar = true, usuarioId) {
+    const reporte = await this.findOne(id);
+    if (!reporte) throw boom.notFound('Reporte no encontrado');
+    const payload = archivar
+      ? { archivado: true, archivadoAt: new Date(), archivadoPorId: usuarioId }
+      : { archivado: false, archivadoAt: null, archivadoPorId: null };
+    await reporte.update(payload);
+    return reporte;
+  }
 }
 
 export default ReporteService;

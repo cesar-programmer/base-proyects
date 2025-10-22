@@ -167,8 +167,17 @@ export default function DocenteDashboard() {
         activities = Array.isArray(fallbackActivitiesResponse?.data) ? fallbackActivitiesResponse.data : [];
       }
       
-      // Cargar reportes del docente
-      const reportsResponse = await reportService.getReportsByTeacher(user.id);
+      // Cargar reportes del docente, filtrando por período activo si está disponible
+      let periodoActivoId = null;
+      try {
+        const deadlineResp = await reportService.getDeadlineInfo();
+        const info = deadlineResp?.data || deadlineResp;
+        periodoActivoId = info?.periodoActivoId || null;
+      } catch (_) {}
+      const reportsResponse = await reportService.getReportsByTeacher(
+        user.id,
+        periodoActivoId ? { periodoAcademicoId: periodoActivoId } : {}
+      );
       const reports = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
 
       // Cargar fechas límite próximas (recordatorios reales)

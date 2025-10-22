@@ -273,13 +273,12 @@ const getReportesQuerySchema = Joi.object({
   limit: Joi.number()
     .integer()
     .min(1)
-    .max(100)
     .default(10)
+    .custom((value) => (value > 100 ? 100 : value))
     .messages({
       'number.base': 'El límite debe ser un número',
       'number.integer': 'El límite debe ser un número entero',
-      'number.min': 'El límite debe ser mayor a 0',
-      'number.max': 'El límite no puede ser mayor a 100'
+      'number.min': 'El límite debe ser mayor a 0'
     }),
   estado: Joi.string()
     .valid('borrador', 'enviado', 'revisado', 'aprobado', 'devuelto')
@@ -308,7 +307,8 @@ const getReportesQuerySchema = Joi.object({
       'number.integer': 'El filtro de semestre debe ser un número entero',
       'number.min': 'El filtro de semestre debe ser 1 o 2',
       'number.max': 'El filtro de semestre debe ser 1 o 2'
-    })
+    }),
+  includeArchivados: Joi.boolean().default(false)
 });
 
 // Esquema para enviar reporte
@@ -350,6 +350,16 @@ const getReportHistorySchema = Joi.object({
   fechaFin: Joi.date()
     .messages({
       'date.base': 'La fecha de fin debe ser una fecha válida'
+    }),
+  excludeArchivados: Joi.boolean().default(false)
+});
+
+// Declaración del esquema para archivar/desarchivar reporte
+const archiveReporteSchema = Joi.object({
+  archivar: Joi.boolean()
+    .required()
+    .messages({
+      'any.required': 'El campo archivar es requerido'
     })
 });
 
@@ -362,5 +372,6 @@ export {
   getReportesByPeriodSchema,
   getReportesQuerySchema,
   sendReporteSchema,
-  getReportHistorySchema
+  getReportHistorySchema,
+  archiveReporteSchema
 };

@@ -573,19 +573,28 @@ export default function PendingReports() {
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reportes, setReportes] = useState([]);
+  const [periodoActivoId, setPeriodoActivoId] = useState(null);
 
   useEffect(() => {
     loadReports();
     loadDeadlineInfo();
   }, [user]);
 
+  useEffect(() => {
+    if (user?.id) {
+      loadReports();
+    }
+  }, [periodoActivoId]);
+
   const loadReports = async () => {
     if (!user?.id) return;
     
     try {
       setLoading(true);
-      const response = await reportService.getReportsByTeacher(user.id);
-      console.log('Respuesta completa de reportes:', response);
+      const options = {};
+      if (periodoActivoId) options.periodoAcademicoId = periodoActivoId;
+      const response = await reportService.getReportsByTeacher(user.id, options);
+      console.log('Respuesta completa de reportes (filtrada por período si aplica):', response);
       
       // Asegurar que siempre sea un array
       const reportsData = response?.data || response || [];
@@ -636,6 +645,9 @@ export default function PendingReports() {
         setFechaLimiteActual(fechaFormateada);
       } else {
         console.log('No se recibió fecha límite válida:', deadlineInfo.fechaLimite);
+      }
+      if (deadlineInfo.periodoActivoId) {
+        setPeriodoActivoId(deadlineInfo.periodoActivoId);
       }
     } catch (error) {
       console.error('Error al cargar información de fecha límite:', error);

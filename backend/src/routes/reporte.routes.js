@@ -9,7 +9,9 @@ import {
   changeReporteStatusSchema,
   getReportesByDocenteSchema,
   getReportesByPeriodSchema,
-  getReportHistorySchema
+  getReportHistorySchema,
+  getReportesQuerySchema,
+  archiveReporteSchema
 } from '../schemas/reporte.schema.js';
 
 const router = express.Router();
@@ -25,6 +27,7 @@ router.get('/my-reportes',
 router.get('/',
   verifyToken,
   checkDocenteOrAdmin,
+  validatorHandler(getReportesQuerySchema, 'query'),
   reporteController.getReportes.bind(reporteController)
 );
 
@@ -175,6 +178,12 @@ router.patch('/:id/estado',
   reporteController.updateReporteStatus.bind(reporteController)
 );
 
-
+router.patch('/:id/archivar',
+  verifyToken,
+  checkAdmin,
+  validatorHandler(getReporteSchema, 'params'),
+  validatorHandler(archiveReporteSchema, 'body'),
+  reporteController.archiveReporte.bind(reporteController)
+);
 
 export default router;

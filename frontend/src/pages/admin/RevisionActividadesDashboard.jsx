@@ -18,6 +18,8 @@ import {
   BookOpen,
   ChevronDown,
   X,
+  Archive,
+  Loader2,
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import { useStats } from '../../context/StatsContext'
@@ -240,6 +242,10 @@ export default function RevisionActividadesDashboard() {
   const [categories, setCategories] = useState([])
   const [teachers, setTeachers] = useState([])
   const [stats, setStats] = useState({ pending: 0, approved: 0, returned: 0 })
+  // Toggle para mostrar u ocultar reportes archivados
+  const [showArchivados, setShowArchivados] = useState(false)
+  // Estado de carga para archivado masivo
+  const [isArchivingAll, setIsArchivingAll] = useState(false)
   
   const { user } = useAuth()
   const { fetchStats } = useStats()
@@ -268,12 +274,53 @@ export default function RevisionActividadesDashboard() {
     }
   }
 
+  // Archivar todos los reportes aprobados (con paginación)
+  const handleArchiveAllApproved = async () => {
+    try {
+      const confirmar = window.confirm('¿Archivar todos los reportes aprobados?');
+      if (!confirmar) return;
+      setIsArchivingAll(true);
+
+      let page = 1;
+      const limit = 100;
+      let archivados = 0;
+      let fallas = 0;
+
+      while (true) {
+        const resp = await reportService.getAllReports({ estado: 'aprobado', includeArchivados: false, page, limit });
+        const lote = resp?.data?.reportes || [];
+        if (!Array.isArray(lote) || lote.length === 0) break;
+
+        for (const reporte of lote) {
+          try {
+            await reportService.archiveReport(Number(reporte.id), true);
+            archivados += 1;
+          } catch (e) {
+            console.error('Fallo al archivar reporte', reporte.id, e);
+            fallas += 1;
+          }
+        }
+
+        if (lote.length < limit) break;
+        page += 1;
+      }
+
+      toast.success(`Archivados: ${archivados}. Fallidos: ${fallas}.`);
+      await loadActivities();
+    } catch (error) {
+      console.error('Error al archivar aprobados:', error);
+      toast.error('No se pudieron archivar todos los aprobados');
+    } finally {
+      setIsArchivingAll(false);
+    }
+  }
+
   // Función para cargar todos los reportes desde la API
   const loadActivities = async () => {
     try {
       setLoading(true)
       console.log('🔄 Cargando todos los reportes...')
-      const response = await reportService.getAllReports()
+      const response = await reportService.getAllReports({ includeArchivados: showArchivados, limit: 100 })
       console.log('📊 Respuesta completa de la API:', response)
       
       // El backend retorna { message, data: { reportes: [], total, etc } }
@@ -347,6 +394,7 @@ export default function RevisionActividadesDashboard() {
           comentarios: report.comentariosRevision,
           resumenEjecutivo: report.resumenEjecutivo,
           actividades: report.actividades || [],
+          archivado: !!report.archivado,
           // Mantener el objeto reporte completo para referencia
           reporte: report
         }
@@ -421,7 +469,7 @@ export default function RevisionActividadesDashboard() {
     if (user) {
       loadActivities()
     }
-  }, [user])
+  }, [user, showArchivados])
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -891,7 +939,16 @@ export default function RevisionActividadesDashboard() {
                     {activity.categoria || 'GENERAL'}
                   </span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">{getStatusBadge(activity.estado_realizado)}</td>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(activity.estado_realizado)}
+                    {activity.archivado && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+                        Archivado
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                   <div data-dropdown-container className="relative">
                     <button
@@ -921,6 +978,26 @@ export default function RevisionActividadesDashboard() {
                           >
                             <Eye className="mr-3 h-4 w-4 text-green-500" />
                             Ver detalles
+                          </button>
+                          
+                          <button
+                            onClick={async () => {
+                              try {
+                                const reportId = Number(activity.reporteId || activity.id)
+                                await reportService.archiveReport(reportId, !activity.archivado)
+                                toast.success(activity.archivado ? 'Reporte desarchivado' : 'Reporte archivado')
+                                setDropdownOpen(null)
+                                await loadActivities()
+                              } catch (error) {
+                                console.error('Error al archivar/desarchivar reporte:', error)
+                                toast.error('No se pudo cambiar el estado de archivado')
+                              }
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            role="menuitem"
+                          >
+                            <Archive className="mr-3 h-4 w-4 text-gray-500" />
+                            {activity.archivado ? 'Desarchivar' : 'Archivar'}
                           </button>
                           
                           {activity.estado_realizado === "pendiente" && (
@@ -1091,15 +1168,42 @@ export default function RevisionActividadesDashboard() {
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Filtros de Búsqueda</h3>
-              <button
-                onClick={() => {
-                  setSearchTerm('')
-                  setFilterCategory('all')
-                }}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                Limpiar filtros
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                   onClick={() => {
+                     setShowArchivados(prev => !prev)
+                   }}
+                   className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                 >
+                   {showArchivados ? 'Ocultar archivados' : 'Mostrar archivados'}
+                 </button>
+                 <button
+                   onClick={handleArchiveAllApproved}
+                   disabled={isArchivingAll}
+                   className={`inline-flex items-center px-3 py-2 border text-sm font-medium rounded-md ${isArchivingAll ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'text-white bg-green-600 border-green-600 hover:bg-green-700'}`}
+                 >
+                   {isArchivingAll ? (
+                     <>
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       Archivando...
+                     </>
+                   ) : (
+                     <>
+                       <Archive className="mr-2 h-4 w-4" />
+                       Archivar aprobados
+                     </>
+                   )}
+                 </button>
+                 <button
+                   onClick={() => {
+                     setSearchTerm('')
+                     setFilterCategory('all')
+                   }}
+                   className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                 >
+                   Limpiar filtros
+                 </button>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

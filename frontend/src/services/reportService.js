@@ -2,9 +2,21 @@ import api from './api';
 
 const reportService = {
   // Obtener todos los reportes
-  getAllReports: async () => {
+  getAllReports: async (options = {}) => {
     try {
-      const response = await api.get('/reportes?limit=1000'); // Aumentar límite para obtener todos los reportes
+      const params = new URLSearchParams();
+      const { limit, page, estado, includeArchivados } = options;
+
+      if (limit) params.append('limit', limit);
+      else params.append('limit', '100');
+
+      if (page) params.append('page', page);
+      if (estado) params.append('estado', estado);
+      if (typeof includeArchivados !== 'undefined') {
+        params.append('includeArchivados', includeArchivados ? 'true' : 'false');
+      }
+
+      const response = await api.get(`/reportes?${params.toString()}`);
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener reportes');
@@ -52,9 +64,19 @@ const reportService = {
   },
 
   // Obtener reportes por docente
-  getReportsByTeacher: async (docenteId) => {
+  getReportsByTeacher: async (docenteId, options = {}) => {
     try {
-      const response = await api.get(`/reportes/docente/${docenteId}`);
+      const params = new URLSearchParams();
+      if (options.periodoAcademicoId) params.append('periodoAcademicoId', options.periodoAcademicoId);
+      if (options.estado) params.append('estado', options.estado);
+      if (options.actividadId) params.append('actividadId', options.actividadId);
+      if (options.excludeArchivados !== undefined) params.append('excludeArchivados', options.excludeArchivados);
+      
+      const queryString = params.toString();
+      const url = queryString
+        ? `/reportes/docente/${docenteId}?${queryString}`
+        : `/reportes/docente/${docenteId}`;
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener reportes del docente');
@@ -161,6 +183,16 @@ const reportService = {
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al actualizar estado del reporte');
+    }
+  },
+
+  // NUEVO: Archivar o desarchivar reporte
+  archiveReport: async (id, archivar = true) => {
+    try {
+      const response = await api.patch(`/reportes/${id}/archivar`, { archivar });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Error al archivar/desarchivar reporte');
     }
   },
 

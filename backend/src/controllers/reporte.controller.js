@@ -8,12 +8,13 @@ class ReporteController {
   // Obtener todos los reportes
   async getReportes(req, res, next) {
     try {
-      const { page = 1, limit = 10, estado, actividadId, usuarioId } = req.query;
+      const { page = 1, limit = 10, estado, actividadId, usuarioId, includeArchivados } = req.query;
       const filters = {};
       
       if (estado) filters.estado = estado;
       if (actividadId) filters.actividadId = parseInt(actividadId);
       if (usuarioId) filters.usuarioId = parseInt(usuarioId);
+      if (includeArchivados) filters.includeArchivados = includeArchivados === 'true' || includeArchivados === true;
 
       // Si es administrador o coordinador, solo mostrar reportes que han sido enviados (tienen fechaEnvio)
       if (req.user.rol === 'ADMINISTRADOR' || req.user.rol === 'COORDINADOR') {
@@ -147,7 +148,7 @@ class ReporteController {
   async getReportesByDocente(req, res, next) {
     try {
       const { docenteId } = req.params;
-      const { estado, actividadId } = req.query;
+      const { estado, actividadId, periodoAcademicoId, excludeArchivados } = req.query;
       
       // Verificar permisos: solo el usuario propietario o admin pueden ver
       if (req.user.rol !== 'ADMINISTRADOR' && req.user.rol !== 'COORDINADOR' && parseInt(docenteId) !== req.user.id) {
@@ -157,6 +158,8 @@ class ReporteController {
       const filters = { usuarioId: parseInt(docenteId) };
       if (estado) filters.estado = estado;
       if (actividadId) filters.actividadId = parseInt(actividadId);
+      if (periodoAcademicoId) filters.periodoAcademicoId = parseInt(periodoAcademicoId);
+      if (excludeArchivados) filters.excludeArchivados = excludeArchivados === 'true' || excludeArchivados === true;
       
       const reportes = await reporteService.findByDocente(docenteId, filters);
       
@@ -313,13 +316,14 @@ class ReporteController {
         throw boom.badRequest('El parámetro docenteId es requerido');
       }
       
-      const { estado, tipo, fechaInicio, fechaFin } = req.query;
+      const { estado, tipo, fechaInicio, fechaFin, excludeArchivados } = req.query;
       
       const filters = {};
       if (estado) filters.estado = estado;
       if (tipo) filters.tipo = tipo;
       if (fechaInicio) filters.fechaInicio = fechaInicio;
       if (fechaFin) filters.fechaFin = fechaFin;
+      if (excludeArchivados) filters.excludeArchivados = excludeArchivados === 'true' || excludeArchivados === true;
       
       const reportes = await reporteService.findByDocente(parseInt(docenteId), filters);
       
@@ -874,6 +878,27 @@ class ReporteController {
       res.json({
         message: result.message,
         data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Archivar reporte
+  async archiveReporte(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { archivar } = req.body;
+      
+      if (typeof archivar === 'undefined') {
+        throw boom.badRequest('El campo archivar es requerido');
+      }
+
+      const updated = await reporteService.archive(parseInt(id), archivar === true || archivar === 'true', req.user.id);
+
+      res.json({
+        message: archivar ? 'Reporte archivado exitosamente' : 'Reporte desarchivado exitosamente',
+        data: updated
       });
     } catch (error) {
       next(error);

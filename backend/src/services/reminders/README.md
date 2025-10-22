@@ -150,6 +150,41 @@ curl -X DELETE http://localhost:3001/api/v1/recordatorios/<id> \
 2. Agregue el caso en `providers/index.js` y seleccione por `REMINDER_PROVIDER`.
 3. Configure variables de entorno necesarias para su proveedor.
 
+## Activar Gmail OAuth2 (XOAUTH2)
+
+- Establece `REMINDER_PROVIDER=gmail` para usar el proveedor Gmail.
+- Configura variables en `.env`:
+  - `SMTP_DEBUG=true` (solo en pruebas)
+  - `SMTP_FROM=<remitente@uabc.edu.mx>` (recomendado igual que `GMAIL_USER`)
+  - `GMAIL_USER=<remitente@uabc.edu.mx>`
+  - `GMAIL_CLIENT_ID=<client_id>`
+  - `GMAIL_CLIENT_SECRET=<client_secret>`
+  - `GMAIL_REFRESH_TOKEN=<refresh_token>`
+- No uses `GMAIL_ACCESS_TOKEN` manualmente; el transporte lo obtiene con `refresh_token`.
+
+### Obtener refresh_token con Node (script simple)
+
+- Edita `backend/getToken_example.js` y coloca tus credenciales:
+  - `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`.
+- Ejecuta en consola:
+  - `node getToken_example.js`
+- Abre el enlace que imprime, consiente el acceso, pega el `code` en la consola.
+- Copia el `refresh_token` mostrado y colócalo en `GMAIL_REFRESH_TOKEN` del `.env`.
+
+### Intercambiar el `code` con Node (CLI)
+
+- Si ya tienes un `code` de la URL de callback:
+  - `node scripts/gmail-exchange-code.js --code="<code>" --redirect_uri="http://localhost:5173/oauth2callback"`
+- El script usa `GMAIL_CLIENT_ID` y `GMAIL_CLIENT_SECRET` del `.env` y mostrará `refresh_token` listo para pegar.
+
+### Prueba rápida de envío con Gmail
+
+- Reinicia el backend y lanza un envío manual limitado:
+  - `curl -X POST http://localhost:3000/api/v1/recordatorios/enviar-manual -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{"mensaje":"Prueba Gmail (texto plano)","destinatarios":"todos","limit":1}'`
+- Logs esperados en consola:
+  - `[GMAIL] Transport verified successfully`
+  - `[GMAIL] Sent to <email> messageId=... response=...`
+
 ## Consideraciones
 
 - El filtro “pendientes” en `ReminderService.getRecipients('pendientes')` es un TODO y depende de la lógica de negocio (p. ej., usuarios con reportes pendientes).

@@ -4,7 +4,19 @@ import Boom from '@hapi/boom';
 function validatorHandle(schema, property) {
   return async (req, res, next) => {
     try {
-      await schema.validateAsync(req[property], { abortEarly: false });
+      const options = {
+        abortEarly: false,
+        // Permitir parámetros desconocidos en queries (e.g. _ts para cache-busting)
+        allowUnknown: property === 'query',
+        // Removerlos para que no pasen al controller
+        stripUnknown: property === 'query'
+      };
+
+      const value = await schema.validateAsync(req[property], options);
+      // Si se sanitizó la query, reemplazarla con el valor validado
+      if (property === 'query') {
+        req[property] = value;
+      }
       next();
     } catch (error) {
       next(Boom.badRequest(error));

@@ -99,3 +99,5 @@ netlify.toml
 
 
 /backend/uploads/
+
+getToken.js

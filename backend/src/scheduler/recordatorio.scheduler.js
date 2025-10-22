@@ -29,8 +29,12 @@ function calculateNextRun(config) {
 
 async function runOnce(config) {
   try {
-    await reminderService.sendReminder(config);
-    console.log('[ReminderScheduler] Recordatorio enviado.');
+    const result = await reminderService.sendReminder(config);
+    if (result?.ok) {
+      console.log(`[ReminderScheduler] Enviado: count=${result.count} provider=${result.provider || 'unknown'}`);
+    } else {
+      console.warn(`[ReminderScheduler] Falló envío: count=${result?.count || 0} failed=${(result?.failed?.length) || 0} provider=${result?.provider || 'unknown'} reason=${result?.reason || 'unknown'}`);
+    }
   } catch (e) {
     console.error('[ReminderScheduler] Error enviando recordatorio:', e);
   }

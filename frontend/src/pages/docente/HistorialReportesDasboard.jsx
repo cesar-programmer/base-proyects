@@ -371,6 +371,31 @@ export default function HistorialReportesDashboard() {
     setSelectedReport(null)
   }
 
+  // Descargar reporte formateado (PDF) igual que otras vistas
+  const handleDownloadReportPDF = async (report) => {
+    try {
+      const id = report?.id || selectedReport?.id
+      if (!id) {
+        toast.error('No hay reporte seleccionado')
+        return
+      }
+      const blob = await reportService.downloadReportPDF(id)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const fileName = `Reporte_${(report?.titulo || selectedReport?.titulo || id)}_${new Date().toISOString().split('T')[0]}.pdf`
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      toast.success('Reporte descargado exitosamente')
+    } catch (error) {
+      console.error('Error al descargar reporte:', error)
+      toast.error(error.message || 'Error al descargar reporte')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -525,7 +550,10 @@ export default function HistorialReportesDashboard() {
                                   <Eye className="w-4 h-4 mr-2 text-green-600" />
                                   Ver detalles
                                 </button>
-                                <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center">
+                                <button
+                                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center"
+                                  onClick={() => { handleDownloadReportPDF(report); setDropdownOpen(null); }}
+                                >
                                   <Download className="w-4 h-4 mr-2 text-blue-600" />
                                   Descargar PDF
                                 </button>
@@ -773,14 +801,9 @@ export default function HistorialReportesDashboard() {
                     Descargar Reporte Completo
                   </button>
 
-                  <button className="text-blue-600 border border-blue-200 hover:bg-blue-50 bg-transparent px-4 py-2 rounded-md transition-colors flex items-center gap-2">
+                  <button onClick={() => handleDownloadReportPDF(selectedReport)} className="text-blue-600 border border-blue-200 hover:bg-blue-50 bg-transparent px-4 py-2 rounded-md transition-colors flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     Generar Versión PDF
-                  </button>
-
-                  <button className="text-gray-600 border border-gray-200 hover:bg-gray-50 bg-transparent px-4 py-2 rounded-md transition-colors flex items-center gap-2">
-                    <Eye className="w-4 h-4" />
-                    Vista Previa de Impresión
                   </button>
                 </div>
               </div>

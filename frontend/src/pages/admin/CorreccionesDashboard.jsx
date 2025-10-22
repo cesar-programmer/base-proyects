@@ -979,22 +979,6 @@ const CorreccionesDashboard = () => {
               </div>
             )}
 
-            {/* Formulario de revisión (solo comentarios) */}
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="review-comment" className="text-sm font-medium text-gray-700 mb-1 block">
-                  Comentarios de revisión
-                </Label>
-                <textarea
-                  id="review-comment"
-                  rows={3}
-                  className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Comentarios sobre la revisión (opcional)..."
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                />
-              </div>
-            </div>
 
             {/* Botones de acción */}
             <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">

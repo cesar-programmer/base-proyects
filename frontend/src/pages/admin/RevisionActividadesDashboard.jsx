@@ -1358,21 +1358,6 @@ export default function RevisionActividadesDashboard() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <button
-            onClick={() => setIsNotificationDialogOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Enviar Notificación
-          </button>
-
-          <button className="inline-flex items-center px-4 py-2 border border-green-200 text-sm font-medium rounded-md text-green-600 bg-transparent hover:bg-green-50 transition-colors">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar Reporte
-          </button>
-        </div>
 
         {/* View Activity Modal */}
         <Modal isOpen={isViewDialogOpen} onClose={() => setIsViewDialogOpen(false)}>

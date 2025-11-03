@@ -62,10 +62,14 @@ RUN apt-get update \
  && npm ci --only=production \
  && npm install -g sequelize-cli
 
+# Copiar el script de entrypoint y convertir finales de línea
+COPY ./scripts/docker-entrypoint.sh /tmp/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /tmp/docker-entrypoint.sh && \
+    mv /tmp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Copiar el resto del código fuente
 COPY . .
-COPY ./scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
 
 # Configurar variables de entorno (valores por defecto seguros/placeholder)
 ENV NODE_ENV=production \
@@ -99,4 +103,4 @@ ENV NODE_ENV=production \
 EXPOSE 3000
 
 # Comando para iniciar en producción (migraciones + seeders + app)
-CMD ["./docker-entrypoint.sh"]
+ENTRYPOINT ["docker-entrypoint.sh"]

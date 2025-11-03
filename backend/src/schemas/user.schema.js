@@ -61,6 +61,7 @@ const createUserSchema = Joi.object({
     }),
   telefono: Joi.string()
     .max(20)
+    .allow('', null)
     .optional()
     .messages({
       'string.max': 'El teléfono no puede exceder 20 caracteres'
@@ -122,6 +123,7 @@ const updateUserSchema = Joi.object({
     }),
   telefono: Joi.string()
     .max(20)
+    .allow('', null)
     .optional()
     .messages({
       'string.max': 'El teléfono no puede exceder 20 caracteres'

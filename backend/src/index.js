@@ -1,5 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import './config/logging.js';
+import { validateEnv } from './config/validateEnv.js';
 import morgan from 'morgan';
 import path from 'path';
 import routerApi from './routes/index.js';
@@ -9,6 +11,7 @@ import { initReminderScheduler } from './scheduler/recordatorio.scheduler.js';
 
 // Configurar variables de entorno
 dotenv.config();
+validateEnv();
 
 const app = express();
 

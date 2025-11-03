@@ -1,0 +1,58 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: mysql
+      DB_USER: ${DB_USER:-user}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-reportesdb}
+      DB_PORT: 3306
+      JWT_SECRET: ${JWT_SECRET:-cambia_esto_por_un_secreto_seguro}
+      FRONTEND_URL: http://localhost:8082
+      # (Opcional) CORS_ORIGINS tiene prioridad si se define
+      # CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        # IMPORTANTE: VITE_API_URL debe ser accesible desde el navegador (no el nombre del servicio)
+        VITE_API_URL: http://localhost:3000/api/v1
+    ports:
+      - "8082:80"
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-reportesdb}
+      MYSQL_USER: ${DB_USER:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+networks:
+  app-network:
+
+volumes:
+  mysql_data:

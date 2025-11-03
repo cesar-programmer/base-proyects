@@ -70,13 +70,31 @@ const fileService = {
 
   // Obtener URL para visualizar archivo
   getViewUrl: (filename) => {
-    const baseUrl = api?.defaults?.baseURL || (import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1');
+    const baseUrl = (() => {
+      const fromApi = api?.defaults?.baseURL;
+      if (fromApi) return fromApi;
+      const fromEnv = import.meta.env.VITE_API_URL;
+      if (fromEnv) return fromEnv;
+      if (!import.meta.env.DEV) {
+        console.warn('[fileService] VITE_API_URL no definida; usando fallback http://localhost:3001/api/v1');
+      }
+      return 'http://localhost:3001/api/v1';
+    })();
     return `${baseUrl}/files/view/${filename}`;
   },
 
   // Obtener URL para descargar archivo
   getDownloadUrl: (filename) => {
-    const baseUrl = api?.defaults?.baseURL || (import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1');
+    const baseUrl = (() => {
+      const fromApi = api?.defaults?.baseURL;
+      if (fromApi) return fromApi;
+      const fromEnv = import.meta.env.VITE_API_URL;
+      if (fromEnv) return fromEnv;
+      if (!import.meta.env.DEV) {
+        console.warn('[fileService] VITE_API_URL no definida; usando fallback http://localhost:3001/api/v1');
+      }
+      return 'http://localhost:3001/api/v1';
+    })();
     return `${baseUrl}/files/download/${filename}`;
   },
 

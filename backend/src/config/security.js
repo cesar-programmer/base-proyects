@@ -3,20 +3,32 @@ import helmet from 'helmet';
 import cors from 'cors';
 import config from './config.js';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 // Configuración de CORS
+const parseOrigins = (str) => (str || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Permitir requests sin origin (mobile apps, postman, etc.)
     if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
+
+    const envOrigins = parseOrigins(process.env.CORS_ORIGINS);
+    const devOrigins = [
       config.server.frontendUrl,
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:8080',
       'http://localhost:8082'
     ];
-    
+
+    const allowedOrigins = envOrigins.length > 0
+      ? envOrigins
+      : (isProd ? [config.server.frontendUrl] : devOrigins);
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -30,8 +42,8 @@ const corsOptions = {
 
 // Rate limiting para autenticación
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 intentos por IP
+  windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), // 15 min por defecto
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX || 5), // 5 intentos por IP
   message: {
     error: 'Demasiados intentos de autenticación. Intenta de nuevo en 15 minutos.'
   },
@@ -41,8 +53,8 @@ const authLimiter = rateLimit({
 
 // Rate limiting general
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 1000, // máximo 1000 requests por IP (aumentado para desarrollo)
+  windowMs: Number(process.env.GENERAL_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), // 15 min
+  max: Number(process.env.GENERAL_RATE_LIMIT_MAX || (isProd ? 300 : 1000)), // menor en prod por defecto
   message: {
     error: 'Demasiadas solicitudes. Intenta de nuevo más tarde.'
   },

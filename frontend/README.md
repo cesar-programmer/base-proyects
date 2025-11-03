@@ -1,8 +1,26 @@
-# React + Vite
+# Frontend — Sistema de Reportes Académicos
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Configuración
 
-Currently, two official plugins are available:
+- Copia `.env.example` a `.env` y ajusta:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```
+VITE_API_URL=http://localhost:3001/api/v1
+```
+
+En producción establece `VITE_API_URL` al dominio de la API.
+
+## Desarrollo
+
+- `npm install`
+- `npm run dev`
+
+## Build de producción
+
+- `npm run build`
+- El build copia los archivos de `public/` a la raíz (favicon, etc.).
+
+## Logs
+
+- En desarrollo, los `console.*` funcionan con normalidad.
+- En producción, se silencian `console.log/debug/trace/table/group/time` automáticamente; se mantienen `console.warn/error`.

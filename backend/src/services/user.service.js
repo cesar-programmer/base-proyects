@@ -6,6 +6,7 @@ class UserService {
   // Obtener todos los usuarios
   async find() {
     try {
+      console.log('🔍 UserService.find() - Consultando todos los usuarios...');
       const users = await models.User.findAll({
         include: [
           {
@@ -16,8 +17,17 @@ class UserService {
         ],
         attributes: { exclude: ['password'] }
       });
+      console.log(`✅ UserService.find() - Encontrados ${users.length} usuarios en BD`);
+      console.log('📋 Usuarios con roles:', users.map(u => ({
+        id: u.id,
+        email: u.email,
+        nombre: u.nombre,
+        rolId: u.rolId,
+        rolData: u.rol
+      })));
       return users;
     } catch (error) {
+      console.error('❌ Error en UserService.find():', error);
       throw boom.internal('Error al obtener los usuarios');
     }
   }

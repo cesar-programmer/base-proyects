@@ -59,10 +59,13 @@ RUN apt-get update \
     libxss1 \
     libxtst6 \
  && rm -rf /var/lib/apt/lists/* \
- && npm ci --only=production
+ && npm ci --only=production \
+ && npm install -g sequelize-cli
 
 # Copiar el resto del código fuente
 COPY . .
+COPY ./scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Configurar variables de entorno (valores por defecto seguros/placeholder)
 ENV NODE_ENV=production \
@@ -95,5 +98,5 @@ ENV NODE_ENV=production \
 # Exponer el puerto de la API
 EXPOSE 3000
 
-# Comando para iniciar en producción
-CMD ["node", "src/index.js"]
+# Comando para iniciar en producción (migraciones + seeders + app)
+CMD ["./docker-entrypoint.sh"]

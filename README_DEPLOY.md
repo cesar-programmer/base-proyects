@@ -79,6 +79,12 @@ docker compose -f docker-compose.prod.yml logs -f backend
 
 ```
 docker compose -f docker-compose.prod.yml logs -f frontend
+
+- Migraciones y seeders (automático):
+  - El backend ejecuta `sequelize db:migrate` y `sequelize db:seed:all` al iniciar.
+  - Controlar con variables:
+    - `RUN_MIGRATIONS=true|false`
+    - `RUN_SEEDERS=true|false`
 ```
 
 - Estado general:

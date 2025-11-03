@@ -4,7 +4,8 @@ const userService = {
   // Obtener todos los usuarios
   getAllUsers: async () => {
     try {
-      const response = await api.get('/users');
+      // Agregar timestamp para evitar caché
+      const response = await api.get(`/users?_ts=${Date.now()}`);
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Error al obtener usuarios');

@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
-import { User, Search, Plus, Edit, Trash2, Users, Eye, EyeOff } from "lucide-react";
+import { User, Search, Plus, Edit, Trash2, Users, Eye, EyeOff, Upload, Download, FileSpreadsheet } from "lucide-react";
 import userService from '../../services/userService';
 import { toast } from 'react-toastify';
 
@@ -73,7 +73,10 @@ export default function GestionUsuariosDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -92,10 +95,29 @@ export default function GestionUsuariosDashboard() {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Iniciando carga de usuarios...');
+      // Agregar timestamp para evitar caché
       const response = await userService.getAllUsers();
+      console.log('📦 Respuesta completa del servidor:', response);
+      console.log('👥 Total de usuarios recibidos:', response.data?.length || 0);
+      console.log('📋 Lista de usuarios:', response.data);
+      
+      // Verificar estructura de cada usuario
+      if (response.data && response.data.length > 0) {
+        console.log('🔍 Primer usuario (estructura):', response.data[0]);
+        console.log('🔍 Roles de cada usuario:', response.data.map(u => ({
+          nombre: u.nombre,
+          email: u.email,
+          rol: u.rol,
+          rolNombre: u.rol?.nombre
+        })));
+      }
+      
       setUsers(response.data || []);
+      console.log('✅ Estado actualizado con', response.data?.length || 0, 'usuarios');
     } catch (error) {
       toast.error('Error al cargar usuarios: ' + error.message);
+      console.error('❌ Error al cargar usuarios:', error);
     } finally {
       setLoading(false);
     }
@@ -168,8 +190,24 @@ export default function GestionUsuariosDashboard() {
                          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.cedula?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || user.rol?.id?.toString() === roleFilter;
-    return matchesSearch && matchesRole;
+    const isNotCoordinator = user.rol?.nombre !== 'COORDINADOR'; // Ocultar coordinadores
+    
+    console.log(`🔍 Filtrado usuario ${user.email}:`, {
+      matchesSearch,
+      matchesRole,
+      isNotCoordinator,
+      rolNombre: user.rol?.nombre,
+      incluido: matchesSearch && matchesRole && isNotCoordinator
+    });
+    
+    return matchesSearch && matchesRole && isNotCoordinator;
   });
+  
+  console.log('📊 Resultado del filtrado:');
+  console.log('  - Total usuarios:', users.length);
+  console.log('  - Usuarios filtrados:', filteredUsers.length);
+  console.log('  - Búsqueda:', searchTerm || '(vacío)');
+  console.log('  - Filtro rol:', roleFilter);
 
   const openEditModal = (user) => {
     setEditingUser(user);
@@ -186,8 +224,136 @@ export default function GestionUsuariosDashboard() {
 
   const closeModals = () => {
     setShowCreateModal(false);
+    setShowBulkUploadModal(false);
     setEditingUser(null);
+    setBulkFile(null);
+    setUploadProgress(0);
     setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
+  };
+
+  // Función para descargar plantilla CSV
+  const downloadTemplate = () => {
+    // rolId: 1=ADMINISTRADOR, 3=DOCENTE (2=COORDINADOR está oculto)
+    const csvContent = "nombre,apellido,email,cedula,telefono,rolId,password\nJuan,Pérez,juan.perez@universidad.edu,12345678,555-1234,3,Password123\nMaría,González,maria.gonzalez@universidad.edu,87654321,555-5678,1,Password123";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'plantilla_usuarios.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Plantilla descargada exitosamente');
+  };
+
+  // Función para manejar la carga del archivo
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        toast.error('Por favor, selecciona un archivo CSV válido');
+        return;
+      }
+      setBulkFile(file);
+    }
+  };
+
+  // Función para procesar y cargar usuarios masivamente
+  const handleBulkUpload = async (e) => {
+    e.preventDefault();
+    if (!bulkFile) {
+      toast.error('Por favor, selecciona un archivo CSV');
+      return;
+    }
+
+    try {
+      setUploadProgress(10);
+      const text = await bulkFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast.error('El archivo CSV está vacío o no tiene datos');
+        return;
+      }
+
+      setUploadProgress(30);
+      
+      // Procesar el CSV
+      const headers = lines[0].split(',').map(h => h.trim());
+      const users = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values.length === headers.length) {
+          const user = {};
+          headers.forEach((header, index) => {
+            user[header] = values[index];
+          });
+          
+          // Validar campos requeridos
+          if (user.nombre && user.apellido && user.email && user.cedula && user.rolId && user.password) {
+            users.push(user);
+          }
+        }
+      }
+
+      if (users.length === 0) {
+        toast.error('No se encontraron usuarios válidos en el archivo');
+        return;
+      }
+
+      console.log(`Procesando ${users.length} usuarios para crear...`);
+      setUploadProgress(50);
+
+      // Crear usuarios uno por uno
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
+      for (let i = 0; i < users.length; i++) {
+        try {
+          console.log(`Creando usuario ${i + 1}/${users.length}: ${users[i].email}`);
+          await userService.createUser(users[i]);
+          successCount++;
+          setUploadProgress(50 + (50 * (i + 1) / users.length));
+        } catch (error) {
+          errorCount++;
+          const errorMsg = error.message || 'Error desconocido';
+          console.error(`Error al crear usuario ${users[i].email}:`, errorMsg);
+          errors.push(`${users[i].email}: ${errorMsg}`);
+        }
+      }
+
+      console.log(`Carga masiva completada: ${successCount} exitosos, ${errorCount} errores`);
+      setUploadProgress(100);
+      
+      // Cerrar modal y limpiar
+      setShowBulkUploadModal(false);
+      setBulkFile(null);
+      
+      // Recargar usuarios con un pequeño delay para asegurar que se actualice
+      setTimeout(async () => {
+        console.log('Recargando lista de usuarios...');
+        await loadUsers();
+        setUploadProgress(0);
+        
+        if (successCount > 0) {
+          toast.success(`✅ ${successCount} usuarios creados exitosamente`);
+        }
+        if (errorCount > 0) {
+          toast.warning(`⚠️ ${errorCount} usuarios no pudieron ser creados`, {
+            duration: 6000
+          });
+          // Mostrar detalles de errores en consola
+          console.log('Errores detallados:', errors);
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error al procesar el archivo:', error);
+      toast.error('Error al procesar el archivo: ' + error.message);
+      setUploadProgress(0);
+    }
   };
 
   if (loading) {
@@ -226,18 +392,27 @@ export default function GestionUsuariosDashboard() {
               onChange={(e) => setRoleFilter(e.target.value)}
             >
               <option value="all">Todos los roles</option>
-              {roles.map(role => (
+              {roles.filter(role => role.nombre !== 'COORDINADOR').map(role => (
                 <option key={role.id} value={role.id.toString()}>{role.nombre}</option>
               ))}
             </Select>
           </div>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Usuario
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowBulkUploadModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Carga Masiva
+            </Button>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Usuario
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -390,7 +565,7 @@ export default function GestionUsuariosDashboard() {
                   required
                 >
                   <option value="">Seleccionar rol</option>
-                  {roles.map(role => (
+                  {roles.filter(role => role.nombre !== 'COORDINADOR').map(role => (
                     <option key={role.id} value={role.id.toString()}>{role.nombre}</option>
                   ))}
                 </Select>
@@ -482,7 +657,7 @@ export default function GestionUsuariosDashboard() {
                   required
                 >
                   <option value="">Seleccionar rol</option>
-                  {roles.map(role => (
+                  {roles.filter(role => role.nombre !== 'COORDINADOR').map(role => (
                     <option key={role.id} value={role.id.toString()}>{role.nombre}</option>
                   ))}
                 </Select>
@@ -492,6 +667,104 @@ export default function GestionUsuariosDashboard() {
                   Actualizar Usuario
                 </Button>
                 <Button type="button" onClick={closeModals} className="bg-gray-600 hover:bg-gray-700 text-white flex-1">
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de carga masiva */}
+      {showBulkUploadModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+              Carga Masiva de Usuarios
+            </h3>
+            
+            {/* Instrucciones */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-semibold text-blue-900 mb-2">📋 Instrucciones:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                <li>Descarga la plantilla CSV haciendo clic en el botón de abajo</li>
+                <li>Completa el archivo con los datos de los usuarios</li>
+                <li>Asegúrate de incluir todos los campos requeridos</li>
+                <li>Los ID de roles son: <strong>1 = ADMINISTRADOR</strong>, <strong>2 = DOCENTE</strong></li>
+                <li>Sube el archivo completado usando el botón de carga</li>
+              </ol>
+            </div>
+
+            {/* Botón para descargar plantilla */}
+            <div className="mb-4">
+              <Button
+                type="button"
+                onClick={downloadTemplate}
+                className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Descargar Plantilla CSV
+              </Button>
+            </div>
+
+            {/* Formulario de carga */}
+            <form onSubmit={handleBulkUpload}>
+              <div className="mb-4">
+                <Label htmlFor="bulk-file">Seleccionar Archivo CSV</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
+                    <input
+                      id="bulk-file"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <Upload className="w-5 h-5 text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-600">
+                      {bulkFile ? bulkFile.name : 'Haz clic para seleccionar archivo'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Barra de progreso */}
+              {uploadProgress > 0 && (
+                <div className="mb-4">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1 text-center">{uploadProgress}%</p>
+                </div>
+              )}
+
+              {/* Formato esperado */}
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs font-semibold text-gray-700 mb-1">Formato CSV esperado:</p>
+                <code className="text-xs text-gray-600 block">
+                  nombre,apellido,email,cedula,telefono,rolId,password
+                </code>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 disabled:opacity-50"
+                  disabled={!bulkFile || uploadProgress > 0}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Cargar Usuarios
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={closeModals} 
+                  className="bg-gray-600 hover:bg-gray-700 text-white flex-1"
+                  disabled={uploadProgress > 0}
+                >
                   Cancelar
                 </Button>
               </div>

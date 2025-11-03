@@ -7,23 +7,34 @@ class UserController {
   // Obtener todos los usuarios
   async getUsers(req, res, next) {
     try {
+      console.log('🔍 GET /users - Query params:', req.query);
       const { page = 1, limit = 10, activo, id_rol } = req.query;
       const filters = {};
       
       if (activo !== undefined) filters.activo = activo === 'true';
       if (id_rol) filters.id_rol = parseInt(id_rol);
 
+      console.log('📋 Filtros aplicados:', filters);
       const users = await userService.find({
         page: parseInt(page),
         limit: parseInt(limit),
         ...filters
       });
 
+      console.log('✅ Usuarios encontrados:', users.length);
+      console.log('👥 Lista de usuarios:', users.map(u => ({
+        id: u.id,
+        email: u.email,
+        rolId: u.rol?.id,
+        rolNombre: u.rol?.nombre
+      })));
+
       res.json({
         message: 'Usuarios obtenidos exitosamente',
         data: users
       });
     } catch (error) {
+      console.error('❌ Error en getUsers:', error);
       next(error);
     }
   }

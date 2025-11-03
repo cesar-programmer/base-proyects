@@ -13,6 +13,8 @@ services:
       DB_PORT: 3306
       JWT_SECRET: ${JWT_SECRET:-cambia_esto_por_un_secreto_seguro}
       FRONTEND_URL: http://localhost:8082
+      RUN_MIGRATIONS: "true"
+      RUN_SEEDERS: "true"
       # (Opcional) CORS_ORIGINS tiene prioridad si se define
       # CORS_ORIGINS: http://localhost:8080
     ports:

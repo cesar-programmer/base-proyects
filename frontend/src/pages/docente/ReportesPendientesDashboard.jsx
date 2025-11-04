@@ -196,13 +196,33 @@ const DashboardHeader = ({ semestre, fechaLimite }) => (
       Gestiona y completa tus reportes académicos pendientes de manera eficiente
     </p>
     <div className="flex justify-center items-center gap-6 text-sm">
-      <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
-        <Calendar className="w-4 h-4 text-green-600" />
-        <span className="font-medium text-green-800">Semestre: {semestre}</span>
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+        !semestre || semestre === "N/A" 
+          ? "bg-gray-50 border-gray-200" 
+          : "bg-green-50 border-green-200"
+      }`}>
+        <Calendar className={`w-4 h-4 ${
+          !semestre || semestre === "N/A" ? "text-gray-400" : "text-green-600"
+        }`} />
+        <span className={`font-medium ${
+          !semestre || semestre === "N/A" ? "text-gray-500" : "text-green-800"
+        }`}>
+          Semestre: {!semestre || semestre === "N/A" ? "No hay semestre activo" : semestre}
+        </span>
       </div>
-      <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-        <Clock className="w-4 h-4 text-amber-600" />
-        <span className="font-medium text-amber-800">Fecha límite: {fechaLimite}</span>
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+        !fechaLimite || fechaLimite === "N/A" 
+          ? "bg-gray-50 border-gray-200" 
+          : "bg-amber-50 border-amber-200"
+      }`}>
+        <Clock className={`w-4 h-4 ${
+          !fechaLimite || fechaLimite === "N/A" ? "text-gray-400" : "text-amber-600"
+        }`} />
+        <span className={`font-medium ${
+          !fechaLimite || fechaLimite === "N/A" ? "text-gray-500" : "text-amber-800"
+        }`}>
+          Fecha límite: {!fechaLimite || fechaLimite === "N/A" ? "Sin fecha límite" : fechaLimite}
+        </span>
       </div>
     </div>
   </div>
@@ -701,7 +721,8 @@ export default function PendingReports() {
   };
 
   const reportesArray = Array.isArray(reportes) ? reportes.map(mapReporteFromBackend) : [];
-  const reportesDelSemestre = reportesArray
+  // Filtrar reportes completados - solo mostrar pendientes, en revisión y devueltos
+  const reportesDelSemestre = reportesArray.filter((r) => r.estado !== "Completado")
   const reportesFiltrados = reportesDelSemestre.filter((r) => {
     const txt = `${r.titulo} ${r.tipo} ${r.estado} ${r.ultimaActualizacion}`.toLowerCase()
     const matchesSearch = txt.includes(busqueda.toLowerCase())
@@ -932,7 +953,7 @@ export default function PendingReports() {
         {/* Listado */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-gray-900">Reportes del semestre ({reportesFiltrados.length})</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Reportes activos ({reportesFiltrados.length})</h3>
             <Button 
               onClick={() => setOpenCrearReporte(true)}
               className="flex items-center gap-2"

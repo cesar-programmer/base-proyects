@@ -178,12 +178,6 @@ export default function LoginPageAdmin() {
                 </div>
               </div>
 
-              {/* Link de recuperación */}
-              <div className="text-right">
-                <a href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                  ¿Olvidaste tu contraseña?
-                </a>
-              </div>
 
               {/* Mensaje de error */}
               {error && (

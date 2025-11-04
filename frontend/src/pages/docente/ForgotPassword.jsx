@@ -1,10 +1,11 @@
-/* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, Mail, Lock, Info, UserCircle, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { AlertCircle, ArrowLeft, Lock, Check } from 'lucide-react';
 import { toast } from 'react-toastify';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 const Button = ({ children, className, ...props }) => (
   <button 
@@ -31,16 +32,16 @@ const Label = ({ children, htmlFor }) => (
   </label>
 );
 
-export default function LoginPageDocente() {
-  const [error, setError] = useState('');
+export default function ChangePasswordPage() {
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
   });
   
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -55,25 +56,48 @@ export default function LoginPageDocente() {
     setLoading(true);
     setError('');
     
+    // Validar que las contraseñas nuevas coincidan
+    if (formData.newPassword !== formData.confirmNewPassword) {
+      setError('Las contraseñas nuevas no coinciden');
+      toast.error('Las contraseñas nuevas no coinciden');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const result = await login(formData.email, formData.password);
-      
-      if (result.success) {
-        // Verificar que el usuario sea docente o coordinador (temporalmente)
-        if (result.user.rol?.nombre === 'DOCENTE' || result.user.rol?.nombre === 'COORDINADOR') {
-          const rolDisplay = result.user.rol?.nombre === 'COORDINADOR' ? 'Coordinador' : 'Docente';
-          toast.success(`¡Bienvenido, ${rolDisplay}!`);
-          navigate('/docente/dashboard');
-        } else {
-          setError('No tienes permisos de docente');
-          toast.error('Acceso denegado: Se requieren permisos de docente');
-        }
-      } else {
-        setError(result.error);
-        toast.error(result.error);
+      // Primero hacer login para verificar la contraseña actual
+      const loginResponse = await axios.post(`${API_URL}/auth/login`, {
+        email: formData.email,
+        password: formData.currentPassword
+      });
+
+      if (!loginResponse.data.token) {
+        throw new Error('Credenciales inválidas');
       }
+
+      const token = loginResponse.data.token;
+
+      // Ahora cambiar la contraseña
+      await axios.post(
+        `${API_URL}/auth/change-password`,
+        {
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+          confirmNewPassword: formData.confirmNewPassword
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      toast.success('Contraseña actualizada correctamente');
+      setTimeout(() => navigate('/docente/login'), 2000);
     } catch (error) {
-      const errorMessage = 'Error de conexión. Verifica que el servidor esté funcionando.';
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Error al cambiar la contraseña. Verifica tus credenciales.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -85,11 +109,11 @@ export default function LoginPageDocente() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
       {/* Botón de regreso flotante */}
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/docente/login')}
         className="fixed top-6 left-6 flex items-center gap-2 px-4 py-2 bg-white text-green-700 rounded-xl shadow-lg hover:shadow-xl hover:bg-green-50 transition-all duration-300 border border-green-100 z-10"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span className="text-sm font-semibold">Volver</span>
+        <span className="text-sm font-semibold">Volver al Login</span>
       </button>
 
       <div className="w-full max-w-md">
@@ -113,7 +137,7 @@ export default function LoginPageDocente() {
               
               {/* Título */}
               <div className="text-center">
-                <h1 className="text-2xl font-bold text-white mb-2">Portal Docente</h1>
+                <h1 className="text-2xl font-bold text-white mb-2">Cambiar Contraseña</h1>
                 <p className="text-green-100 text-sm">Sistema de Reportes Académicos</p>
               </div>
             </div>
@@ -121,71 +145,88 @@ export default function LoginPageDocente() {
 
           {/* Formulario */}
           <div className="px-8 -mt-8 pb-8">
-            {/* Badge de rol */}
+            {/* Info badge */}
             <div className="flex justify-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
-                <UserCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-semibold text-green-700">Acceso para Docentes</span>
+                <Lock className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-semibold text-green-700">Actualizar Contraseña</span>
               </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Campo de email */}
+              {/* Email */}
               <div>
-                <Label htmlFor="email" className="text-gray-700 font-medium mb-2">
-                  Correo electrónico
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
+                <Label htmlFor="email">Correo electrónico</Label>
+                <div className="relative mt-2">
+                  <Input
                     id="email"
                     name="email"
                     type="email"
                     placeholder="tu.correo@universidad.edu"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                     required
                   />
                 </div>
               </div>
 
-              {/* Campo de contraseña */}
+              {/* Contraseña actual */}
               <div>
-                <Label htmlFor="password" className="text-gray-700 font-medium mb-2">
-                  Contraseña
-                </Label>
-                <div className="relative">
+                <Label htmlFor="currentPassword">Contraseña actual</Label>
+                <div className="relative mt-2">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
+                  <Input
+                    id="currentPassword"
+                    name="currentPassword"
+                    type="password"
                     placeholder="••••••••"
-                    value={formData.password}
+                    value={formData.currentPassword}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="pl-10"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
                 </div>
               </div>
 
-              {/* Link de recuperación */}
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={() => navigate('/docente/forgot-password')}
-                  className="text-sm text-green-600 hover:text-green-700 font-medium hover:underline"
-                >
-                  ¿Cambiar tu contraseña?
-                </button>
+              <div className="border-t border-gray-200 my-4"></div>
+
+              {/* Nueva contraseña */}
+              <div>
+                <Label htmlFor="newPassword">Nueva contraseña</Label>
+                <div className="relative mt-2">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="newPassword"
+                    name="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.newPassword}
+                    onChange={handleChange}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Mínimo 8 caracteres, una mayúscula, una minúscula y un número
+                </p>
+              </div>
+
+              {/* Confirmar nueva contraseña */}
+              <div>
+                <Label htmlFor="confirmNewPassword">Confirmar nueva contraseña</Label>
+                <div className="relative mt-2">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="confirmNewPassword"
+                    name="confirmNewPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.confirmNewPassword}
+                    onChange={handleChange}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Mensaje de error */}
@@ -199,7 +240,7 @@ export default function LoginPageDocente() {
               {/* Botón de envío */}
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
+                className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading}
               >
                 {loading ? (
@@ -208,10 +249,13 @@ export default function LoginPageDocente() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Iniciando sesión...
+                    Actualizando...
                   </span>
                 ) : (
-                  'Iniciar Sesión'
+                  <span className="flex items-center justify-center gap-2">
+                    <Check className="w-5 h-5" />
+                    Cambiar Contraseña
+                  </span>
                 )}
               </Button>
             </form>
@@ -225,5 +269,4 @@ export default function LoginPageDocente() {
       </div>
     </div>
   );
-};
-
+}

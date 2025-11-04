@@ -133,6 +133,118 @@ class AuthController {
       next(error);
     }
   }
+
+  // Solicitar recuperación de contraseña
+  async forgotPassword(req, res, next) {
+    try {
+      const { email } = req.body;
+
+      // Buscar usuario por email
+      const user = await userService.findByEmail(email);
+      
+      // Por seguridad, siempre responder éxito aunque el usuario no exista
+      if (!user) {
+        return res.json({
+          message: 'Si el correo existe, recibirás un código de recuperación',
+          // En un entorno real, aquí se enviaría un email
+        });
+      }
+
+      // Generar código de 6 dígitos
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Token con expiración de 1 hora
+      const resetToken = jwt.sign(
+        { email: user.email, code: resetCode },
+        config.jwt.secret,
+        { expiresIn: '1h' }
+      );
+
+      // Guardar token en el usuario
+      await userService.saveResetToken(user.id, resetToken, resetCode);
+
+      // En producción, aquí se enviaría un email con el código
+      // Por ahora, lo retornamos en la respuesta (solo para desarrollo)
+      res.json({
+        message: 'Código de recuperación generado',
+        // REMOVER EN PRODUCCIÓN - Solo para desarrollo
+        resetCode,
+        resetToken,
+        email: user.email
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Resetear contraseña con token
+  async resetPassword(req, res, next) {
+    try {
+      const { token, newPassword } = req.body;
+
+      // Verificar token
+      let decoded;
+      try {
+        decoded = jwt.verify(token, config.jwt.secret);
+      } catch (error) {
+        throw boom.unauthorized('Token inválido o expirado');
+      }
+
+      // Buscar usuario por email del token
+      const user = await userService.findByEmail(decoded.email);
+      
+      if (!user) {
+        throw boom.notFound('Usuario no encontrado');
+      }
+
+      // Verificar que el token coincida con el guardado
+      const isValidToken = await userService.verifyResetToken(user.id, token);
+      if (!isValidToken) {
+        throw boom.unauthorized('Token inválido o ya utilizado');
+      }
+
+      // Actualizar contraseña
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      await userService.update(user.id, { password: hashedPassword });
+
+      // Limpiar token de reseteo
+      await userService.clearResetToken(user.id);
+
+      res.json({
+        message: 'Contraseña actualizada exitosamente'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Verificar código de recuperación
+  async verifyResetCode(req, res, next) {
+    try {
+      const { email, code } = req.body;
+
+      const user = await userService.findByEmail(email);
+      
+      if (!user) {
+        throw boom.unauthorized('Código inválido');
+      }
+
+      const isValid = await userService.verifyResetCode(user.id, code);
+      
+      if (!isValid) {
+        throw boom.unauthorized('Código inválido o expirado');
+      }
+
+      // Retornar el token para usar en el reseteo
+      res.json({
+        message: 'Código válido',
+        token: user.resetToken
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default AuthController;

@@ -130,30 +130,6 @@ export default function LoginPageAdmin() {
               </div>
             </div>
 
-            {/* Alerta informativa */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-              <div className="flex gap-3">
-                <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-semibold text-amber-900 mb-2">
-                    Credenciales de Prueba
-                  </h3>
-                  <div className="space-y-2 text-sm text-amber-800">
-                    <div className="bg-white/60 rounded-lg px-3 py-2">
-                      <p className="font-medium mb-1">Administrador:</p>
-                      <p className="text-xs text-amber-700">admin@universidad.edu</p>
-                      <p className="text-xs text-amber-700">Contraseña: admin123</p>
-                    </div>
-                    <div className="bg-white/60 rounded-lg px-3 py-2">
-                      <p className="font-medium mb-1">Coordinador:</p>
-                      <p className="text-xs text-amber-700">maria.gonzalez@universidad.edu</p>
-                      <p className="text-xs text-amber-700">Contraseña: coord123</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Campo de email */}
               <div>

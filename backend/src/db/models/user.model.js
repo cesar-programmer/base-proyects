@@ -55,6 +55,18 @@ const UserSchema = {
     allowNull: true,
     type: DataTypes.DATE
   },
+  resetToken: {
+    allowNull: true,
+    type: DataTypes.STRING(500)
+  },
+  resetCode: {
+    allowNull: true,
+    type: DataTypes.STRING(10)
+  },
+  resetTokenExpires: {
+    allowNull: true,
+    type: DataTypes.DATE
+  },
   rolId: {
     allowNull: false,
     type: DataTypes.INTEGER,

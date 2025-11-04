@@ -280,6 +280,94 @@ class UserService {
       throw boom.internal('Error al obtener usuarios por rol');
     }
   }
+
+  // Guardar token de reseteo de contraseña
+  async saveResetToken(userId, token, code) {
+    try {
+      const user = await this.findOne(userId);
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1); // Expira en 1 hora
+
+      await user.update({
+        resetToken: token,
+        resetCode: code,
+        resetTokenExpires: expiresAt
+      });
+
+      return { message: 'Token guardado correctamente' };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al guardar token de reseteo');
+    }
+  }
+
+  // Verificar token de reseteo
+  async verifyResetToken(userId, token) {
+    try {
+      const user = await models.User.findByPk(userId);
+      
+      if (!user || !user.resetToken) {
+        return false;
+      }
+
+      // Verificar que el token coincida
+      if (user.resetToken !== token) {
+        return false;
+      }
+
+      // Verificar que no haya expirado
+      if (user.resetTokenExpires && new Date() > user.resetTokenExpires) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Verificar código de reseteo
+  async verifyResetCode(userId, code) {
+    try {
+      const user = await models.User.findByPk(userId);
+      
+      if (!user || !user.resetCode) {
+        return false;
+      }
+
+      // Verificar que el código coincida
+      if (user.resetCode !== code) {
+        return false;
+      }
+
+      // Verificar que no haya expirado
+      if (user.resetTokenExpires && new Date() > user.resetTokenExpires) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Limpiar token de reseteo
+  async clearResetToken(userId) {
+    try {
+      const user = await this.findOne(userId);
+      
+      await user.update({
+        resetToken: null,
+        resetCode: null,
+        resetTokenExpires: null
+      });
+
+      return { message: 'Token limpiado correctamente' };
+    } catch (error) {
+      if (boom.isBoom(error)) throw error;
+      throw boom.internal('Error al limpiar token de reseteo');
+    }
+  }
 }
 
 export default UserService;

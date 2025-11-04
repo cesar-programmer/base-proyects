@@ -6,6 +6,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      TZ: America/Tijuana
       DB_HOST: mysql
       DB_USER: ${DB_USER:-user}
       DB_PASSWORD: ${DB_PASSWORD:-password}
@@ -15,6 +16,15 @@ services:
       FRONTEND_URL: http://localhost:8082
       RUN_MIGRATIONS: "true"
       RUN_SEEDERS: "true"
+      # Configuración de correos
+      REMINDER_PROVIDER: ${REMINDER_PROVIDER:-gmail}
+      SMTP_DEBUG: ${SMTP_DEBUG:-false}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@uabc.edu}
+      # Gmail OAuth2
+      GMAIL_USER: ${GMAIL_USER}
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+      GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN}
       # (Opcional) CORS_ORIGINS tiene prioridad si se define
       # CORS_ORIGINS: http://localhost:8080
     ports:

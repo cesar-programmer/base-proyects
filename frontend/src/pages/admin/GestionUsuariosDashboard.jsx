@@ -691,7 +691,7 @@ export default function GestionUsuariosDashboard() {
                 <li>Descarga la plantilla CSV haciendo clic en el botón de abajo</li>
                 <li>Completa el archivo con los datos de los usuarios</li>
                 <li>Asegúrate de incluir todos los campos requeridos</li>
-                <li>Los ID de roles son: <strong>1 = ADMINISTRADOR</strong>, <strong>2 = DOCENTE</strong></li>
+                <li>Los ID de roles son: <strong>1 = ADMINISTRADOR</strong>, <strong>3 = DOCENTE</strong></li>
                 <li>Sube el archivo completado usando el botón de carga</li>
               </ol>
             </div>

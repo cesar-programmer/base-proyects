@@ -4,9 +4,10 @@ import './config/logging.js';
 import { validateEnv } from './config/validateEnv.js';
 import morgan from 'morgan';
 import path from 'path';
+import cors from 'cors';
 import routerApi from './routes/index.js';
 import { logErrors, errorHandler, boomErrorHandler, queryErrorHandler } from './middleware/error.handler.js';
-import { generalSecurityMiddleware, securityHeaders } from './config/security.js';
+import { corsOptions, generalSecurityMiddleware, securityHeaders } from './config/security.js';
 import { initReminderScheduler } from './scheduler/recordatorio.scheduler.js';
 
 // Configurar variables de entorno
@@ -14,6 +15,9 @@ dotenv.config();
 validateEnv();
 
 const app = express();
+
+// IMPORTANTE: CORS debe ir PRIMERO, antes de cualquier otro middleware
+app.use(cors(corsOptions));
 
 // Middlewares de seguridad
 app.use(generalSecurityMiddleware);

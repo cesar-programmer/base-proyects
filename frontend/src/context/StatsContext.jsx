@@ -2,7 +2,7 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable no-unused-vars */
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import estadisticaService from '../services/estadisticaService';
+import reportService from '../services/reportService';
 
 const StatsContext = createContext();
 
@@ -24,43 +24,34 @@ export const StatsProvider = ({ children }) => {
     setError(null);
     
     try {
-      // ⭐ Ahora obtenemos TODAS las estadísticas de una vez
-      console.log('🟢 [StatsContext] Iniciando fetch de dashboard stats...');
-      const dashboardData = await estadisticaService.getDashboardStats();
-      console.log('📦 [StatsContext] Datos completos del dashboard (response.data.data):', dashboardData);
-      if (dashboardData?.general) {
-        const g = dashboardData.general;
-        console.log('🔹 [StatsContext] General:', {
-          totalUsuarios: g.totalUsuarios,
-          usuariosActivos: g.usuariosActivos,
-          totalReportes: g.totalReportes,
-          totalActividades: g.totalActividades,
-          totalNotificaciones: g.totalNotificaciones,
-        });
-      }
-      if (dashboardData?.actividades) {
-        const a = dashboardData.actividades;
-        console.log('🔹 [StatsContext] Actividades:', {
-          total: a.total,
-          aprobadas: a.aprobadas,
-          pendientes: a.pendientes,
-          devueltas: a.devueltas,
-        });
-      }
+      // ⭐ Obtenemos estadísticas generales de REPORTES
+      console.log('🟢 [StatsContext] Iniciando fetch de estadísticas de reportes...');
+      const reportStats = await reportService.getReportStats();
+      console.log('📦 [StatsContext] Estadísticas de reportes (response.data.data):', reportStats);
       
-      // Transformamos para mantener compatibilidad con el código existente
-      const transformedStats = estadisticaService.transformActivityStatsForDashboard(dashboardData);
-      console.log('🧮 [StatsContext] Stats transformadas para gráfico:', transformedStats);
+      // Transformamos los datos de reportes al formato esperado por el dashboard
+      const transformedStats = {
+        completadas: reportStats.completados || 0,  // Reportes aprobados
+        pendientes: reportStats.pendientes || 0,     // Reportes pendientes
+        devueltas: reportStats.devueltos || 0,       // Reportes devueltos
+        total: reportStats.total || 0,
+        porcentajes: {
+          completadas: reportStats.porcentajes?.completados || 0,
+          pendientes: reportStats.porcentajes?.pendientes || 0,
+          devueltas: reportStats.porcentajes?.devueltos || 0
+        }
+      };
       
-      // Guardamos tanto los datos transformados como los completos
+      console.log('🧮 [StatsContext] Stats de reportes transformadas para gráfico:', transformedStats);
+      
       setStats({
         ...transformedStats,
-        _fullDashboardData: dashboardData // Datos completos disponibles si se necesitan
+        _fullReportData: reportStats // Datos completos disponibles si se necesitan
       });
-      console.log('✅ [StatsContext] Stats guardadas en contexto.');
+      console.log('✅ [StatsContext] Stats de reportes guardadas en contexto.');
     } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-      setError('Error al cargar las estadísticas del dashboard');
+      console.error('❌ [StatsContext] Error fetching report stats:', err);
+      setError('Error al cargar las estadísticas de reportes');
     } finally {
       setLoading(false);
     }

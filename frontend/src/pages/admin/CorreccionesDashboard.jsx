@@ -210,17 +210,43 @@ const CorreccionesDashboard = () => {
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
         setActivities(response.data.data);
         setTotalRecords(response.data.pagination?.total || response.data.data.length);
+        
+        // Solo mostrar toast informativo si no hay actividades y no es por un error
+        if (response.data.data.length === 0) {
+          toast({
+            title: "Sin actividades",
+            description: "Este usuario no ha registrado actividades en el período seleccionado",
+            type: "info"
+          });
+        }
       } else {
         setActivities([]);
         setTotalRecords(0);
+        toast({
+          title: "Sin actividades",
+          description: "Este usuario no ha registrado actividades en el período seleccionado",
+          type: "info"
+        });
       }
     } catch (error) {
       console.error("Error loading user activities:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las actividades del usuario",
-        type: "error"
-      });
+      
+      // Verificar si es un error 404 (no encontrado) o si no hay datos
+      if (error.response && error.response.status === 404) {
+        toast({
+          title: "Sin actividades",
+          description: "Este usuario no ha registrado actividades en el período seleccionado",
+          type: "info"
+        });
+      } else {
+        // Solo mostrar error si es un problema real del servidor
+        toast({
+          title: "Error",
+          description: "Ocurrió un problema al cargar las actividades. Por favor, intente nuevamente.",
+          type: "error"
+        });
+      }
+      
       setActivities([]);
       setTotalRecords(0);
     } finally {

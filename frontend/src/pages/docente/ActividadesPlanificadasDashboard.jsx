@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
 import {
   CalendarDays,
   ListTodo,
@@ -22,11 +22,13 @@ import {
   Eye,
   Download,
   Upload,
-  HardDrive
+  HardDrive,
+  AlertCircle
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import activityService from '../../services/activityService';
 import reportService from '../../services/reportService';
+import periodoAcademicoService from '../../services/periodoAcademicoService';
 import { toast } from 'react-toastify'
 
 const CATEGORIAS = [
@@ -346,6 +348,9 @@ export default function PlannedActivities() {
   const [selectedCategory, setSelectedCategory] = useState("")
   const [selectedActivity, setSelectedActivity] = useState(null)
   const [editingActivity, setEditingActivity] = useState(null)
+  const [periodoActivo, setPeriodoActivo] = useState(null)
+  const [loadingPeriodo, setLoadingPeriodo] = useState(true)
+  const [fechaLimiteActual, setFechaLimiteActual] = useState("N/A")
 
 
   // Funciones para manejar borradores en localStorage
@@ -410,11 +415,25 @@ export default function PlannedActivities() {
     }
   }
 
-  useEffect(() => {
-    loadActivities();
-  }, [user]);
+  const loadPeriodoActivo = useCallback(async () => {
+    try {
+      setLoadingPeriodo(true);
+      const response = await periodoAcademicoService.getPeriodoActivo();
+      
+      if (response.success && response.data) {
+        setPeriodoActivo(response.data);
+      } else {
+        setPeriodoActivo(null);
+      }
+    } catch (error) {
+      console.error('Error al cargar período activo:', error);
+      setPeriodoActivo(null);
+    } finally {
+      setLoadingPeriodo(false);
+    }
+  }, []);
 
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async () => {
     if (!user?.id) return;
     
     try {
@@ -431,7 +450,41 @@ export default function PlannedActivities() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadActivities();
+    loadPeriodoActivo();
+    
+    // Cargar información de fecha límite
+    const fetchDeadlineInfo = async () => {
+      try {
+        const response = await reportService.getDeadlineInfo();
+        console.log('Respuesta de getDeadlineInfo:', response);
+        
+        // Los datos están en response.data
+        const deadlineInfo = response.data || response;
+        console.log('Datos extraídos:', deadlineInfo);
+        
+        if (deadlineInfo.fechaLimite && deadlineInfo.fechaLimite !== "N/A") {
+          console.log('Fecha límite recibida:', deadlineInfo.fechaLimite);
+          const fechaFormateada = new Date(deadlineInfo.fechaLimite).toLocaleDateString('es-ES', { 
+            day: 'numeric', 
+            month: 'long' 
+          });
+          console.log('Fecha límite formateada:', fechaFormateada);
+          setFechaLimiteActual(fechaFormateada);
+        } else {
+          console.log('No se recibió fecha límite válida:', deadlineInfo.fechaLimite);
+        }
+      } catch (error) {
+        console.error('Error al cargar información de fecha límite:', error);
+        // Mantener el valor por defecto "N/A" en caso de error
+      }
+    };
+    
+    fetchDeadlineInfo();
+  }, [loadActivities, loadPeriodoActivo]);
 
   const actividadesArray = Array.isArray(actividades) ? actividades : []
   const totalActividades = actividadesArray.length
@@ -654,14 +707,29 @@ export default function PlannedActivities() {
 
   const deleteActivity = async (id) => {
     try {
-      const activity = actividadesArray.find(a => a.id === id);
-      if (!activity?.isNew) {
+      // Verificar si es un ID de base de datos (numérico) o un ID temporal (string)
+      const isTemporaryId = typeof id === 'string' && (
+        id.includes('-') || // IDs como "DOCENCIA-doc-3" o "custom-123..."
+        id.startsWith('custom-') ||
+        id.match(/^[A-Z]+_?[A-Z]*-/)  // IDs de catálogo
+      );
+      
+      // Solo llamar al backend si es un ID de base de datos
+      if (!isTemporaryId) {
         await activityService.deleteActivity(id);
         toast.success('Actividad eliminada exitosamente', {
           position: "top-right",
           autoClose: 3000,
         });
+      } else {
+        // Para IDs temporales, solo mostrar mensaje de que se removió localmente
+        toast.info('Actividad removida del plan', {
+          position: "top-right",
+          autoClose: 2000,
+        });
       }
+      
+      // Remover del estado local en ambos casos
       setActividades((prev) => {
         const currentActivities = Array.isArray(prev) ? prev : [];
         return currentActivities.filter((a) => a.id !== id);
@@ -794,7 +862,7 @@ export default function PlannedActivities() {
     }
   }
 
-  const disabled = submitted
+  const disabled = submitted || !periodoActivo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 pb-28">
@@ -803,7 +871,36 @@ export default function PlannedActivities() {
         <header className="space-y-2">
           <h1 className="text-3xl font-bold text-green-800">Actividades Planificadas</h1>
           <p className="text-gray-600">Organiza y registra tus actividades para el semestre {semestre}.</p>
+          
+          {/* Mostrar fecha límite de registro */}
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="w-4 h-4 text-amber-600" />
+            <span className="text-gray-700">
+              Fecha límite de registro:{" "}
+              <span className={`font-semibold ${!fechaLimiteActual || fechaLimiteActual === "N/A" ? "text-gray-500" : "text-amber-700"}`}>
+                {!fechaLimiteActual || fechaLimiteActual === "N/A" ? "Sin fecha límite" : fechaLimiteActual}
+              </span>
+            </span>
+          </div>
         </header>
+
+        {/* Banner de período inactivo */}
+        {!loadingPeriodo && !periodoActivo && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                  No hay período académico activo
+                </h3>
+                <p className="text-sm text-yellow-700">
+                  Actualmente no es posible crear o editar actividades porque no hay un período académico activo. 
+                  Por favor, contacta al  administrador para que active un período académico.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Resumen */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -834,12 +931,14 @@ export default function PlannedActivities() {
           <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Fecha Límite</p>
-                <p className="text-3xl font-bold text-red-600">30</p>
-                <p className="text-xs text-gray-500">de Agosto</p>
+                <p className="text-sm text-gray-600">Fecha Límite de Registro</p>
+                <p className={`text-2xl font-bold ${!fechaLimiteActual || fechaLimiteActual === "N/A" ? "text-gray-400" : "text-amber-600"}`}>
+                  {!fechaLimiteActual || fechaLimiteActual === "N/A" ? "Sin fecha límite" : fechaLimiteActual}
+                </p>
+                <p className="text-xs text-gray-500">Fecha de registro de actividades</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Flag className="w-6 h-6 text-red-600" />
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!fechaLimiteActual || fechaLimiteActual === "N/A" ? "bg-gray-100" : "bg-amber-100"}`}>
+                <Flag className={`w-6 h-6 ${!fechaLimiteActual || fechaLimiteActual === "N/A" ? "text-gray-400" : "text-amber-600"}`} />
               </div>
             </CardContent>
           </Card>

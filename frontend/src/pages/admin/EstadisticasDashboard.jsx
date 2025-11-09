@@ -109,7 +109,7 @@ const DownloadButton = ({ format, onClick }) => (
 // Componente de encabezado con filtros
 const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSelectedMetric, selectedChart, setSelectedChart }) => (
   <Card className="p-6">
-    <h1 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas</h1>
+    <h1 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas de Reportes</h1>
     
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <Select
@@ -129,8 +129,8 @@ const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSel
         value={selectedMetric}
         onChange={(e) => setSelectedMetric(e.target.value)}
         options={[
-          { value: "Actividades Completadas", label: "Actividades Completadas" },
-          { value: "Actividades Pendientes", label: "Actividades Pendientes" },
+          { value: "Reportes Aprobados", label: "Reportes Aprobados" },
+          { value: "Reportes Pendientes", label: "Reportes Pendientes" },
           { value: "Porcentaje Cumplimiento", label: "Porcentaje Cumplimiento" }
         ]}
       />
@@ -150,7 +150,7 @@ const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSel
 );
 
 // Componente de gráfico de barras
-const BarChart = ({ chartData, maxValue, legendLabel = "Actividades Completadas" }) => (
+const BarChart = ({ chartData, maxValue, legendLabel = "Reportes Aprobados" }) => (
   <Card className="p-6">
     <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
     
@@ -195,7 +195,7 @@ const BarChart = ({ chartData, maxValue, legendLabel = "Actividades Completadas"
 );
 
 // Componente de gráfico de líneas simple (SVG)
-const LineChart = ({ chartData, maxValue, legendLabel = "Actividades Completadas" }) => {
+const LineChart = ({ chartData, maxValue, legendLabel = "Reportes Aprobados" }) => {
   const width = 800;
   const height = 320;
   const paddingLeft = 40;
@@ -251,7 +251,7 @@ const LineChart = ({ chartData, maxValue, legendLabel = "Actividades Completadas
 };
 
 // Componente de gráfico circular simple (conic-gradient)
-const PieChart = ({ chartData, legendLabel = "Actividades Completadas" }) => {
+const PieChart = ({ chartData, legendLabel = "Reportes Aprobados" }) => {
   const total = chartData.reduce((sum, item) => sum + Number(item?.value ?? 0), 0);
   let current = 0;
   const slices = chartData.map((item) => {
@@ -297,16 +297,22 @@ const PieChart = ({ chartData, legendLabel = "Actividades Completadas" }) => {
 // Componente de tabla de cumplimiento
 const ComplianceTable = ({ complianceData, downloadFile }) => (
   <Card className="p-6">
-    <h2 className="text-xl font-semibold text-gray-900 mb-6">Cumplimiento</h2>
+    <h2 className="text-xl font-semibold text-gray-900 mb-6">Cumplimiento de Reportes</h2>
     
-    <div className="overflow-x-auto">
+    {/* Contador de docentes */}
+    <div className="mb-4 text-sm text-gray-600">
+      Mostrando <strong>{complianceData.length}</strong> docente(s)
+    </div>
+    
+    {/* Tabla con scroll vertical para muchos docentes */}
+    <div className="overflow-x-auto" style={{ maxHeight: '600px', overflowY: 'auto' }}>
       <table className="w-full">
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">DOCENTE</th>
-            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ACTIVIDADES COMPLETADAS</th>
-            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ACTIVIDADES PENDIENTES</th>
-            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">PORCENTAJE DE CUMPLIMIENTO</th>
+        <thead className="sticky top-0 bg-white shadow-sm">
+          <tr className="border-b-2 border-gray-300">
+            <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700 bg-gray-50">DOCENTE</th>
+            <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700 bg-gray-50">REPORTES APROBADOS</th>
+            <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700 bg-gray-50">REPORTES PENDIENTES</th>
+            <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700 bg-gray-50">PORCENTAJE DE CUMPLIMIENTO</th>
           </tr>
         </thead>
         <tbody>
@@ -318,7 +324,7 @@ const ComplianceTable = ({ complianceData, downloadFile }) => (
     </div>
 
     {/* Download buttons */}
-    <div className="flex justify-end gap-3 mt-6">
+    <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
       <DownloadButton format="PNG" onClick={() => downloadFile('PNG')} />
       <DownloadButton format="JPG" onClick={() => downloadFile('JPG')} />
       <DownloadButton format="SVG" onClick={() => downloadFile('SVG')} />
@@ -336,7 +342,7 @@ const getComplianceColor = (pct) => {
 // Componente principal
 export default function EstadisticasDashboard() {
   const [selectedDate, setSelectedDate] = useState('fecha');
-  const [selectedMetric, setSelectedMetric] = useState('Actividades Completadas');
+  const [selectedMetric, setSelectedMetric] = useState('Reportes Aprobados');
   const [selectedChart, setSelectedChart] = useState('Grafico de Barras');
   const [complianceData, setComplianceData] = useState([]);
   const [loadingCompliance, setLoadingCompliance] = useState(false);
@@ -344,7 +350,7 @@ export default function EstadisticasDashboard() {
   const chartRef = useRef(null);
   const tableRef = useRef(null);
 
-  // Stats generales del dashboard (actividades)
+  // Stats generales del dashboard (reportes)
   const { stats, loading: loadingStats, error: errorStats, fetchStats } = useStats();
 
   useEffect(() => {
@@ -373,21 +379,21 @@ export default function EstadisticasDashboard() {
     if (complianceData && complianceData.length > 0) {
       const colorForMetric = selectedMetric === 'Porcentaje Cumplimiento'
         ? 'bg-blue-500'
-        : selectedMetric === 'Actividades Pendientes'
+        : selectedMetric === 'Reportes Pendientes'
           ? 'bg-yellow-500'
           : 'bg-green-500';
       return complianceData.map((row) => ({
         name: row.docente,
-        value: selectedMetric === 'Porcentaje Cumplimiento' ? row.porcentaje : (selectedMetric === 'Actividades Pendientes' ? row.pendientes : row.completadas),
+        value: selectedMetric === 'Porcentaje Cumplimiento' ? row.porcentaje : (selectedMetric === 'Reportes Pendientes' ? row.pendientes : row.completadas),
         color: colorForMetric
       }));
     }
-    // Fallback a estadísticas generales por estado
+    // Fallback a estadísticas generales por estado de reportes
     if (!stats) return [];
     return [
-      { name: "Completadas", value: stats.completadas || 0, color: "bg-green-500" },
+      { name: "Aprobados", value: stats.completadas || 0, color: "bg-green-500" },
       { name: "Pendientes", value: stats.pendientes || 0, color: "bg-yellow-500" },
-      { name: "Devueltas", value: stats.devueltas || 0, color: "bg-red-500" }
+      { name: "Devueltos", value: stats.devueltas || 0, color: "bg-red-500" }
     ];
   }, [stats, complianceData, selectedMetric]);
 
@@ -433,13 +439,12 @@ export default function EstadisticasDashboard() {
         });
         console.log('👩‍🏫 [EstadisticasDashboard] Docentes combinados únicos:', docentes.map(d => d.id));
 
-        // Limitar a los primeros 5 docentes para el dashboard
-        const topDocentes = docentes.slice(0, 5);
-        console.log('👥 [EstadisticasDashboard] Top docentes (limit 5):', topDocentes.map(d => d.id));
+        // Mostrar TODOS los docentes (sin límite)
+        console.log('👥 [EstadisticasDashboard] Total de docentes a mostrar:', docentes.length);
 
         // 3) Para cada docente, obtener estadísticas de reportes
         const rows = [];
-        for (const docente of topDocentes) {
+        for (const docente of docentes) {
           const nombreCompleto = `${docente.nombre} ${docente.apellido}`.trim();
           const statsRes = await api.get('/reportes/stats/general', { params: { usuarioId: docente.id } });
           const s = statsRes.data?.data || {};

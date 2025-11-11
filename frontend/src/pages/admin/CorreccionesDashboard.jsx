@@ -200,19 +200,26 @@ const CorreccionesDashboard = () => {
   const loadUserActivities = async (userId, filters = {}) => {
     try {
       setIsLoading(true);
+      console.log('🔍 [CorreccionesDashboard] Cargando actividades para usuario:', userId);
       const response = await activityService.getActivitiesByUserCurrentPeriod(userId, {
         page: currentPage,
         limit: pageSize,
         ...filters
       });
 
-      // Extraer los datos del objeto data
-      if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        setActivities(response.data.data);
-        setTotalRecords(response.data.pagination?.total || response.data.data.length);
+      console.log('📋 [CorreccionesDashboard] Respuesta completa:', response);
+      console.log('📋 [CorreccionesDashboard] response.data:', response.data);
+      console.log('📋 [CorreccionesDashboard] Es array response.data:', Array.isArray(response.data));
+
+      // El servicio getActivitiesByUserCurrentPeriod retorna: { data: [], pagination: {}, periodoActivo: {} }
+      // NO tiene un nivel extra de data.data
+      if (response.data && Array.isArray(response.data)) {
+        console.log('✅ [CorreccionesDashboard] Actividades encontradas:', response.data.length);
+        setActivities(response.data);
+        setTotalRecords(response.pagination?.total || response.data.length);
         
         // Solo mostrar toast informativo si no hay actividades y no es por un error
-        if (response.data.data.length === 0) {
+        if (response.data.length === 0) {
           toast({
             title: "Sin actividades",
             description: "Este usuario no ha registrado actividades en el período seleccionado",
@@ -220,6 +227,7 @@ const CorreccionesDashboard = () => {
           });
         }
       } else {
+        console.log('⚠️ [CorreccionesDashboard] No se encontraron actividades');
         setActivities([]);
         setTotalRecords(0);
         toast({

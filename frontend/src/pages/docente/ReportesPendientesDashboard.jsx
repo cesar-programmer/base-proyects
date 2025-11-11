@@ -643,35 +643,45 @@ export default function PendingReports() {
 
   const loadDeadlineInfo = async () => {
     try {
-      // Cargar información de fecha límite de ENTREGA (no de REGISTRO)
-      const response = await reportService.getEntregaDeadlineInfo();
-      console.log('Respuesta de getEntregaDeadlineInfo:', response);
+      console.log('🔍 [ReportesPendientes] Iniciando carga de fecha límite de ENTREGA...');
+      // Usar el endpoint /deadline/info que ya busca fechas de categoría ENTREGA
+      const response = await reportService.getDeadlineInfo();
+      console.log('📋 [ReportesPendientes] Respuesta RAW de getDeadlineInfo:', response);
+      console.log('📋 [ReportesPendientes] response.data:', response.data);
       
       // Los datos están en response.data
       const deadlineInfo = response.data || response;
-      console.log('Datos extraídos:', deadlineInfo);
+      console.log('📋 [ReportesPendientes] deadlineInfo extraído:', deadlineInfo);
       
       if (deadlineInfo.semestre && deadlineInfo.semestre !== "N/A") {
-        console.log('Estableciendo semestre:', deadlineInfo.semestre);
+        console.log('✅ [ReportesPendientes] Estableciendo semestre:', deadlineInfo.semestre);
         setSemestreActual(deadlineInfo.semestre);
+      } else {
+        console.log('⚠️ [ReportesPendientes] No hay semestre válido:', deadlineInfo.semestre);
       }
+      
       if (deadlineInfo.fechaLimite && deadlineInfo.fechaLimite !== "N/A") {
-        console.log('Fecha límite de entrega recibida:', deadlineInfo.fechaLimite);
+        console.log('✅ [ReportesPendientes] Fecha límite de entrega recibida:', deadlineInfo.fechaLimite);
         const fechaFormateada = new Date(deadlineInfo.fechaLimite).toLocaleDateString('es-ES', { 
           day: 'numeric', 
           month: 'long' 
         });
-        console.log('Fecha límite de entrega formateada:', fechaFormateada);
+        console.log('✅ [ReportesPendientes] Fecha límite de entrega formateada:', fechaFormateada);
         setFechaLimiteActual(fechaFormateada);
       } else {
-        console.log('No se recibió fecha límite de entrega válida:', deadlineInfo.fechaLimite);
+        console.log('⚠️ [ReportesPendientes] No se recibió fecha límite de entrega válida:', deadlineInfo.fechaLimite);
+        setFechaLimiteActual("N/A");
       }
+      
       if (deadlineInfo.periodoActivoId) {
+        console.log('✅ [ReportesPendientes] Periodo activo ID:', deadlineInfo.periodoActivoId);
         setPeriodoActivoId(deadlineInfo.periodoActivoId);
       }
     } catch (error) {
-      console.error('Error al cargar información de fecha límite de entrega:', error);
+      console.error('❌ [ReportesPendientes] Error al cargar información de fecha límite de entrega:', error);
+      console.error('❌ [ReportesPendientes] Error completo:', error.response?.data || error.message);
       // Mantener los valores por defecto en caso de error
+      setFechaLimiteActual("N/A");
     }
   };
 
@@ -712,8 +722,14 @@ export default function PendingReports() {
       }),
       semestre: semestreActual,
       resumen: reporte.descripcion,
-      resumenEjecutivo: reporte.resumenEjecutivo, // Agregar el resumen ejecutivo
+      descripcion: reporte.descripcion,
+      resumenEjecutivo: reporte.resumenEjecutivo,
       comentariosRevision: reporte.comentariosRevision,
+      fechaRealizacion: reporte.fechaRealizacion,
+      participantesReales: reporte.participantesReales,
+      resultados: reporte.resultados,
+      observaciones: reporte.observaciones,
+      recomendaciones: reporte.recomendaciones,
       actividades: reporte.actividades || [],
       archivos: reporte.archivos || [],
       totalHoras: Number(reporte.total_horas ?? reporte.totalHoras ?? 0)
@@ -791,12 +807,31 @@ export default function PendingReports() {
     setOpenSolicitud(false)
   }
 
-  const abrirCorreccion = (rep) => {
-    // Usar el mismo modal de edición pero en modo corrección
-    setReporteAEditar(rep)
-    setModoCorreccion(true)  // Activar modo corrección para mostrar comentarios
-    setOpenEditarReporte(true)
-    setDropdownOpen(null)
+  const abrirCorreccion = async (rep) => {
+    try {
+      setDropdownOpen(null)
+      // Obtener los datos completos del reporte desde el backend (incluyendo actividades)
+      const reporteCompleto = await reportService.getReportById(rep.id)
+      
+      if (reporteCompleto && reporteCompleto.data) {
+        console.log('📝 Datos completos del reporte para corrección:', reporteCompleto.data);
+        console.log('📋 Actividades del reporte:', reporteCompleto.data.actividades);
+        
+        // Aplicar el mapeo de estados al reporte
+        const reporteMapeado = mapReporteFromBackend(reporteCompleto.data)
+        
+        // Usar el mismo modal de edición pero en modo corrección
+        setReporteAEditar(reporteMapeado)
+        setModoCorreccion(true)  // Activar modo corrección para mostrar comentarios
+        setOpenEditarReporte(true)
+      } else {
+        console.error('Estructura inesperada de respuesta:', reporteCompleto)
+        toast.error('Error al cargar los datos del reporte para corrección')
+      }
+    } catch (error) {
+      console.error('Error al obtener datos del reporte para corrección:', error)
+      toast.error('Error al cargar el reporte para corrección')
+    }
   }
 
   // Función para mapear estados del frontend al backend

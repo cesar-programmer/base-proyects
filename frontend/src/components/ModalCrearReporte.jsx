@@ -271,11 +271,18 @@ const ModalCrearReporte = ({
         resultados: formData.resultados,
         observaciones: formData.observaciones,
         recomendaciones: formData.recomendaciones,
-        tipo: 'ACTIVIDADES_REALIZADAS',
-        semestre: periodoActivo.nombre,
-        estado: modoEdicion ? (reporteExistente?.estado_reporte || 'borrador') : 'borrador',
-        actividades: actividadesSeleccionadas
+        actividades: actividadesSeleccionadas, // Siempre enviar actividades (create y update)
+        // Si es modo corrección, cambiar estado de devuelto a enviado
+        // Si es edición normal, mantener el estado actual
+        // Si es creación, usar borrador
+        estado: modoCorreccion ? 'enviado' : modoEdicion ? (reporteExistente?.estado_reporte || 'borrador') : 'borrador'
       };
+
+      // Solo incluir tipo y semestre en CREACIÓN (no son editables)
+      if (!modoEdicion) {
+        reporteData.tipo = 'ACTIVIDADES_REALIZADAS';
+        reporteData.semestre = periodoActivo.nombre;
+      }
 
       let nuevoReporte, reporteId;
 
@@ -689,31 +696,32 @@ const ModalCrearReporte = ({
                 </div>
               )}
             </div>
-          </form>
-        </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors border border-gray-300"
-            disabled={loading}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || subiendoArchivos || actividadesSeleccionadas.length === 0 || !formData.titulo.trim()}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {subiendoArchivos 
-              ? 'Subiendo archivos...' 
-              : loading 
-                ? (modoEdicion ? 'Actualizando...' : 'Creando...') 
-                : (modoEdicion ? 'Actualizar Reporte' : 'Crear Reporte')
-            }
-          </button>
+            {/* Botones de acción - DENTRO del formulario */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors border border-gray-300"
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading || subiendoArchivos || actividadesSeleccionadas.length === 0 || !formData.titulo.trim()}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {subiendoArchivos 
+                  ? 'Subiendo archivos...' 
+                  : loading 
+                    ? (modoCorreccion ? 'Reenviando...' : modoEdicion ? 'Actualizando...' : 'Creando...') 
+                    : (modoCorreccion ? 'Reenviar para Revisión' : modoEdicion ? 'Actualizar Reporte' : 'Crear Reporte')
+                }
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

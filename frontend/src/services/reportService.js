@@ -287,16 +287,6 @@ const reportService = {
     }
   },
 
-  // Obtener información de fecha límite de ENTREGA de reportes
-  getEntregaDeadlineInfo: async () => {
-    try {
-      const response = await api.get('/reportes/deadline/entrega');
-      return response.data;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Error al obtener información de fecha límite de entrega');
-    }
-  },
-
   // Obtener reportes devueltos para correcciones
   getReturnedReports: async (filters = {}) => {
     try {

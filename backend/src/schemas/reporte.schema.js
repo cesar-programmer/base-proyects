@@ -189,20 +189,51 @@ const updateReporteSchema = Joi.object({
     .messages({
       'date.base': 'La fecha de realización debe ser una fecha válida'
     }),
+  participantesReales: Joi.number()
+    .integer()
+    .min(0)
+    .allow(null)
+    .messages({
+      'number.base': 'Los participantes reales deben ser un número',
+      'number.integer': 'Los participantes reales deben ser un número entero',
+      'number.min': 'Los participantes reales no pueden ser negativos'
+    }),
+  resultados: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Los resultados no pueden exceder 2000 caracteres'
+    }),
+  observaciones: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Las observaciones no pueden exceder 2000 caracteres'
+    }),
+  recomendaciones: Joi.string()
+    .max(2000)
+    .allow('', null)
+    .messages({
+      'string.max': 'Las recomendaciones no pueden exceder 2000 caracteres'
+    }),
+  actividades: Joi.array()
+    .items(
+      Joi.alternatives().try(
+        Joi.number().integer().positive(),
+        Joi.object({
+          id: Joi.number().integer().positive().required()
+        })
+      )
+    )
+    .min(1)
+    .messages({
+      'array.min': 'Debe seleccionar al menos una actividad',
+      'array.base': 'Las actividades deben ser un array'
+    }),
   estado: Joi.string()
     .valid('borrador', 'enviado', 'revisado', 'aprobado', 'devuelto')
     .messages({
       'any.only': 'El estado debe ser borrador, enviado, revisado, aprobado o devuelto'
-    }),
-  semestre: Joi.number()
-    .integer()
-    .min(1)
-    .max(2)
-    .messages({
-      'number.base': 'El semestre debe ser un número',
-      'number.integer': 'El semestre debe ser un número entero',
-      'number.min': 'El semestre debe ser 1 o 2',
-      'number.max': 'El semestre debe ser 1 o 2'
     }),
   observaciones_admin: Joi.string()
     .max(1000)

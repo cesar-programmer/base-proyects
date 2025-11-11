@@ -789,38 +789,209 @@ class ReporteService {
       if (filters.usuarioId) whereClause.usuarioId = filters.usuarioId;
       if (!filters.includeArchivados) whereClause.archivado = false;
 
-      const totalReportes = await models.Reporte.count({ where: whereClause });
+      // 1. Verificar si hay fecha límite de ENTREGA configurada (categoría ENTREGA)
+      const fechaLimiteEntrega = await models.FechaLimite.findOne({
+        where: { 
+          categoria: 'ENTREGA',
+          activo: true
+        },
+        include: [{
+          model: models.PeriodoAcademico,
+          as: 'periodo', // Usar el alias correcto definido en la asociación
+          where: { activo: true },
+          required: true
+        }]
+      });
+
+      // Si NO hay fecha límite de ENTREGA activa, usar lógica antigua
+      if (!fechaLimiteEntrega) {
+        console.log('ℹ️ No hay fecha límite de ENTREGA activa, usando lógica antigua');
+        const totalReportes = await models.Reporte.count({ where: whereClause });
+        const reportes = await models.Reporte.findAll({
+          attributes: ['estado'],
+          where: whereClause
+        });
+
+        const estadoCount = {};
+        reportes.forEach(reporte => {
+          const estado = reporte.estado || 'Sin estado';
+          estadoCount[estado] = (estadoCount[estado] || 0) + 1;
+        });
+
+        const completados = estadoCount['aprobado'] || 0;
+        const pendientes = estadoCount['borrador'] || 0;
+        const enRevision = estadoCount['enviado'] || 0;
+        const devueltos = estadoCount['devuelto'] || 0;
+
+        const calcularPorcentaje = (cantidad) => {
+          return totalReportes > 0 ? Math.round((cantidad / totalReportes) * 100) : 0;
+        };
+
+        return {
+          total: totalReportes,
+          completados,
+          pendientes,
+          enRevision,
+          devueltos,
+          porcentajes: {
+            completados: calcularPorcentaje(completados),
+            pendientes: calcularPorcentaje(pendientes),
+            enRevision: calcularPorcentaje(enRevision),
+            devueltos: calcularPorcentaje(devueltos)
+          },
+          detalle: {
+            mensaje: 'Sin fecha límite de ENTREGA activa'
+          }
+        };
+      }
+
+      const periodoActivo = fechaLimiteEntrega.periodo; // Usar el alias correcto
+      console.log('✅ Fecha límite de ENTREGA activa encontrada para período:', periodoActivo.nombre);
+
+      // 2. NUEVA LÓGICA: Contar TODOS los docentes que DEBEN entregar reporte
+      // Son los docentes que tienen actividades en el período actual
+      let docentesConActividades = [];
       
-      const reportes = await models.Reporte.findAll({
-        attributes: ['estado'],
-        where: whereClause
+      try {
+        // Obtener todas las actividades y extraer usuarios únicos manualmente
+        const actividades = await models.Actividad.findAll({
+          where: {
+            periodoAcademicoId: periodoActivo.id,
+            estado_planificacion: { [Op.ne]: 'rechazada' } // No rechazadas
+          },
+          attributes: ['usuarioId'],
+          raw: true
+        });
+        
+        // Extraer IDs únicos de usuarios
+        const usuariosUnicos = [...new Set(actividades.map(a => a.usuarioId))];
+        docentesConActividades = usuariosUnicos.map(id => ({ usuarioId: id }));
+        
+        console.log(`📊 Docentes con actividades no rechazadas: ${docentesConActividades.length}`);
+        
+      } catch (actividadError) {
+        // Si hay error (ej: campo no existe), intentar sin filtro de estado
+        console.warn('⚠️ Error al consultar actividades con filtros avanzados, usando filtro básico:', actividadError.message);
+        try {
+          const actividades = await models.Actividad.findAll({
+            where: {
+              periodoAcademicoId: periodoActivo.id
+            },
+            attributes: ['usuarioId'],
+            raw: true
+          });
+          
+          // Extraer IDs únicos de usuarios
+          const usuariosUnicos = [...new Set(actividades.map(a => a.usuarioId))];
+          docentesConActividades = usuariosUnicos.map(id => ({ usuarioId: id }));
+          
+          console.log(`📊 Docentes con actividades (sin filtro): ${docentesConActividades.length}`);
+          
+        } catch (basicError) {
+          // Si aún falla, usar lógica antigua
+          console.error('❌ Error al consultar actividades, usando lógica antigua:', basicError.message);
+          docentesConActividades = [];
+        }
+      }
+
+      const totalDocentesDebenEntregar = docentesConActividades.length;
+
+      // Si no hay docentes con actividades, usar lógica antigua para evitar división por 0
+      if (totalDocentesDebenEntregar === 0) {
+        console.warn('⚠️ No hay docentes con actividades en el período activo, usando lógica antigua');
+        const totalReportes = await models.Reporte.count({ where: whereClause });
+        const reportes = await models.Reporte.findAll({
+          attributes: ['estado'],
+          where: whereClause
+        });
+
+        const estadoCount = {};
+        reportes.forEach(reporte => {
+          const estado = reporte.estado || 'Sin estado';
+          estadoCount[estado] = (estadoCount[estado] || 0) + 1;
+        });
+
+        const completados = estadoCount['aprobado'] || 0;
+        const pendientes = estadoCount['borrador'] || 0;
+        const enRevision = estadoCount['enviado'] || 0;
+        const devueltos = estadoCount['devuelto'] || 0;
+
+        const calcularPorcentaje = (cantidad) => {
+          return totalReportes > 0 ? Math.round((cantidad / totalReportes) * 100) : 0;
+        };
+
+        return {
+          total: totalReportes,
+          completados,
+          pendientes,
+          enRevision,
+          devueltos,
+          porcentajes: {
+            completados: calcularPorcentaje(completados),
+            pendientes: calcularPorcentaje(pendientes),
+            enRevision: calcularPorcentaje(enRevision),
+            devueltos: calcularPorcentaje(devueltos)
+          },
+          detalle: {
+            mensaje: 'Sin docentes con actividades en período activo, mostrando estadísticas de reportes existentes'
+          }
+        };
+      }
+
+      // 3. Obtener reportes del período actual
+      // Los reportes están vinculados al período a través de las actividades
+      const reportesPeriodo = await models.Reporte.findAll({
+        where: whereClause,
+        include: [{
+          model: models.Actividad,
+          as: 'actividades',
+          where: {
+            periodoAcademicoId: periodoActivo.id
+          },
+          attributes: [],
+          required: true, // INNER JOIN - solo reportes con actividades del período
+          through: { attributes: [] } // No incluir atributos de la tabla intermedia
+        }],
+        attributes: ['usuarioId', 'estado']
       });
 
-      // Contar manualmente por estado
-      const estadoCount = {};
-      reportes.forEach(reporte => {
-        const estado = reporte.estado || 'Sin estado';
-        estadoCount[estado] = (estadoCount[estado] || 0) + 1;
-      });
-
-      const reportesPorEstado = Object.entries(estadoCount).map(([estado, count]) => ({
-        estado,
-        count
+      // Convertir a objetos simples
+      const reportesData = reportesPeriodo.map(r => ({
+        usuarioId: r.usuarioId,
+        estado: r.estado
       }));
 
-      // Contar reportes por categorías específicas
-      const completados = estadoCount['aprobado'] || 0;
-      const pendientes = estadoCount['borrador'] || 0;
-      const enRevision = estadoCount['enviado'] || 0;
-      const devueltos = estadoCount['devuelto'] || 0;
+      // 4. Agrupar reportes por docente (cada docente solo debe tener 1 reporte por período)
+      const reportesPorDocente = {};
+      reportesData.forEach(reporte => {
+        // Si un docente tiene múltiples reportes, tomar el de mayor prioridad:
+        // aprobado > enviado > devuelto > borrador
+        const estadoActual = reportesPorDocente[reporte.usuarioId];
+        const prioridad = { 'aprobado': 4, 'enviado': 3, 'devuelto': 2, 'borrador': 1 };
+        
+        if (!estadoActual || (prioridad[reporte.estado] || 0) > (prioridad[estadoActual] || 0)) {
+          reportesPorDocente[reporte.usuarioId] = reporte.estado;
+        }
+      });
 
-      // Calcular porcentajes
+      // 5. Contar por estado
+      const completados = Object.values(reportesPorDocente).filter(estado => estado === 'aprobado').length;
+      const enRevision = Object.values(reportesPorDocente).filter(estado => estado === 'enviado' || estado === 'revisado').length;
+      const devueltos = Object.values(reportesPorDocente).filter(estado => estado === 'devuelto').length;
+      const borradores = Object.values(reportesPorDocente).filter(estado => estado === 'borrador').length;
+      
+      // 6. Calcular pendientes = Docentes que NO tienen reporte o tienen borrador
+      const docentesConReporte = Object.keys(reportesPorDocente).length;
+      const docentesSinReporte = totalDocentesDebenEntregar - docentesConReporte;
+      const pendientes = docentesSinReporte + borradores;
+
+      // 7. Calcular porcentajes sobre el TOTAL DE DOCENTES
       const calcularPorcentaje = (cantidad) => {
-        return totalReportes > 0 ? Math.round((cantidad / totalReportes) * 100) : 0;
+        return totalDocentesDebenEntregar > 0 ? Math.round((cantidad / totalDocentesDebenEntregar) * 100) : 0;
       };
 
       return {
-        total: totalReportes,
+        total: totalDocentesDebenEntregar, // Total de docentes que DEBEN entregar
         completados,
         pendientes,
         enRevision,
@@ -831,7 +1002,12 @@ class ReporteService {
           enRevision: calcularPorcentaje(enRevision),
           devueltos: calcularPorcentaje(devueltos)
         },
-        porEstado: reportesPorEstado
+        detalle: {
+          docentesConActividades: totalDocentesDebenEntregar,
+          docentesSinReporte: docentesSinReporte,
+          docentesConBorrador: borradores,
+          periodoActivo: periodoActivo.nombre
+        }
       };
     } catch (error) {
       console.error('Error en getStats:', error);

@@ -529,6 +529,18 @@ export default function PlannedActivities() {
     };
     
     fetchDeadlineInfo();
+    
+    // Intentar cargar borrador al iniciar si existe
+    if (hasDraftInLocalStorage()) {
+      const shouldLoad = window.confirm(
+        '📂 Se encontró un borrador guardado en tu dispositivo. ¿Deseas cargarlo?\n\n' +
+        'Esto restaurará las actividades que no alcanzaste a enviar.'
+      );
+      if (shouldLoad) {
+        loadDraftFromLocalStorage();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadActivities, loadPeriodoActivo]);
 
   const actividadesArray = Array.isArray(actividades) ? actividades : []
@@ -579,6 +591,9 @@ export default function PlannedActivities() {
   }
 
   const addEmptyActivity = () => {
+    const hoy = new Date().toISOString().split('T')[0];
+    const enUnMes = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
     setActividades((prev) => {
       const currentActivities = Array.isArray(prev) ? prev : [];
       return [
@@ -588,22 +603,26 @@ export default function PlannedActivities() {
           titulo: "",
           categoria: "DOCENCIA",
           descripcion: "",
-          fechaInicio: "",
-          fechaFin: "",
-          
+          fechaInicio: hoy,
+          fechaFin: enUnMes,
           ubicacion: "",
           objetivos: "",
           recursos: "",
           presupuesto: 0,
           participantesEsperados: 0,
           archivoAdjunto: "",
-          horas: 2,
-          horas_dedicadas: 2,
-  
-          periodo_planificacion: "",
+          horas: 4,
+          horas_dedicadas: 4,
+          periodo_planificacion: semestre,
+          isNew: true,
+          guardada: false
         },
       ];
     })
+    
+    toast.info('📝 Nueva actividad agregada. Completa los campos obligatorios marcados con *', {
+      autoClose: 4000
+    });
   }
 
   const autoSaveActivity = async (id) => {
@@ -696,47 +715,92 @@ export default function PlannedActivities() {
     }));
   }
 
+  const validateActivity = (activity) => {
+    const errors = [];
+    
+    // Campos obligatorios
+    if (!activity.titulo || activity.titulo.trim() === '') {
+      errors.push('El título es obligatorio');
+    }
+    
+    if (!activity.descripcion || activity.descripcion.trim() === '') {
+      errors.push('La descripción es obligatoria');
+    }
+    
+    if (!activity.fechaInicio) {
+      errors.push('La fecha de inicio es obligatoria');
+    }
+    
+    if (!activity.fechaFin) {
+      errors.push('La fecha de fin es obligatoria');
+    }
+    
+    // Validar que fecha fin sea posterior a fecha inicio
+    if (activity.fechaInicio && activity.fechaFin) {
+      if (new Date(activity.fechaFin) < new Date(activity.fechaInicio)) {
+        errors.push('La fecha de fin debe ser posterior a la fecha de inicio');
+      }
+    }
+    
+    // Validar horas dedicadas
+    const horas = Number(activity.horas_dedicadas ?? activity.horas ?? 0);
+    if (horas <= 0) {
+      errors.push('Las horas dedicadas deben ser mayor a 0');
+    }
+    
+    // Validar participantes esperados
+    const participantes = Number(activity.participantesEsperados ?? 0);
+    if (participantes < 0) {
+      errors.push('Los participantes esperados no pueden ser negativos');
+    }
+    
+    return errors;
+  };
+
   const saveActivity = async (id) => {
     try {
       const activity = actividadesArray.find(a => a.id === id);
       if (!activity) return;
       
+      // Validar la actividad antes de guardar
+      const validationErrors = validateActivity(activity);
+      if (validationErrors.length > 0) {
+        toast.error(
+          <div>
+            <strong>Errores de validación:</strong>
+            <ul className="mt-2 list-disc list-inside">
+              {validationErrors.map((error, idx) => (
+                <li key={idx}>{error}</li>
+              ))}
+            </ul>
+          </div>,
+          { autoClose: 5000 }
+        );
+        return;
+      }
+      
+      // Preparar datos con valores por defecto para campos opcionales
+      const activityData = {
+        nombre: activity.titulo.trim(),
+        descripcion: activity.descripcion.trim(),
+        categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
+        fecha_inicio: activity.fechaInicio,
+        fecha_fin: activity.fechaFin,
+        horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
+        ubicacion: activity.ubicacion?.trim() || 'No especificado',
+        presupuesto: Number(activity.presupuesto ?? 0),
+        participantesEsperados: Number(activity.participantesEsperados ?? 0),
+        objetivos: activity.objetivos?.trim() || 'Por definir',
+        recursos: activity.recursos?.trim() || 'Por definir',
+        observaciones: activity.observaciones?.trim() || `Actividad planificada para el semestre ${semestre}`
+      };
+      
       if (activity.isNew) {
-        // Mapear campos según el esquema del backend para crear (incluir todos los campos del formulario)
-        const activityData = {
-          nombre: activity.titulo || '',
-          descripcion: activity.descripcion || '',
-          categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
-          fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
-          fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
-          ubicacion: activity.ubicacion || '',
-          presupuesto: activity.presupuesto || 0,
-          participantesEsperados: activity.participantesEsperados || 0,
-          objetivos: activity.objetivos || '',
-          recursos: activity.recursos || '',
-          observaciones: activity.observaciones || `Actividad planificada para el semestre ${semestre}`
-        };
         await activityService.createPlannedActivity(activityData);
-        toast.success('Actividad creada exitosamente');
+        toast.success('✅ Actividad creada exitosamente');
       } else {
-        // Para actualizar, enviar todos los campos del formulario
-        const updateData = {
-          nombre: activity.titulo || '',
-          descripcion: activity.descripcion || '',
-          categoria: activity.categoria?.toUpperCase() || 'DOCENCIA',
-          fecha_inicio: activity.fechaInicio || new Date().toISOString().split('T')[0],
-          fecha_fin: activity.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          horas_dedicadas: Number(activity.horas_dedicadas ?? activity.horas ?? 0),
-          ubicacion: activity.ubicacion || '',
-          presupuesto: activity.presupuesto || 0,
-          participantesEsperados: activity.participantesEsperados || 0,
-          objetivos: activity.objetivos || '',
-          recursos: activity.recursos || '',
-          observaciones: activity.observaciones || `Actividad planificada para el semestre ${semestre}`
-        };
-        await activityService.updateActivity(id, updateData);
-        toast.success('Actividad actualizada exitosamente');
+        await activityService.updateActivity(id, activityData);
+        toast.success('✅ Actividad actualizada exitosamente');
       }
       
       setActividades((prev) => {
@@ -744,9 +808,13 @@ export default function PlannedActivities() {
         return currentActivities.map((a) => (a.id === id ? { ...a, guardada: true, isNew: false } : a));
       })
       setLastSavedAt(new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }))
+      
+      // Guardar en localStorage como respaldo
+      saveDraftToLocalStorage();
+      
       await loadActivities();
     } catch (error) {
-      toast.error('Error al guardar actividad: ' + error.message);
+      toast.error('❌ Error al guardar actividad: ' + error.message);
     }
   }
 
@@ -826,15 +894,51 @@ export default function PlannedActivities() {
       const currentActivities = Array.isArray(actividades) ? actividades : [];
       
       if (currentActivities.length === 0) {
-        toast.error('No hay actividades para enviar', {
+        toast.error('❌ No hay actividades para enviar', {
           position: "top-right",
           autoClose: 3000,
         });
         return;
       }
 
+      // Validar todas las actividades antes de enviar
+      const actividadesConErrores = [];
+      currentActivities.forEach((actividad, index) => {
+        const errors = validateActivity(actividad);
+        if (errors.length > 0) {
+          actividadesConErrores.push({
+            index: index + 1,
+            titulo: actividad.titulo || `Actividad ${index + 1}`,
+            errors
+          });
+        }
+      });
+
+      if (actividadesConErrores.length > 0) {
+        toast.error(
+          <div>
+            <strong>⚠️ Hay actividades con errores que deben corregirse:</strong>
+            <ul className="mt-2 list-disc list-inside max-h-60 overflow-y-auto">
+              {actividadesConErrores.map((act) => (
+                <li key={act.index}>
+                  <strong>{act.titulo}:</strong>
+                  <ul className="ml-4 list-circle">
+                    {act.errors.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </div>,
+          { autoClose: 10000 }
+        );
+        setConfirmOpen(false);
+        return;
+      }
+
       // Mostrar toast de inicio del proceso
-      toast.info(`Procesando ${currentActivities.length} actividades...`, {
+      toast.info(`🔄 Procesando ${currentActivities.length} actividades...`, {
         position: "top-right",
         autoClose: 2000,
       });
@@ -845,20 +949,20 @@ export default function PlannedActivities() {
       
       for (const actividad of currentActivities) {
         try {
-          // Preparar los datos de la actividad según el esquema del backend (incluir todos los campos del formulario)
+          // Preparar los datos con validación (valores por defecto para campos opcionales)
           const actividadData = {
-            nombre: actividad.titulo || '',
-            descripcion: actividad.descripcion || '',
+            nombre: actividad.titulo.trim(),
+            descripcion: actividad.descripcion.trim(),
             categoria: actividad.categoria?.toUpperCase() || 'DOCENCIA',
-            fecha_inicio: actividad.fechaInicio || new Date().toISOString().split('T')[0],
-            fecha_fin: actividad.fechaFin || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            fecha_inicio: actividad.fechaInicio,
+            fecha_fin: actividad.fechaFin,
             horas_dedicadas: Number(actividad.horas_dedicadas ?? actividad.horas ?? 0),
-            ubicacion: actividad.ubicacion || '',
-            presupuesto: actividad.presupuesto || 0,
-            participantesEsperados: actividad.participantesEsperados || 0,
-            objetivos: actividad.objetivos || '',
-            recursos: actividad.recursos || '',
-            observaciones: `Actividad planificada para el semestre ${semestre}`
+            ubicacion: actividad.ubicacion?.trim() || 'No especificado',
+            presupuesto: Number(actividad.presupuesto ?? 0),
+            participantesEsperados: Number(actividad.participantesEsperados ?? 0),
+            objetivos: actividad.objetivos?.trim() || 'Por definir',
+            recursos: actividad.recursos?.trim() || 'Por definir',
+            observaciones: actividad.observaciones?.trim() || `Actividad planificada para el semestre ${semestre}`
           };
 
           // Si la actividad ya tiene un ID numérico, significa que ya existe en la BD
@@ -872,8 +976,8 @@ export default function PlannedActivities() {
           }
         } catch (error) {
           console.error('Error al crear actividad:', actividad.titulo, error);
-          actividadesError.push(actividad.titulo);
-          toast.error(`Error al crear la actividad: ${actividad.titulo}`, {
+          actividadesError.push(actividad.titulo || 'Sin título');
+          toast.error(`❌ Error al crear: ${actividad.titulo || 'Sin título'}`, {
             position: "top-right",
             autoClose: 4000,
           });
@@ -882,15 +986,17 @@ export default function PlannedActivities() {
 
       // Mostrar resultados del proceso
       if (actividadesError.length > 0) {
-        toast.warning(`Se crearon ${actividadesCreadas.length} actividades. ${actividadesError.length} actividades tuvieron errores.`, {
+        toast.warning(`⚠️ Se crearon ${actividadesCreadas.length} actividades. ${actividadesError.length} tuvieron errores.`, {
           position: "top-right",
           autoClose: 5000,
         });
       } else {
-        toast.success(`¡Excelente! Se crearon ${actividadesCreadas.length} actividades exitosamente`, {
+        toast.success(`✅ ¡Excelente! Se crearon ${actividadesCreadas.length} actividades exitosamente`, {
           position: "top-right",
           autoClose: 4000,
         });
+        // Limpiar borrador local al enviar exitosamente
+        clearDraftFromLocalStorage();
       }
 
       setSubmitted(true);
@@ -900,7 +1006,7 @@ export default function PlannedActivities() {
       await loadActivities();
     } catch (error) {
       console.error('Error al enviar plan:', error);
-      toast.error(`Error al enviar plan: ${error.message || 'Error desconocido'}`, {
+      toast.error(`❌ Error al enviar plan: ${error.message || 'Error desconocido'}`, {
         position: "top-right",
         autoClose: 5000,
       });
@@ -1103,18 +1209,27 @@ export default function PlannedActivities() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Campos obligatorios con * */}
                       <div className="space-y-2">
-                        <Label>Título de la Actividad</Label>
+                        <Label className="flex items-center gap-1">
+                          Título de la Actividad <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           value={a.titulo}
                           onChange={(e) => updateActivity(a.id, "titulo", e.target.value)}
                           disabled={disabled}
                           placeholder="p.ej., Preparación de material didáctico"
+                          className={!a.titulo || a.titulo.trim() === '' ? 'border-red-300 focus:ring-red-500' : ''}
                         />
+                        {!a.titulo || a.titulo.trim() === '' ? (
+                          <p className="text-xs text-red-600">Este campo es obligatorio</p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Tipo/Categoría</Label>
+                        <Label className="flex items-center gap-1">
+                          Tipo/Categoría <span className="text-red-500">*</span>
+                        </Label>
                         <Select
                           value={a.categoria}
                           onChange={(v) => updateActivity(a.id, "categoria", v)}
@@ -1129,74 +1244,111 @@ export default function PlannedActivities() {
                       </div>
 
                       <div className="space-y-2 md:col-span-2">
-                        <Label>Descripción Breve</Label>
+                        <Label className="flex items-center gap-1">
+                          Descripción Breve <span className="text-red-500">*</span>
+                        </Label>
                         <Textarea
                           value={a.descripcion}
                           onChange={(e) => updateActivity(a.id, "descripcion", e.target.value)}
                           disabled={disabled}
                           placeholder="Explica el objetivo o alcance de la actividad..."
+                          className={!a.descripcion || a.descripcion.trim() === '' ? 'border-red-300 focus:ring-red-500' : ''}
                         />
+                        {!a.descripcion || a.descripcion.trim() === '' ? (
+                          <p className="text-xs text-red-600">Este campo es obligatorio</p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Fecha de Inicio</Label>
+                        <Label className="flex items-center gap-1">
+                          Fecha de Inicio <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="date"
                           value={a.fechaInicio ?? ""}
                           onChange={(e) => updateActivity(a.id, "fechaInicio", e.target.value)}
                           disabled={disabled}
+                          className={!a.fechaInicio ? 'border-red-300 focus:ring-red-500' : ''}
                         />
+                        {!a.fechaInicio ? (
+                          <p className="text-xs text-red-600">Este campo es obligatorio</p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Fecha de Fin</Label>
+                        <Label className="flex items-center gap-1">
+                          Fecha de Fin <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="date"
                           value={a.fechaFin ?? ""}
                           onChange={(e) => updateActivity(a.id, "fechaFin", e.target.value)}
                           disabled={disabled}
+                          className={!a.fechaFin ? 'border-red-300 focus:ring-red-500' : ''}
                         />
+                        {!a.fechaFin ? (
+                          <p className="text-xs text-red-600">Este campo es obligatorio</p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Horas Dedicadas</Label>
+                        <Label className="flex items-center gap-1">
+                          Horas Dedicadas <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           type="number"
-                          min={0}
+                          min={1}
                           value={Number(a.horas_dedicadas ?? a.horas ?? 0)}
                           onChange={(e) => updateActivity(a.id, "horas_dedicadas", Number(e.target.value || 0))}
                           disabled={disabled}
+                          className={Number(a.horas_dedicadas ?? a.horas ?? 0) <= 0 ? 'border-red-300 focus:ring-red-500' : ''}
                         />
+                        {Number(a.horas_dedicadas ?? a.horas ?? 0) <= 0 ? (
+                          <p className="text-xs text-red-600">Debe ser mayor a 0</p>
+                        ) : null}
                       </div>
 
+                      {/* Campos opcionales con placeholder informativo */}
                       <div className="space-y-2">
-                        <Label>Ubicación</Label>
+                        <Label className="flex items-center gap-1">
+                          Ubicación 
+                          <span className="text-gray-400 text-xs ml-1">(opcional)</span>
+                        </Label>
                         <Input
                           value={a.ubicacion || ""}
                           onChange={(e) => updateActivity(a.id, "ubicacion", e.target.value)}
                           disabled={disabled}
-                          placeholder="p.ej., Aula 101, Laboratorio de Informática"
+                          placeholder='Ej: "Aula 101" (si no aplica, se guardará como "No especificado")'
                         />
+                        {!a.ubicacion || a.ubicacion.trim() === '' ? (
+                          <p className="text-xs text-blue-600">💡 Si no completas este campo, se guardará como &quot;No especificado&quot;</p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Presupuesto <span className="text-gray-500 text-sm">(opcional)</span></Label>
+                        <Label className="flex items-center gap-1">
+                          Presupuesto 
+                          <span className="text-gray-400 text-xs ml-1">(opcional, por defecto: $0)</span>
+                        </Label>
                         <Input
                           type="number"
                           min={0}
-                          value={a.presupuesto || ""}
+                          value={a.presupuesto ?? 0}
                           onChange={(e) => updateActivity(a.id, "presupuesto", Number(e.target.value || 0))}
                           disabled={disabled}
-                          placeholder="Ingrese el presupuesto si aplica"
+                          placeholder="0"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Participantes Esperados</Label>
+                        <Label className="flex items-center gap-1">
+                          Participantes Esperados 
+                          <span className="text-gray-400 text-xs ml-1">(opcional, por defecto: 0)</span>
+                        </Label>
                         <Input
                           type="number"
                           min={0}
-                          value={a.participantesEsperados || 0}
+                          value={a.participantesEsperados ?? 0}
                           onChange={(e) => updateActivity(a.id, "participantesEsperados", Number(e.target.value || 0))}
                           disabled={disabled}
                           placeholder="0"
@@ -1204,25 +1356,44 @@ export default function PlannedActivities() {
                       </div>
 
                       <div className="space-y-2 md:col-span-2">
-                        <Label>Objetivos</Label>
+                        <Label className="flex items-center gap-1">
+                          Objetivos 
+                          <span className="text-gray-400 text-xs ml-1">(opcional)</span>
+                        </Label>
                         <Textarea
                           value={a.objetivos || ""}
                           onChange={(e) => updateActivity(a.id, "objetivos", e.target.value)}
                           disabled={disabled}
-                          placeholder="Describe los objetivos específicos de la actividad..."
+                          placeholder='Describe los objetivos... (si no completas, se guardará como "Por definir")'
                         />
+                        {!a.objetivos || a.objetivos.trim() === '' ? (
+                          <p className="text-xs text-blue-600">💡 Si no completas este campo, se guardará como &quot;Por definir&quot;</p>
+                        ) : null}
                       </div>
 
                       <div className="space-y-2 md:col-span-2">
-                        <Label>Recursos Necesarios</Label>
+                        <Label className="flex items-center gap-1">
+                          Recursos Necesarios 
+                          <span className="text-gray-400 text-xs ml-1">(opcional)</span>
+                        </Label>
                         <Textarea
                           value={a.recursos || ""}
                           onChange={(e) => updateActivity(a.id, "recursos", e.target.value)}
                           disabled={disabled}
-                          placeholder="Lista los recursos materiales, tecnológicos o humanos necesarios..."
+                          placeholder='Lista los recursos necesarios... (si no completas, se guardará como "Por definir")'
                         />
+                        {!a.recursos || a.recursos.trim() === '' ? (
+                          <p className="text-xs text-blue-600">💡 Si no completas este campo, se guardará como &quot;Por definir&quot;</p>
+                        ) : null}
                       </div>
 
+                      {/* Información de estado */}
+                      <div className="md:col-span-2 mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-800">
+                          <strong>📌 Campos con * son obligatorios.</strong> Los campos opcionales se guardarán con valores por defecto si no los completas.
+                          {!a.guardada && ' Tu progreso se guarda automáticamente cada 2 segundos.'}
+                        </p>
+                      </div>
 
                     </div>
                   </CardContent>

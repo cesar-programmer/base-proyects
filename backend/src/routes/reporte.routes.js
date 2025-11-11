@@ -117,6 +117,12 @@ router.get('/deadline/info',
   reporteController.getDeadlineInfo.bind(reporteController)
 );
 
+// Ruta para obtener información de fecha límite de REGISTRO de actividades
+router.get('/deadline/registro',
+  verifyToken,
+  reporteController.getRegistroDeadlineInfo.bind(reporteController)
+);
+
 // Rutas solo para administradores
 
 // Endpoint para que docentes envíen sus reportes (cambiar de Pendiente a En revisión)

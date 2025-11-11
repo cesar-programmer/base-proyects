@@ -20,7 +20,13 @@ const app = express();
 app.use(cors(corsOptions));
 
 // Middlewares de seguridad
-app.use(generalSecurityMiddleware);
+// En desarrollo, deshabilitamos el rate limiter para evitar bloqueos
+if (process.env.NODE_ENV === 'production') {
+  app.use(generalSecurityMiddleware);
+  console.log('✅ Rate limiter activado (modo producción)');
+} else {
+  console.log('⚠️  Rate limiter deshabilitado (modo desarrollo)');
+}
 app.use(securityHeaders);
 
 // Middlewares básicos

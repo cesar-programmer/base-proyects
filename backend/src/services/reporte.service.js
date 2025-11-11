@@ -517,6 +517,91 @@ class ReporteService {
     }
   }
 
+  // Obtener información de fecha límite para REGISTRO de actividades
+  async getRegistroDeadlineInfo() {
+    try {
+      const periodoService = new PeriodoAcademicoService();
+      const fechaLimiteService = new FechaLimiteService();
+
+      // Obtener el período académico activo
+      const periodoActivo = await periodoService.findActive();
+      
+      if (!periodoActivo) {
+        return {
+          semestre: "N/A",
+          fechaLimite: "N/A",
+          periodoActivo: null
+        };
+      }
+
+      // Extraer el semestre del nombre del período
+      const semestre = periodoActivo.nombre;
+
+      // Obtener las fechas límite de categoría 'REGISTRO' para el período activo
+      const fechasLimite = await fechaLimiteService.findByCategory('REGISTRO');
+      
+      if (!fechasLimite || fechasLimite.length === 0) {
+        return {
+          semestre: semestre,
+          fechaLimite: "N/A",
+          periodoActivo: periodoActivo.nombre,
+          periodoActivoId: periodoActivo.id
+        };
+      }
+
+      // Filtrar solo las fechas del período activo
+      const fechasDelPeriodoActivo = fechasLimite.filter(fecha => 
+        fecha.periodo && fecha.periodo.id === periodoActivo.id
+      );
+
+      if (fechasDelPeriodoActivo.length === 0) {
+        return {
+          semestre: semestre,
+          fechaLimite: "N/A",
+          periodoActivo: periodoActivo.nombre,
+          periodoActivoId: periodoActivo.id
+        };
+      }
+
+      // Encontrar la fecha límite más próxima
+      const now = new Date();
+      const fechaLimiteProxima = fechasDelPeriodoActivo.reduce((closest, current) => {
+        const currentDate = new Date(current.fecha_limite);
+        const closestDate = new Date(closest.fecha_limite);
+        
+        // Si ambas son futuras, tomar la más cercana
+        if (currentDate >= now && closestDate >= now) {
+          return currentDate < closestDate ? current : closest;
+        }
+        
+        // Si una es futura y otra pasada, tomar la futura
+        if (currentDate >= now && closestDate < now) {
+          return current;
+        }
+        if (currentDate < now && closestDate >= now) {
+          return closest;
+        }
+        
+        // Si ambas son pasadas, tomar la más reciente
+        return currentDate > closestDate ? current : closest;
+      });
+
+      return {
+        semestre: semestre,
+        fechaLimite: fechaLimiteProxima ? fechaLimiteProxima.fecha_limite : "N/A",
+        periodoActivo: periodoActivo.nombre,
+        periodoActivoId: periodoActivo.id
+      };
+    } catch (error) {
+      console.error('Error al obtener información de fecha límite de registro:', error);
+      return {
+        semestre: "N/A",
+        fechaLimite: "N/A",
+        periodoActivo: null
+      };
+    }
+  }
+
   // Aprobar reporte
   async approve(id, comentarios = '', revisadoPorId) {
     try {

@@ -9,7 +9,14 @@ import fileService from '../services/fileService';
 import UploadManager from '../services/uploadManager';
 import { toast } from 'react-toastify';
 
-const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
+const ModalCrearReporte = ({ 
+  open, 
+  onClose, 
+  onReporteCreado, 
+  reporteExistente = null, 
+  modoEdicion = false,
+  modoCorreccion = false  // Nuevo prop para indicar si es corrección
+}) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [actividades, setActividades] = useState([]);
@@ -36,8 +43,30 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
     if (open && user) {
       cargarActividades();
       cargarPeriodoActivo();
+      
+      // Si estamos en modo edición, cargar datos del reporte existente
+      if (modoEdicion && reporteExistente) {
+        setFormData({
+          titulo: reporteExistente.titulo || '',
+          descripcion: reporteExistente.resumen || reporteExistente.descripcion || '',
+          resumenEjecutivo: reporteExistente.resumenEjecutivo || '',
+          tipo: reporteExistente.tipo || 'ACTIVIDADES_REALIZADAS',
+          fechaRealizacion: reporteExistente.fechaRealizacion 
+            ? new Date(reporteExistente.fechaRealizacion).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
+          participantesReales: reporteExistente.participantesReales || '',
+          resultados: reporteExistente.resultados || '',
+          observaciones: reporteExistente.observaciones || '',
+          recomendaciones: reporteExistente.recomendaciones || ''
+        });
+        
+        // Cargar actividades seleccionadas del reporte
+        if (reporteExistente.actividades && Array.isArray(reporteExistente.actividades)) {
+          setActividadesSeleccionadas(reporteExistente.actividades.map(a => a.id));
+        }
+      }
     }
-  }, [open, user]);
+  }, [open, user, modoEdicion, reporteExistente]);
 
   const cargarPeriodoActivo = async () => {
     try {
@@ -233,7 +262,6 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
     try {
       setLoading(true);
 
-      // 1) Crear el reporte primero (sin archivos)
       const reporteData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
@@ -245,16 +273,27 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         recomendaciones: formData.recomendaciones,
         tipo: 'ACTIVIDADES_REALIZADAS',
         semestre: periodoActivo.nombre,
-        estado: 'borrador',
+        estado: modoEdicion ? (reporteExistente?.estado_reporte || 'borrador') : 'borrador',
         actividades: actividadesSeleccionadas
       };
 
-      toast.info('📝 Creando reporte...');
-      const response = await reportService.createReport(reporteData);
-      console.log('✅ Reporte creado exitosamente:', response);
+      let nuevoReporte, reporteId;
 
-      const nuevoReporte = response?.data || response; // Según reportService, retorna response.data
-      const reporteId = nuevoReporte?.id;
+      if (modoEdicion && reporteExistente) {
+        // MODO EDICIÓN: Actualizar reporte existente
+        toast.info('📝 Actualizando reporte...');
+        const response = await reportService.updateReport(reporteExistente.id, reporteData);
+        console.log('✅ Reporte actualizado exitosamente:', response);
+        nuevoReporte = response?.data || response;
+        reporteId = reporteExistente.id;
+      } else {
+        // MODO CREACIÓN: Crear nuevo reporte
+        toast.info('📝 Creando reporte...');
+        const response = await reportService.createReport(reporteData);
+        console.log('✅ Reporte creado exitosamente:', response);
+        nuevoReporte = response?.data || response;
+        reporteId = nuevoReporte?.id;
+      }
 
       // 2) Subir archivos y asociarlos al reporte recién creado
       if (archivosSeleccionados.length > 0 && reporteId) {
@@ -286,7 +325,8 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         }
       }
 
-      toast.success(`📋 ¡Excelente! Reporte "${formData.titulo}" creado exitosamente`);
+      const accion = modoEdicion ? 'actualizado' : 'creado';
+      toast.success(`📋 ¡Excelente! Reporte "${formData.titulo}" ${accion} exitosamente`);
       
       // Limpiar formulario
       setFormData({
@@ -331,7 +371,9 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <FileText className="w-6 h-6 text-green-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Crear Nuevo Reporte</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {modoCorreccion ? 'Corregir Reporte Devuelto' : modoEdicion ? 'Editar Reporte' : 'Crear Nuevo Reporte'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -340,6 +382,27 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
+
+        {/* Banner de comentarios de revisión - Solo en modo corrección */}
+        {modoCorreccion && reporteExistente?.comentariosRevision && (
+          <div className="mx-6 mt-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-amber-900 mb-1">
+                  Observaciones del Administrador
+                </h3>
+                <p className="text-sm text-amber-800 whitespace-pre-wrap">
+                  {reporteExistente.comentariosRevision}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
@@ -644,7 +707,12 @@ const ModalCrearReporte = ({ open, onClose, onReporteCreado }) => {
             disabled={loading || subiendoArchivos || actividadesSeleccionadas.length === 0 || !formData.titulo.trim()}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {subiendoArchivos ? 'Subiendo archivos...' : loading ? 'Creando...' : 'Crear Reporte'}
+            {subiendoArchivos 
+              ? 'Subiendo archivos...' 
+              : loading 
+                ? (modoEdicion ? 'Actualizando...' : 'Creando...') 
+                : (modoEdicion ? 'Actualizar Reporte' : 'Crear Reporte')
+            }
           </button>
         </div>
       </div>

@@ -679,14 +679,21 @@ const CorreccionesDashboard = () => {
                   <span className="ml-3 text-gray-600">Cargando actividades...</span>
                 </div>
               ) : activities.length === 0 ? (
-                <div className="text-center py-12">
-                  <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No hay actividades registradas
-                  </h3>
-                  <p className="text-gray-600">
-                    Este usuario no ha registrado actividades en el período seleccionado.
-                  </p>
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
+                  <div className="flex items-start">
+                    <Activity className="w-12 h-12 text-blue-500 mr-4 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                        Sin actividades en el período activo
+                      </h3>
+                      <p className="text-blue-800 mb-2">
+                        <strong>{selectedUser?.nombre || 'Este usuario'}</strong> no tiene actividades registradas en el período académico actual.
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        💡 <strong>Nota:</strong> Solo se muestran actividades del semestre activo. Esto es normal si el docente aún no ha planificado o registrado actividades para este período.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>

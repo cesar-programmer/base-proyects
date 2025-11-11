@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react"
 import {
   CalendarDays,
+  Calendar,
   ListTodo,
   Clock,
   Flag,
@@ -217,6 +218,48 @@ const Select = ({ value, onChange, disabled = false, children, placeholder = "Se
 
 const SelectItem = ({ value, children }) => null // Este componente es solo para estructura
 
+// Componente de encabezado del dashboard
+const DashboardHeader = ({ semestre, fechaLimite }) => (
+  <div className="text-center space-y-4">
+    <div>
+      <h1 className="text-3xl font-bold text-green-800 mb-2">Actividades Planificadas</h1>
+      <p className="text-green-600 max-w-2xl mx-auto">
+        Organiza y registra tus actividades académicas de manera eficiente
+      </p>
+    </div>
+    <div className="flex justify-center items-center gap-6 text-sm">
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+        !semestre || semestre === "N/A" 
+          ? "bg-gray-50 border-gray-200" 
+          : "bg-green-50 border-green-200"
+      }`}>
+        <Calendar className={`w-4 h-4 ${
+          !semestre || semestre === "N/A" ? "text-gray-400" : "text-green-600"
+        }`} />
+        <span className={`font-medium ${
+          !semestre || semestre === "N/A" ? "text-gray-500" : "text-green-800"
+        }`}>
+          Semestre: {!semestre || semestre === "N/A" ? "No hay semestre activo" : semestre}
+        </span>
+      </div>
+      <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+        !fechaLimite || fechaLimite === "N/A" 
+          ? "bg-gray-50 border-gray-200" 
+          : "bg-amber-50 border-amber-200"
+      }`}>
+        <Clock className={`w-4 h-4 ${
+          !fechaLimite || fechaLimite === "N/A" ? "text-gray-400" : "text-amber-600"
+        }`} />
+        <span className={`font-medium ${
+          !fechaLimite || fechaLimite === "N/A" ? "text-gray-500" : "text-amber-800"
+        }`}>
+          Fecha límite: {!fechaLimite || fechaLimite === "N/A" ? "Sin fecha límite" : fechaLimite}
+        </span>
+      </div>
+    </div>
+  </div>
+);
+
 // Componente Accordion
 const Accordion = ({ children, type = "single" }) => {
   const [openItems, setOpenItems] = useState(new Set())
@@ -336,7 +379,6 @@ function getCurrentSemesterNumber(date = new Date()) {
 
 export default function PlannedActivities() {
   const { user } = useAuth();
-  const semestre = useMemo(() => currentSemesterFor(), [])
   const [actividades, setActividades] = useState([])
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const [autoSaveTimeouts, setAutoSaveTimeouts] = useState({})
@@ -351,6 +393,9 @@ export default function PlannedActivities() {
   const [periodoActivo, setPeriodoActivo] = useState(null)
   const [loadingPeriodo, setLoadingPeriodo] = useState(true)
   const [fechaLimiteActual, setFechaLimiteActual] = useState("N/A")
+
+  // Obtener el semestre del período activo, o calcular uno por defecto
+  const semestre = periodoActivo?.nombre || "N/A"
 
 
   // Funciones para manejar borradores en localStorage
@@ -456,29 +501,29 @@ export default function PlannedActivities() {
     loadActivities();
     loadPeriodoActivo();
     
-    // Cargar información de fecha límite
+    // Cargar información de fecha límite de REGISTRO (no de ENTREGA)
     const fetchDeadlineInfo = async () => {
       try {
-        const response = await reportService.getDeadlineInfo();
-        console.log('Respuesta de getDeadlineInfo:', response);
+        const response = await reportService.getRegistroDeadlineInfo();
+        console.log('Respuesta de getRegistroDeadlineInfo:', response);
         
         // Los datos están en response.data
         const deadlineInfo = response.data || response;
         console.log('Datos extraídos:', deadlineInfo);
         
         if (deadlineInfo.fechaLimite && deadlineInfo.fechaLimite !== "N/A") {
-          console.log('Fecha límite recibida:', deadlineInfo.fechaLimite);
+          console.log('Fecha límite de registro recibida:', deadlineInfo.fechaLimite);
           const fechaFormateada = new Date(deadlineInfo.fechaLimite).toLocaleDateString('es-ES', { 
             day: 'numeric', 
             month: 'long' 
           });
-          console.log('Fecha límite formateada:', fechaFormateada);
+          console.log('Fecha límite de registro formateada:', fechaFormateada);
           setFechaLimiteActual(fechaFormateada);
         } else {
-          console.log('No se recibió fecha límite válida:', deadlineInfo.fechaLimite);
+          console.log('No se recibió fecha límite de registro válida:', deadlineInfo.fechaLimite);
         }
       } catch (error) {
-        console.error('Error al cargar información de fecha límite:', error);
+        console.error('Error al cargar información de fecha límite de registro:', error);
         // Mantener el valor por defecto "N/A" en caso de error
       }
     };
@@ -862,40 +907,27 @@ export default function PlannedActivities() {
     }
   }
 
-  const disabled = submitted || !periodoActivo
+  // Deshabilitar si ya se envió O si no hay fecha límite de registro configurada
+  const disabled = submitted || fechaLimiteActual === "N/A"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-50 pb-28">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         {/* Header */}
-        <header className="space-y-2">
-          <h1 className="text-3xl font-bold text-green-800">Actividades Planificadas</h1>
-          <p className="text-gray-600">Organiza y registra tus actividades para el semestre {semestre}.</p>
-          
-          {/* Mostrar fecha límite de registro */}
-          <div className="flex items-center gap-2 text-sm">
-            <CalendarDays className="w-4 h-4 text-amber-600" />
-            <span className="text-gray-700">
-              Fecha límite de registro:{" "}
-              <span className={`font-semibold ${!fechaLimiteActual || fechaLimiteActual === "N/A" ? "text-gray-500" : "text-amber-700"}`}>
-                {!fechaLimiteActual || fechaLimiteActual === "N/A" ? "Sin fecha límite" : fechaLimiteActual}
-              </span>
-            </span>
-          </div>
-        </header>
+        <DashboardHeader semestre={semestre} fechaLimite={fechaLimiteActual} />
 
-        {/* Banner de período inactivo */}
-        {!loadingPeriodo && !periodoActivo && (
+        {/* Banner de fecha límite no configurada */}
+        {!loading && fechaLimiteActual === "N/A" && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="text-sm font-semibold text-yellow-800 mb-1">
-                  No hay período académico activo
+                  No hay fecha límite de registro configurada
                 </h3>
                 <p className="text-sm text-yellow-700">
-                  Actualmente no es posible crear o editar actividades porque no hay un período académico activo. 
-                  Por favor, contacta al  administrador para que active un período académico.
+                  Actualmente no es posible registrar actividades porque el administrador no ha configurado una fecha límite de registro (categoría REGISTRO). 
+                  Por favor, contacta al administrador para que configure la fecha límite de registro de actividades.
                 </p>
               </div>
             </div>

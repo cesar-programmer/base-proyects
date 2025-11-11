@@ -755,6 +755,20 @@ class ReporteController {
     }
   }
 
+  // Obtener información de fecha límite para REGISTRO de actividades
+  async getRegistroDeadlineInfo(req, res, next) {
+    try {
+      const deadlineInfo = await reporteService.getRegistroDeadlineInfo();
+      
+      res.json({
+        message: 'Información de fecha límite de registro obtenida exitosamente',
+        data: deadlineInfo
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Aprobar reporte
   async approveReporte(req, res, next) {
     try {

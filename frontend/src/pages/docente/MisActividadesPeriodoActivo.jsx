@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import activityService from '../../services/activityService';
-import { Search, Calendar, Users, Clock, Tag, CheckCircle2, AlertCircle, MapPin } from 'lucide-react';
+import { Search, Calendar, Users, Clock, Tag, CheckCircle2, AlertCircle, MapPin, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -173,6 +173,22 @@ export default function MisActividadesPeriodoActivo() {
     }
   };
 
+  const deleteActivity = async (actId, titulo) => {
+    if (!window.confirm(`¿Estás seguro de eliminar la actividad "${titulo}"?\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      await activityService.deleteActivity(actId);
+      setData(prev => ({
+        ...prev,
+        actividades: prev.actividades.filter(a => a.id !== actId)
+      }));
+      toast.success('Actividad eliminada exitosamente');
+    } catch (err) {
+      toast.error(err.message || 'Error al eliminar la actividad');
+    }
+  };
+
   // Modal simple local (hoisted arriba)
 
   if (loading) {
@@ -296,6 +312,13 @@ export default function MisActividadesPeriodoActivo() {
                       onClick={() => startEdit(act)}
                     >
                       Editar
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
+                      onClick={() => deleteActivity(act.id, titulo)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
                     </button>
                   </div>
                 </div>

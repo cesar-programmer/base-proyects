@@ -156,15 +156,21 @@ export default function DocenteDashboard() {
       // Cargar actividades del docente del período académico activo
       let activities = [];
       try {
+        console.log('📊 [Dashboard] Cargando actividades del período activo para usuario:', user.id);
         const activitiesResponse = await activityService.getActivitiesByUserCurrentPeriod(user.id);
+        console.log('📊 [Dashboard] Respuesta de actividades:', activitiesResponse);
+        
         const rawActivities = Array.isArray(activitiesResponse?.data)
           ? activitiesResponse.data
           : (Array.isArray(activitiesResponse) ? activitiesResponse : (Array.isArray(activitiesResponse?.items) ? activitiesResponse.items : []));
         activities = rawActivities;
+        console.log('📊 [Dashboard] Total de actividades cargadas:', activities.length);
+        console.log('📊 [Dashboard] Actividades:', activities);
       } catch (errActivitiesPeriod) {
-        console.warn('Fallo al obtener actividades del período activo, usando todas las actividades:', errActivitiesPeriod);
+        console.warn('⚠️ [Dashboard] Fallo al obtener actividades del período activo:', errActivitiesPeriod);
         const fallbackActivitiesResponse = await activityService.getActivitiesByTeacher(user.id);
         activities = Array.isArray(fallbackActivitiesResponse?.data) ? fallbackActivitiesResponse.data : [];
+        console.log('📊 [Dashboard] Actividades fallback:', activities.length);
       }
       
       // Cargar reportes del docente, filtrando por período activo si está disponible
@@ -173,12 +179,19 @@ export default function DocenteDashboard() {
         const deadlineResp = await reportService.getDeadlineInfo();
         const info = deadlineResp?.data || deadlineResp;
         periodoActivoId = info?.periodoActivoId || null;
-      } catch (_) {}
+        console.log('📊 [Dashboard] Período activo ID:', periodoActivoId);
+      } catch (_) {
+        console.warn('⚠️ [Dashboard] No se pudo obtener período activo');
+      }
+      
+      console.log('📊 [Dashboard] Cargando reportes del docente...');
       const reportsResponse = await reportService.getReportsByTeacher(
         user.id,
         periodoActivoId ? { periodoAcademicoId: periodoActivoId } : {}
       );
       const reports = Array.isArray(reportsResponse?.data) ? reportsResponse.data : [];
+      console.log('📊 [Dashboard] Total de reportes cargados:', reports.length);
+      console.log('📊 [Dashboard] Reportes:', reports);
 
       // Cargar fechas límite próximas (recordatorios reales)
       try {
@@ -190,18 +203,37 @@ export default function DocenteDashboard() {
         }));
         setUpcomingReminders(reminders);
       } catch (errFechas) {
-        console.warn('No se pudieron cargar las fechas límite próximas:', errFechas);
+        console.warn('⚠️ [Dashboard] No se pudieron cargar las fechas límite próximas:', errFechas);
         setUpcomingReminders([]);
       }
       
-      // Calcular estadísticas (alineadas con lógica de Reportes Pendientes)
-      const actividadesPlanificadas = activities.filter(a => (a.estado_planificacion ?? a.estadoPlanificacion)).length;
-      const reportesCompletados = reports.filter(r => (r.estado || '').toLowerCase() === 'aprobado').length;
-      const reportesEnRevision = reports.filter(r => {
-        const estado = (r.estado || '').toLowerCase();
-        return estado === 'enviado' || estado === 'revisado' || estado === 'en_revision';
+      // Calcular estadísticas
+      // ACTIVIDADES PLANIFICADAS: Total de actividades del período (todas las que tiene)
+      const actividadesPlanificadas = activities.length;
+      
+      // REPORTES COMPLETADOS: Estado "aprobado" o "completado"
+      const reportesCompletados = reports.filter(r => {
+        const estado = (r.estado_reporte || r.estado || '').toLowerCase();
+        return estado === 'aprobado' || estado === 'completado';
       }).length;
-      const progresoGeneral = reports.length > 0 ? Math.round((reportesCompletados / reports.length) * 100) : 0;
+      
+      // REPORTES EN REVISIÓN: Estado "en_revision", "enviado", "revisado"
+      const reportesEnRevision = reports.filter(r => {
+        const estado = (r.estado_reporte || r.estado || '').toLowerCase();
+        return estado === 'en_revision' || estado === 'enviado' || estado === 'revisado';
+      }).length;
+      
+      // PROGRESO GENERAL: Porcentaje basado en reportes completados vs total
+      const progresoGeneral = reports.length > 0 
+        ? Math.round((reportesCompletados / reports.length) * 100) 
+        : 0;
+      
+      console.log('📊 [Dashboard] Estadísticas calculadas:', {
+        actividadesPlanificadas,
+        reportesCompletados,
+        reportesEnRevision,
+        progresoGeneral
+      });
       
       setStats({
         actividadesPlanificadas,

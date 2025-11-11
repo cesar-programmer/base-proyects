@@ -46,10 +46,10 @@ const corsOptions = {
 
 // Rate limiting para autenticación
 const authLimiter = rateLimit({
-  windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), // 15 min por defecto
-  max: Number(process.env.AUTH_RATE_LIMIT_MAX || 5), // 5 intentos por IP
+  windowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 5 * 60 * 1000), // 5 min por defecto
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX || 10000), // 10,000 intentos por IP
   message: {
-    error: 'Demasiados intentos de autenticación. Intenta de nuevo en 15 minutos.'
+    error: 'Demasiados intentos de autenticación. Intenta de nuevo en 5 minutos.'
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -57,8 +57,8 @@ const authLimiter = rateLimit({
 
 // Rate limiting general
 const generalLimiter = rateLimit({
-  windowMs: Number(process.env.GENERAL_RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), // 15 min
-  max: Number(process.env.GENERAL_RATE_LIMIT_MAX || (isProd ? 300 : 1000)), // menor en prod por defecto
+  windowMs: Number(process.env.GENERAL_RATE_LIMIT_WINDOW_MS || 5 * 60 * 1000), // 5 min por defecto
+  max: Number(process.env.GENERAL_RATE_LIMIT_MAX || 10000), // 10,000 peticiones
   message: {
     error: 'Demasiadas solicitudes. Intenta de nuevo más tarde.'
   },

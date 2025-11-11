@@ -321,30 +321,11 @@ export default function HistorialReportesDashboard() {
       color: "text-green-600",
       bgColor: "bg-green-100",
     },
-    {
-      label: "En Revisión",
-      value: reports.filter((r) => r.estado === "En revisión").length,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
-    },
-    {
-      label: "Pendientes",
-      value: reports.filter((r) => r.estado === "Pendiente").length,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-100",
-    },
-    {
-      label: "Devueltos",
-      value: reports.filter((r) => r.estado === "Devuelto").length,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
-    },
   ]
 
   const clearFilters = () => {
     setSearchTerm("")
     setFilterType("all")
-    setFilterStatus("all")
   }
 
   const openReportDetails = async (report) => {
@@ -408,7 +389,7 @@ export default function HistorialReportesDashboard() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {stats.map((stat, index) => (
             <div key={index} className="bg-white rounded-lg shadow-lg border-0 hover:shadow-xl transition-shadow duration-300">
               <div className="p-6">
@@ -435,12 +416,12 @@ export default function HistorialReportesDashboard() {
             </h2>
           </div>
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Buscar por título, tipo, estado o semestre..."
+                  placeholder="Buscar por título, tipo o semestre..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
@@ -461,17 +442,6 @@ export default function HistorialReportesDashboard() {
                 <option value="ADMINISTRATIVA">ADMINISTRATIVA</option>
                 <option value="POSGRADO">POSGRADO</option>
                 <option value="OTRA">OTRA</option>
-              </select>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none bg-white"
-              >
-                <option value="all">Todos los estados</option>
-                <option value="Completado">Completado</option>
-                <option value="En revisión">En revisión</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Devuelto">Devuelto</option>
               </select>
             </div>
           </div>

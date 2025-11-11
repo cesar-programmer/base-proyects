@@ -60,14 +60,27 @@ const activityService = {
       params.append('periodoAcademicoId', periodoActivo.id);
       
       const response = await api.get(`/actividades/usuario/${usuarioId}?${params.toString()}`);
-      console.log('📋 [ActivityService] Resultado actividades filtradas:', response.data);
+      console.log('📋 [ActivityService] Respuesta RAW completa:', response);
+      console.log('📋 [ActivityService] response.data:', response.data);
+      console.log('📋 [ActivityService] response.data.data:', response.data?.data);
+      console.log('📋 [ActivityService] Tipo de response.data:', typeof response.data);
+      console.log('📋 [ActivityService] Es array response.data:', Array.isArray(response.data));
+      console.log('📋 [ActivityService] Es array response.data.data:', Array.isArray(response.data?.data));
+      
+      // La respuesta del backend tiene estructura: { message, data: { data: [], pagination: {} } }
+      // Necesitamos extraer el array de actividades que está en data.data
+      const actividadesData = response.data?.data || response.data;
       
       const result = {
-        ...response.data,
+        // Si actividadesData es el objeto con {data, pagination}, usarlo directo
+        // Si no, crear estructura compatible
+        data: actividadesData.data || actividadesData,
+        pagination: actividadesData.pagination || {},
         periodoActivo
       };
       
-      console.log('✅ [ActivityService] Actividades obtenidas exitosamente para período:', periodoActivo.nombre);
+      console.log('✅ [ActivityService] Resultado final:', result);
+      console.log('✅ [ActivityService] Total de actividades:', result.data?.length || 0);
       return result;
     } catch (error) {
       console.error('💥 [ActivityService] Error al obtener actividades del período actual:', error);

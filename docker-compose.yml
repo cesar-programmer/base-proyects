@@ -36,6 +36,11 @@ services:
       - DB_PORT=3306
       - JWT_SECRET=dev_jwt_secret
       - FRONTEND_URL=http://localhost:8082
+      # Rate Limiting - Valores MUY ALTOS para desarrollo y demos
+      - AUTH_RATE_LIMIT_WINDOW_MS=300000     # 5 minutos
+      - AUTH_RATE_LIMIT_MAX=10000            # 10,000 intentos cada 5 min
+      - GENERAL_RATE_LIMIT_WINDOW_MS=300000  # 5 minutos  
+      - GENERAL_RATE_LIMIT_MAX=10000         # 10,000 peticiones cada 5 min
     depends_on:
       mysql:
         condition: service_healthy

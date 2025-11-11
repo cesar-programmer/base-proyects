@@ -93,18 +93,32 @@ const ComplianceTableRow = ({ item }) => (
 );
 
 // Componente de botón de descarga
-const DownloadButton = ({ format, onClick }) => (
-  <Button 
-    data-no-export="true"
-    onClick={onClick}
-    className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-50"
-  >
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-    Descargar {format}
-  </Button>
-);
+const DownloadButton = ({ format, onClick, icon = "download" }) => {
+  // Iconos diferentes según el formato
+  const icons = {
+    download: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+    csv: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    )
+  };
+
+  return (
+    <Button 
+      data-no-export="true"
+      onClick={onClick}
+      className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-50"
+    >
+      {icons[icon] || icons.download}
+      {format === "CSV" ? "Exportar" : "Descargar"} {format}
+    </Button>
+  );
+};
 
 // Componente de encabezado con filtros
 const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSelectedMetric, selectedChart, setSelectedChart }) => (
@@ -295,7 +309,7 @@ const PieChart = ({ chartData, legendLabel = "Reportes Aprobados" }) => {
 };
 
 // Componente de tabla de cumplimiento
-const ComplianceTable = ({ complianceData, downloadFile }) => (
+const ComplianceTable = ({ complianceData, downloadFile, downloadCSV }) => (
   <Card className="p-6">
     <h2 className="text-xl font-semibold text-gray-900 mb-6">Cumplimiento de Reportes</h2>
     
@@ -325,6 +339,7 @@ const ComplianceTable = ({ complianceData, downloadFile }) => (
 
     {/* Download buttons */}
     <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+      <DownloadButton format="CSV" onClick={downloadCSV} icon="csv" />
       <DownloadButton format="PNG" onClick={() => downloadFile('PNG')} />
       <DownloadButton format="JPG" onClick={() => downloadFile('JPG')} />
       <DownloadButton format="SVG" onClick={() => downloadFile('SVG')} />
@@ -503,17 +518,84 @@ export default function EstadisticasDashboard() {
   const downloadFile = async (format) => {
     const node = tableRef.current;
     if (!node) return;
-    const filename = 'tabla-cumplimiento';
+    
     try {
-      if (format === 'PNG') {
-        await downloadNodeAsPng(node, `${filename}.png`);
-      } else if (format === 'SVG') {
-        await downloadNodeAsSvg(node, `${filename}.svg`);
-      } else if (format === 'JPG') {
-        await downloadNodeAsJpeg(node, `${filename}.jpg`);
+      // Encontrar el contenedor con scroll
+      const scrollContainer = node.querySelector('[style*="maxHeight"]');
+      
+      if (scrollContainer) {
+        // Guardar estilos originales
+        const originalMaxHeight = scrollContainer.style.maxHeight;
+        const originalOverflowY = scrollContainer.style.overflowY;
+        
+        // Expandir temporalmente para capturar TODO el contenido
+        scrollContainer.style.maxHeight = 'none';
+        scrollContainer.style.overflowY = 'visible';
+        
+        // Esperar a que el DOM se actualice
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Capturar la tabla completa
+        const filename = 'tabla-cumplimiento';
+        if (format === 'PNG') {
+          await downloadNodeAsPng(node, `${filename}.png`);
+        } else if (format === 'SVG') {
+          await downloadNodeAsSvg(node, `${filename}.svg`);
+        } else if (format === 'JPG') {
+          await downloadNodeAsJpeg(node, `${filename}.jpg`);
+        }
+        
+        // Restaurar estilos originales
+        scrollContainer.style.maxHeight = originalMaxHeight;
+        scrollContainer.style.overflowY = originalOverflowY;
+      } else {
+        // Si no hay scroll, capturar normalmente
+        const filename = 'tabla-cumplimiento';
+        if (format === 'PNG') {
+          await downloadNodeAsPng(node, `${filename}.png`);
+        } else if (format === 'SVG') {
+          await downloadNodeAsSvg(node, `${filename}.svg`);
+        } else if (format === 'JPG') {
+          await downloadNodeAsJpeg(node, `${filename}.jpg`);
+        }
       }
     } catch (err) {
       console.error('❌ Error al descargar tabla:', err);
+    }
+  };
+
+  const downloadCSV = () => {
+    try {
+      // Crear contenido CSV
+      const headers = ['Docente', 'Reportes Aprobados', 'Reportes Pendientes', 'Porcentaje'];
+      const rows = complianceData.map(item => [
+        `"${item.docente}"`,
+        item.completadas,
+        item.pendientes,
+        `"${item.porcentaje}%"`
+      ]);
+      
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+      
+      // Crear blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'cumplimiento-reportes.csv');
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log('✅ CSV descargado exitosamente');
+    } catch (err) {
+      console.error('❌ Error al descargar CSV:', err);
     }
   };
 
@@ -577,7 +659,7 @@ export default function EstadisticasDashboard() {
             </Card>
           ) : (
             <div ref={tableRef}>
-              <ComplianceTable complianceData={complianceData} downloadFile={downloadFile} />
+              <ComplianceTable complianceData={complianceData} downloadFile={downloadFile} downloadCSV={downloadCSV} />
             </div>
           )
         )}

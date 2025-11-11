@@ -18,7 +18,6 @@ import {
 } from "lucide-react"
 import { useAuth } from '../../context/AuthContext'
 import reportService from '../../services/reportService';
-import UploadManager from '../../services/uploadManager';
 import { toast } from 'react-toastify'
 import ModalCrearReporte from '../../components/ModalCrearReporte';
 import ListaArchivosReporte from '../../components/ListaArchivosReporte';
@@ -644,8 +643,9 @@ export default function PendingReports() {
 
   const loadDeadlineInfo = async () => {
     try {
-      const response = await reportService.getDeadlineInfo();
-      console.log('Respuesta completa del endpoint deadline info:', response);
+      // Cargar información de fecha límite de ENTREGA (no de REGISTRO)
+      const response = await reportService.getEntregaDeadlineInfo();
+      console.log('Respuesta de getEntregaDeadlineInfo:', response);
       
       // Los datos están en response.data
       const deadlineInfo = response.data || response;
@@ -656,21 +656,21 @@ export default function PendingReports() {
         setSemestreActual(deadlineInfo.semestre);
       }
       if (deadlineInfo.fechaLimite && deadlineInfo.fechaLimite !== "N/A") {
-        console.log('Fecha límite recibida:', deadlineInfo.fechaLimite);
+        console.log('Fecha límite de entrega recibida:', deadlineInfo.fechaLimite);
         const fechaFormateada = new Date(deadlineInfo.fechaLimite).toLocaleDateString('es-ES', { 
           day: 'numeric', 
           month: 'long' 
         });
-        console.log('Fecha límite formateada:', fechaFormateada);
+        console.log('Fecha límite de entrega formateada:', fechaFormateada);
         setFechaLimiteActual(fechaFormateada);
       } else {
-        console.log('No se recibió fecha límite válida:', deadlineInfo.fechaLimite);
+        console.log('No se recibió fecha límite de entrega válida:', deadlineInfo.fechaLimite);
       }
       if (deadlineInfo.periodoActivoId) {
         setPeriodoActivoId(deadlineInfo.periodoActivoId);
       }
     } catch (error) {
-      console.error('Error al cargar información de fecha límite:', error);
+      console.error('Error al cargar información de fecha límite de entrega:', error);
       // Mantener los valores por defecto en caso de error
     }
   };
@@ -742,13 +742,11 @@ export default function PendingReports() {
   const [openDetalle, setOpenDetalle] = useState(false)
   const [openSolicitud, setOpenSolicitud] = useState(false)
   const [mensajeSolicitud, setMensajeSolicitud] = useState("")
-  const [openCorreccion, setOpenCorreccion] = useState(false)
-  const [tituloCorreccion, setTituloCorreccion] = useState("")
-  const [resumenCorreccion, setResumenCorreccion] = useState("")
-  const [resumenEjecutivoCorreccion, setResumenEjecutivoCorreccion] = useState("")
-  const [archivosCorreccion, setArchivosCorreccion] = useState([])
   const [openCrearReporte, setOpenCrearReporte] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [openEditarReporte, setOpenEditarReporte] = useState(false)
+  const [reporteAEditar, setReporteAEditar] = useState(null)
+  const [modoCorreccion, setModoCorreccion] = useState(false) // Para saber si es corrección
 
   const abrirDetalle = async (rep) => {
     try {
@@ -794,51 +792,11 @@ export default function PendingReports() {
   }
 
   const abrirCorreccion = (rep) => {
-    setReporteSeleccionado(rep)
-    setTituloCorreccion(rep.titulo || "")
-    setResumenCorreccion(rep.resumen || "")
-    setResumenEjecutivoCorreccion(rep.resumenEjecutivo || "")
-    setArchivosCorreccion([])
-    setOpenCorreccion(true)
+    // Usar el mismo modal de edición pero en modo corrección
+    setReporteAEditar(rep)
+    setModoCorreccion(true)  // Activar modo corrección para mostrar comentarios
+    setOpenEditarReporte(true)
     setDropdownOpen(null)
-  }
-
-  const reenviarCorreccion = async () => {
-    if (!reporteSeleccionado?.id || enviando) return
-    const toastId = toast.loading('Reenviando reporte...')
-    setEnviando(true)
-    try {
-      // 1) Actualizar título, descripción y resumen ejecutivo
-      await reportService.updateReport(reporteSeleccionado.id, {
-        titulo: tituloCorreccion,
-        descripcion: resumenCorreccion,
-        resumenEjecutivo: resumenEjecutivoCorreccion
-      })
-
-      // 2) Subir evidencias seleccionadas y asociarlas al reporte
-      if (archivosCorreccion && archivosCorreccion.length > 0) {
-        const manager = new UploadManager({ concurrency: 3 })
-        await manager.uploadFiles(Array.from(archivosCorreccion), {
-          actividadId: null,
-          reporteId: reporteSeleccionado.id,
-          descripcion: `Evidencias de corrección del reporte: ${tituloCorreccion}`,
-          categoria: 'evidencia'
-        })
-      }
-
-      // 3) Enviar nuevamente a revisión
-      await reportService.sendReport(reporteSeleccionado.id)
-      toast.update(toastId, { render: 'Reporte reenviado para revisión', type: 'success', isLoading: false, autoClose: 1500 })
-      setOpenCorreccion(false)
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
-    } catch (error) {
-      console.error('Error al reenviar reporte:', error)
-      toast.update(toastId, { render: 'Error al reenviar el reporte', type: 'error', isLoading: false, autoClose: 3000 })
-    } finally {
-      setEnviando(false)
-    }
   }
 
   // Función para mapear estados del frontend al backend
@@ -893,6 +851,17 @@ export default function PendingReports() {
     }
   }
 
+  const abrirEdicionReporte = (rep) => {
+    setReporteAEditar(rep)
+    setModoCorreccion(false) // Edición normal, no corrección
+    setOpenEditarReporte(true)
+  }
+
+  // Verificar si ya tiene un reporte aprobado/completado en el período actual
+  const tieneReporteAprobado = reportesArray.some(
+    (r) => r.estado === "Completado" || r.estado === "completado"
+  )
+
   const statsArray = [
     {
       label: "Pendientes",
@@ -933,6 +902,24 @@ export default function PendingReports() {
       <div className="max-w-7xl mx-auto space-y-8">
         <DashboardHeader semestre={semestreActual} fechaLimite={fechaLimiteActual} />
 
+        {/* Banner de fecha límite no configurada */}
+        {!loading && fechaLimiteActual === "N/A" && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                  No hay fecha límite de entrega configurada
+                </h3>
+                <p className="text-sm text-yellow-700">
+                  Actualmente no es posible crear reportes porque el administrador no ha configurado una fecha límite de entrega (categoría ENTREGA). 
+                  Por favor, contacta al administrador para que configure la fecha límite de entrega de reportes.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tarjetas de estado */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsArray.map((stat, index) => (
@@ -954,13 +941,24 @@ export default function PendingReports() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-lg font-semibold text-gray-900">Reportes activos ({reportesFiltrados.length})</h3>
-            <Button 
-              onClick={() => setOpenCrearReporte(true)}
-              className="flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              Crear Reporte
-            </Button>
+            {tieneReporteAprobado ? (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-300 rounded-md">
+                <CheckCircle2 className="w-5 h-5 text-green-700" />
+                <span className="text-sm font-medium text-green-800">
+                  Ya entregaste tu reporte semestral aprobado
+                </span>
+              </div>
+            ) : (
+              <Button 
+                onClick={() => setOpenCrearReporte(true)}
+                className="flex items-center gap-2"
+                disabled={fechaLimiteActual === "N/A"}
+                title={fechaLimiteActual === "N/A" ? "No se puede crear reporte sin fecha límite de entrega configurada" : "Crear nuevo reporte"}
+              >
+                <FileText className="w-4 h-4" />
+                Crear Reporte
+              </Button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -1008,10 +1006,16 @@ export default function PendingReports() {
                         </DropdownMenuItem>
 
                         {r.estado === "Pendiente" && (
-                          <DropdownMenuItem onClick={() => !enviando && enviarReporte(r)} className={enviando ? 'opacity-50 cursor-not-allowed' : ''}>
-                            <Send className="w-4 h-4 mr-2 text-blue-600" />
-                            {enviando ? 'Enviando…' : 'Enviar para revisión'}
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem onClick={() => abrirEdicionReporte(r)}>
+                              <Edit3 className="w-4 h-4 mr-2 text-blue-600" />
+                              Editar reporte
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => !enviando && enviarReporte(r)} className={enviando ? 'opacity-50 cursor-not-allowed' : ''}>
+                              <Send className="w-4 h-4 mr-2 text-blue-600" />
+                              {enviando ? 'Enviando…' : 'Enviar para revisión'}
+                            </DropdownMenuItem>
+                          </>
                         )}
 
                         {r.estado === "En revisión" && (
@@ -1062,14 +1066,24 @@ export default function PendingReports() {
           footer={
             <>
               {reporteSeleccionado?.estado === "Pendiente" && (
-                <Button
-                  onClick={() => enviarReporte(reporteSeleccionado)}
-                  disabled={enviando}
-                  className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {enviando ? 'Enviando…' : 'Enviar para revisión'}
-                </Button>
+                <>
+                  <Button
+                    onClick={() => abrirEdicionReporte(reporteSeleccionado)}
+                    variant="outline"
+                    className="inline-flex items-center px-4 py-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent rounded-md transition-colors focus:ring-blue-500"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Editar reporte
+                  </Button>
+                  <Button
+                    onClick={() => enviarReporte(reporteSeleccionado)}
+                    disabled={enviando}
+                    className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {enviando ? 'Enviando…' : 'Enviar para revisión'}
+                  </Button>
+                </>
               )}
               {reporteSeleccionado?.estado === "En revisión" && (
                 <Button
@@ -1140,97 +1154,6 @@ export default function PendingReports() {
           </div>
         </SmallModal>
 
-        {/* Modal de corrección del reporte devuelto */}
-        <Modal
-          isOpen={openCorreccion}
-          onClose={() => setOpenCorreccion(false)}
-          title="Corregir reporte devuelto"
-          description="Atiende las observaciones del administrador, corrige y vuelve a enviar a revisión."
-        >
-          <div className="space-y-4">
-            {reporteSeleccionado?.comentariosRevision && (
-              <div className="p-3 bg-red-50 border border-red-100 rounded text-sm text-red-800">
-                Observaciones: {reporteSeleccionado.comentariosRevision}
-              </div>
-            )}
-            <div className="space-y-2">
-              <label htmlFor="titulo" className="block text-sm font-medium text-gray-700">
-                Título del reporte
-              </label>
-              <input
-                id="titulo"
-                type="text"
-                value={tituloCorreccion}
-                onChange={(e) => setTituloCorreccion(e.target.value)}
-                placeholder="Actualiza el título del reporte..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="resumen" className="block text-sm font-medium text-gray-700">
-                Resumen del reporte
-              </label>
-              <textarea
-                id="resumen"
-                value={resumenCorreccion}
-                onChange={(e) => setResumenCorreccion(e.target.value)}
-                placeholder="Actualiza el resumen del reporte con tus correcciones..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                rows={4}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="resumenEjecutivo" className="block text-sm font-medium text-gray-700">
-                Resumen ejecutivo (actualizado)
-              </label>
-              <textarea
-                id="resumenEjecutivo"
-                value={resumenEjecutivoCorreccion}
-                onChange={(e) => setResumenEjecutivoCorreccion(e.target.value)}
-                placeholder="Actualiza el resumen ejecutivo del reporte..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Evidencias (opcional)</label>
-              <input
-                type="file"
-                multiple
-                onChange={(e) => setArchivosCorreccion(e.target.files)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-500">Puedes adjuntar PDF, imágenes o Excel como respaldo.</p>
-              {archivosCorreccion && archivosCorreccion.length > 0 && (
-                <p className="text-xs text-gray-600">{archivosCorreccion.length} archivo(s) seleccionado(s)</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Archivos actuales del reporte</label>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <ListaArchivosReporte archivos={reporteSeleccionado?.archivos || []} titulo="Archivos actuales del reporte" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-            <Button
-              onClick={() => setOpenCorreccion(false)}
-              variant="outline"
-              className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-colors border-gray-300 focus:ring-gray-300"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={reenviarCorreccion}
-              disabled={!tituloCorreccion.trim() || !resumenCorreccion.trim() || enviando}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-green-500"
-            >
-              {enviando ? 'Reenviando…' : 'Reenviar para revisión'}
-            </Button>
-          </div>
-        </Modal>
-
         {/* Modal para crear reporte */}
         {openCrearReporte && (
           <ModalCrearReporte
@@ -1243,6 +1166,30 @@ export default function PendingReports() {
                 window.location.reload();
               }, 2000);
             }}
+          />
+        )}
+
+        {/* Modal para editar reporte */}
+        {openEditarReporte && reporteAEditar && (
+          <ModalCrearReporte
+            open={openEditarReporte}
+            onClose={() => {
+              setOpenEditarReporte(false);
+              setReporteAEditar(null);
+              setModoCorreccion(false); // Resetear modo corrección
+            }}
+            onReporteCreado={() => {
+              setOpenEditarReporte(false);
+              setReporteAEditar(null);
+              setModoCorreccion(false); // Resetear modo corrección
+              // Recargar reportes después de 2 segundos
+              setTimeout(() => {
+                window.location.reload();
+              }, 2000);
+            }}
+            reporteExistente={reporteAEditar}
+            modoEdicion={true}
+            modoCorreccion={modoCorreccion} // Pasar el modo corrección
           />
         )}
       </div>

@@ -81,17 +81,17 @@ const Modal = ({ isOpen, onClose, children, title }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-4">
           {children}
         </div>
       </div>
@@ -215,6 +215,21 @@ const CorreccionesDashboard = () => {
       // NO tiene un nivel extra de data.data
       if (response.data && Array.isArray(response.data)) {
         console.log('✅ [CorreccionesDashboard] Actividades encontradas:', response.data.length);
+        
+        // Log de los campos de la primera actividad
+        if (response.data.length > 0) {
+          console.log('🔍 [CorreccionesDashboard] Primera actividad completa:', response.data[0]);
+          console.log('📝 [CorreccionesDashboard] Campos de la primera actividad:', {
+            id: response.data[0].id,
+            titulo: response.data[0].titulo,
+            resultados_obtenidos: response.data[0].resultados_obtenidos,
+            observaciones_docente: response.data[0].observaciones_docente,
+            descripcion: response.data[0].descripcion,
+            objetivos: response.data[0].objetivos,
+            recursos: response.data[0].recursos
+          });
+        }
+        
         setActivities(response.data);
         setTotalRecords(response.pagination?.total || response.data.length);
         
@@ -322,6 +337,13 @@ const CorreccionesDashboard = () => {
 
   // Función para abrir modal de revisión
   const handleOpenReviewModal = (activity) => {
+    console.log('🔍 [CorreccionesDashboard] Abriendo modal con actividad:', activity);
+    console.log('📋 [CorreccionesDashboard] Campos importantes:', {
+      resultados_obtenidos: activity.resultados_obtenidos,
+      observaciones_docente: activity.observaciones_docente,
+      descripcion: activity.descripcion,
+      objetivos: activity.objetivos
+    });
     setSelectedActivity(activity);
     setReviewComment("");
     setIsReviewModalOpen(true);
@@ -406,7 +428,7 @@ const CorreccionesDashboard = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-green-700 mb-2">
                 Revisión de Actividades
               </h1>
               <p className="text-gray-600">
@@ -445,7 +467,7 @@ const CorreccionesDashboard = () => {
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center">
                   <Search className="w-5 h-5 text-green-600 mr-2" />
-                  <h3 className="text-lg font-medium text-gray-900">Buscar Usuarios</h3>
+                  <h3 className="text-lg font-medium text-green-700">Buscar Usuarios</h3>
                 </div>
                 <div className="flex-1 flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
@@ -489,7 +511,7 @@ const CorreccionesDashboard = () => {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
                   <Users className="w-6 h-6 text-green-600 mr-3" />
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-green-700">
                     Usuarios Registrados
                   </h2>
                 </div>
@@ -506,7 +528,7 @@ const CorreccionesDashboard = () => {
               ) : users.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <h3 className="text-lg font-medium text-green-700 mb-2">
                     No hay usuarios registrados
                   </h3>
                   <p className="text-gray-600">
@@ -602,7 +624,7 @@ const CorreccionesDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Filter className="w-4 h-4 text-gray-600 mr-2" />
-                    <h3 className="text-sm font-medium text-gray-900">Filtros</h3>
+                    <h3 className="text-sm font-medium text-green-700">Filtros</h3>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button
@@ -670,7 +692,7 @@ const CorreccionesDashboard = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <Activity className="w-5 h-5 text-green-600 mr-2" />
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-semibold text-green-700">
                     Actividades Registradas
                   </h2>
                 </div>
@@ -884,150 +906,127 @@ const CorreccionesDashboard = () => {
       <Modal
         isOpen={isReviewModalOpen}
         onClose={handleCloseReviewModal}
-        title="Revisar Actividad Detallada"
+        title="Detalles de Actividad"
       >
         {selectedActivity && (
-          <div className="space-y-6 max-h-[80vh] overflow-y-auto">
-            {/* Header con título y estados */}
-            <div className="flex items-start justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  {selectedActivity.titulo}
-                </h3>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <span className="bg-white px-2 py-1 rounded-md">{selectedActivity.categoria || 'General'}</span>
-                  <span className="bg-white px-2 py-1 rounded-md">ID: {selectedActivity.id}</span>
-                </div>
+          <div className="space-y-2">
+            {/* Header con título */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 -m-3 mb-2 p-3 text-white rounded-t-lg">
+              <h3 className="text-lg font-bold mb-1">
+                {selectedActivity.titulo}
+              </h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                  {selectedActivity.categoria || 'General'}
+                </span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                  {Number(selectedActivity.horas_dedicadas ?? selectedActivity.horas ?? 0)} horas
+                </span>
               </div>
-              <div className="flex flex-col gap-2 shrink-0"></div>
             </div>
 
-            {/* Información detallada de la actividad */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Grid de información principal - compacto */}
+            <div className="grid grid-cols-3 gap-2">
               {/* Fechas */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Fechas
-                </h4>
-                <div className="space-y-2 text-sm">
+              <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-500">
+                <div className="flex items-center mb-1">
+                  <Calendar className="w-3 h-3 text-blue-600 mr-1" />
+                  <h4 className="font-semibold text-gray-900 text-xs">Fechas</h4>
+                </div>
+                <div className="space-y-0.5 text-[10px]">
                   {selectedActivity.fechaInicio && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Inicio:</span>
+                    <div>
+                      <span className="text-gray-600">Inicio: </span>
                       <span className="font-medium">{new Date(selectedActivity.fechaInicio).toLocaleDateString('es-ES')}</span>
                     </div>
                   )}
                   {selectedActivity.fechaFin && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Fin:</span>
+                    <div>
+                      <span className="text-gray-600">Fin: </span>
                       <span className="font-medium">{new Date(selectedActivity.fechaFin).toLocaleDateString('es-ES')}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Creada:</span>
-                    <span className="font-medium">{new Date(selectedActivity.createdAt).toLocaleDateString('es-ES')}</span>
-                  </div>
-                  {selectedActivity.fecha_envio_planificacion && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Enviada:</span>
-                      <span className="font-medium">{new Date(selectedActivity.fecha_envio_planificacion).toLocaleDateString('es-ES')}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Detalles adicionales */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Detalles
-                </h4>
-                <div className="space-y-2 text-sm">
-                   <div className="flex justify-between">
-                     <span className="text-gray-600">Horas Dedicadas:</span>
-                     <span className="font-medium">{Number(selectedActivity.horas_dedicadas ?? selectedActivity.horas ?? 0)}h</span>
-                   </div>
-                   {selectedActivity.ubicacion && (
-                     <div className="flex justify-between">
-                       <span className="text-gray-600">Ubicación:</span>
-                       <span className="font-medium text-right">{selectedActivity.ubicacion}</span>
-                     </div>
-                   )}
-                   {selectedActivity.participantesEsperados && (
-                     <div className="flex justify-between">
-                       <span className="text-gray-600">Participantes:</span>
-                       <span className="font-medium">{selectedActivity.participantesEsperados}</span>
-                     </div>
-                   )}
-                   {selectedActivity.presupuesto && (
-                     <div className="flex justify-between">
-                       <span className="text-gray-600">Presupuesto:</span>
-                       <span className="font-medium">${parseFloat(selectedActivity.presupuesto).toLocaleString('es-ES')}</span>
-                     </div>
-                   )}
-                   {selectedActivity.periodo_planificacion && (
-                     <div className="flex justify-between">
-                       <span className="text-gray-600">Período:</span>
-                       <span className="font-medium">{selectedActivity.periodo_planificacion}</span>
-                     </div>
-                   )}
-                 </div>
-              </div>
-            </div>
+              {/* Ubicación */}
+              {selectedActivity.ubicacion && (
+                <div className="bg-purple-50 p-2 rounded border-l-2 border-purple-500">
+                  <div className="flex items-center mb-1">
+                    <span className="text-xs mr-1">📍</span>
+                    <h4 className="font-semibold text-gray-900 text-xs">Ubicación</h4>
+                  </div>
+                  <p className="text-[10px] font-medium">{selectedActivity.ubicacion}</p>
+                </div>
+              )}
 
-            {/* Descripción */}
-            {selectedActivity.descripcion && (
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Descripción</h4>
-                <p className="text-sm text-gray-700 leading-relaxed">{selectedActivity.descripcion}</p>
-              </div>
-            )}
-
-            {/* Objetivos */}
-            {selectedActivity.objetivos && (
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Objetivos</h4>
-                <p className="text-sm text-gray-700 leading-relaxed">{selectedActivity.objetivos}</p>
-              </div>
-            )}
-
-            {/* Recursos */}
-            {selectedActivity.recursos && (
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Recursos Necesarios</h4>
-                <p className="text-sm text-gray-700 leading-relaxed">{selectedActivity.recursos}</p>
-              </div>
-            )}
-
-            {/* Observaciones de planificación */}
-            {selectedActivity.observaciones_planificacion && (
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Observaciones de Planificación</h4>
-                <p className="text-sm text-gray-700 leading-relaxed">{selectedActivity.observaciones_planificacion}</p>
-              </div>
-            )}
-
-            {/* Comentarios de revisión anteriores */}
-            {selectedActivity.comentarios_revision && (
-              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Comentarios de Revisión Anteriores</h4>
-                <p className="text-sm text-gray-700 leading-relaxed">{selectedActivity.comentarios_revision}</p>
-                {selectedActivity.fecha_revision && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Revisado el: {new Date(selectedActivity.fecha_revision).toLocaleDateString('es-ES')}
+              {/* Horas/Presupuesto */}
+              <div className="bg-green-50 p-2 rounded border-l-2 border-green-500">
+                <div className="flex items-center mb-1">
+                  <span className="text-xs mr-1">�</span>
+                  <h4 className="font-semibold text-gray-900 text-xs">Datos</h4>
+                </div>
+                {selectedActivity.presupuesto && (
+                  <p className="text-[10px] font-bold text-green-700">
+                    ${parseFloat(selectedActivity.presupuesto).toLocaleString('es-ES')}
+                  </p>
+                )}
+                {selectedActivity.participantesEsperados && (
+                  <p className="text-[10px] text-gray-600">
+                    👥 {selectedActivity.participantesEsperados} personas
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* Secciones de texto - más compactas */}
+            {selectedActivity.descripcion && (
+              <div className="bg-white border border-gray-200 rounded p-2">
+                <h4 className="font-semibold text-gray-900 mb-1 flex items-center text-xs">
+                  <FileText className="w-3 h-3 mr-1 text-gray-600" />
+                  Descripción
+                </h4>
+                <p className="text-[10px] text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedActivity.descripcion}</p>
+              </div>
             )}
 
+            {selectedActivity.objetivos && (
+              <div className="bg-white border border-gray-200 rounded p-2">
+                <h4 className="font-semibold text-gray-900 mb-1 flex items-center text-xs">
+                  <span className="text-xs mr-1">🎯</span>
+                  Objetivos
+                </h4>
+                <p className="text-[10px] text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedActivity.objetivos}</p>
+              </div>
+            )}
 
-            {/* Botones de acción */}
-            <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">
+            {selectedActivity.recursos && (
+              <div className="bg-white border border-gray-200 rounded p-2">
+                <h4 className="font-semibold text-gray-900 mb-1 flex items-center text-xs">
+                  <span className="text-xs mr-1">🛠️</span>
+                  Recursos
+                </h4>
+                <p className="text-[10px] text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedActivity.recursos}</p>
+              </div>
+            )}
+
+            {selectedActivity.observaciones_planificacion && (
+              <div className="bg-orange-50 border-l-2 border-orange-500 rounded p-2">
+                <h4 className="font-semibold text-orange-900 mb-1 flex items-center text-xs">
+                  <MessageSquare className="w-3 h-3 mr-1 text-orange-600" />
+                  Observaciones
+                </h4>
+                <p className="text-[10px] text-orange-900 leading-relaxed whitespace-pre-wrap">{selectedActivity.observaciones_planificacion}</p>
+              </div>
+            )}
+
+            {/* Botón de acción */}
+            <div className="flex justify-end pt-2 border-t border-gray-200">
               <Button
                 onClick={handleCloseReviewModal}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 text-sm"
+                className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 text-xs"
               >
-                Cancelar
+                Cerrar
               </Button>
             </div>
           </div>

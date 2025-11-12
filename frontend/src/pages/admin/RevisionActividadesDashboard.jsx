@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import {
   Eye,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Send,
   Download,
@@ -27,21 +28,46 @@ import reportService from '../../services/reportService'
 import { toast } from 'react-toastify'
 import ListaArchivosReporte from '../../components/ListaArchivosReporte'
 
-// Simple Modal Component
+// Simple Modal Component (para detalles del reporte)
 const Modal = ({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-2">
       <div 
         className="fixed inset-0" 
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-lg max-w-6xl w-full max-h-[95vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-end">
+      <div className="relative bg-white rounded-lg max-w-4xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 flex justify-end">
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold"
+            className="text-gray-400 hover:text-gray-600 text-lg font-bold hover:bg-gray-100 rounded px-2"
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// Modal más pequeño para detalles de actividad individual
+const SmallModal = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-[70] flex items-center justify-center p-3">
+      <div 
+        className="fixed inset-0" 
+        onClick={onClose}
+      />
+      <div className="relative bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-2 flex justify-end">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-lg font-bold hover:bg-gray-100 rounded px-2"
           >
             ×
           </button>
@@ -84,9 +110,24 @@ const TabsContent = ({ value, activeTab, children }) => {
 
 // Componente para mostrar las actividades registradas del profesor seleccionado
 const TeacherActivitiesTab = ({ selectedActivity }) => {
+  const [selectedActivityDetail, setSelectedActivityDetail] = useState(null);
+  const [isActivityDetailOpen, setIsActivityDetailOpen] = useState(false);
+  
   // Usar las actividades del reporte directamente
   const reportActivities = selectedActivity?.actividades || []
   const loadingActivities = false
+
+  // Función para abrir detalle de actividad
+  const openActivityDetail = (activity) => {
+    setSelectedActivityDetail(activity);
+    setIsActivityDetailOpen(true);
+  };
+
+  // Función para cerrar detalle de actividad
+  const closeActivityDetail = () => {
+    setSelectedActivityDetail(null);
+    setIsActivityDetailOpen(false);
+  };
 
   // Función para obtener el icono y estilo según el estado
   const getActivityStatusIcon = (estado) => {
@@ -119,10 +160,18 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
   return (
     <div className="bg-white border border-gray-200 rounded-lg mt-4">
       <div className="border-b border-gray-200 p-4">
-        <h3 className="text-lg font-semibold text-gray-900">Actividades del Período</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Actividades registradas en este reporte
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Actividades del Período</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              {reportActivities.length} {reportActivities.length === 1 ? 'actividad registrada' : 'actividades registradas'} en este reporte
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-300 rounded-lg">
+            <BookOpen className="w-5 h-5 text-green-700" />
+            <span className="text-lg font-bold text-green-800">{reportActivities.length}</span>
+          </div>
+        </div>
       </div>
       <div className="p-4">
         {loadingActivities ? (
@@ -139,39 +188,51 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {reportActivities.map((activity) => {
-              const statusConfig = getActivityStatusIcon(activity.estado_realizado || activity.estado)
-              const StatusIcon = statusConfig.icon
-              
-              return (
-                <div 
-                  key={activity.id} 
-                  className={`flex items-center justify-between p-4 rounded-lg border-l-4 ${
-                    activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
-                      ? "bg-green-50 border-l-green-500"
-                      : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
-                        ? "bg-yellow-50 border-l-yellow-500"
-                        : "bg-blue-50 border-l-blue-500"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
-                          ? "bg-green-500"
-                          : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
-                            ? "bg-yellow-500"
-                            : "bg-blue-500"
-                      }`}
-                    >
-                      {activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA" ? (
-                        <CheckCircle className="w-4 h-4 text-white" />
-                      ) : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO" ? (
-                        <Clock className="w-4 h-4 text-white" />
-                      ) : (
-                        <Calendar className="w-4 h-4 text-white" />
-                      )}
+          <>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                💡 <strong>Haz clic en cualquier actividad</strong> para ver todos sus detalles completos
+              </p>
+            </div>
+            <div className="space-y-3">
+              {reportActivities.map((activity, index) => {
+                const statusConfig = getActivityStatusIcon(activity.estado_realizado || activity.estado)
+                const StatusIcon = statusConfig.icon
+                
+                return (
+                  <button 
+                    key={activity.id}
+                    onClick={() => openActivityDetail(activity)}
+                    className={`w-full flex items-center justify-between p-4 rounded-lg border-l-4 hover:shadow-md transition-all cursor-pointer text-left ${
+                      activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
+                        ? "bg-green-50 border-l-green-500 hover:bg-green-100"
+                        : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
+                          ? "bg-yellow-50 border-l-yellow-500 hover:bg-yellow-100"
+                          : "bg-blue-50 border-l-blue-500 hover:bg-blue-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-gray-600">#{index + 1}</span>
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
+                              ? "bg-green-500"
+                              : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
+                                ? "bg-yellow-500"
+                                : "bg-blue-500"
+                          }`}
+                        >
+                          {activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA" ? (
+                            <CheckCircle className="w-5 h-5 text-white" />
+                          ) : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO" ? (
+                            <Clock className="w-5 h-5 text-white" />
+                          ) : (
+                            <Calendar className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <span className="font-medium text-gray-900 block">{activity.titulo}</span>
@@ -187,32 +248,146 @@ const TeacherActivitiesTab = ({ selectedActivity }) => {
                         </span>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`text-sm font-medium block ${
-                        activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
-                          ? "text-green-600"
-                          : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
-                            ? "text-yellow-600"
-                            : "text-blue-600"
-                      }`}
-                    >
-                      {activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA" ? "Completada" : 
-                       activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO" ? "En Progreso" : "Planificada"}
-                    </span>
-                    {activity.fechaInicio && (
-                      <span className="text-xs text-gray-500 block mt-1">
-                        {formatDate(activity.fechaInicio)}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <span
+                          className={`text-sm font-medium block ${
+                            activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA"
+                              ? "text-green-600"
+                              : activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO"
+                                ? "text-yellow-600"
+                                : "text-blue-600"
+                          }`}
+                        >
+                          {activity.estado_realizado === "COMPLETADA" || activity.estado === "COMPLETADA" ? "Completada" : 
+                           activity.estado_realizado === "EN_PROGRESO" || activity.estado === "EN_PROGRESO" ? "En Progreso" : "Planificada"}
+                        </span>
+                        {activity.fechaInicio && (
+                          <span className="text-xs text-gray-500 block mt-1">
+                            {formatDate(activity.fechaInicio)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center text-green-600">
+                        <Eye className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </button>
               )
             })}
           </div>
+          </>
         )}
       </div>
+
+      {/* Modal de detalle de actividad - COMPACTO */}
+      {isActivityDetailOpen && selectedActivityDetail && (
+        <SmallModal isOpen={isActivityDetailOpen} onClose={closeActivityDetail}>
+          <div className="p-3 space-y-3">
+            {/* Encabezado compacto */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 -m-3 mb-3 p-3 rounded-t-lg">
+              <h3 className="text-lg font-bold text-white mb-1">
+                {selectedActivityDetail.nombre || selectedActivityDetail.titulo}
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs text-white font-medium">
+                  {selectedActivityDetail.categoria}
+                </span>
+                <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs text-white font-medium">
+                  {selectedActivityDetail.estado_realizado === "COMPLETADA" ? "✓ Completada" :
+                   selectedActivityDetail.estado_realizado === "EN_PROGRESO" ? "⏳ En Progreso" : "📅 Planificada"}
+                </span>
+              </div>
+            </div>
+
+            {/* Info principal en grid compacto */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-500">
+                <h4 className="text-xs font-semibold text-blue-700 mb-1">📅 Fechas</h4>
+                <p className="text-[10px] text-gray-700">
+                  <span className="font-medium">Inicio:</span> {formatDate(selectedActivityDetail.fecha_inicio || selectedActivityDetail.fechaInicio)}
+                </p>
+                <p className="text-[10px] text-gray-700">
+                  <span className="font-medium">Fin:</span> {formatDate(selectedActivityDetail.fecha_fin || selectedActivityDetail.fechaFin)}
+                </p>
+              </div>
+              <div className="bg-green-50 p-2 rounded border-l-2 border-green-500">
+                <h4 className="text-xs font-semibold text-green-700 mb-1">⏱️ Horas</h4>
+                <p className="text-xl font-bold text-green-600">
+                  {Number(selectedActivityDetail.horas_dedicadas ?? selectedActivityDetail.horas ?? 0)}h
+                </p>
+                <p className="text-[10px] text-gray-600">dedicadas</p>
+              </div>
+            </div>
+
+            {/* Descripción compacta */}
+            {selectedActivityDetail.descripcion && (
+              <div className="bg-gray-50 border border-gray-200 p-2 rounded">
+                <h4 className="text-xs font-semibold text-gray-700 mb-1">📝 Descripción</h4>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  {selectedActivityDetail.descripcion}
+                </p>
+              </div>
+            )}
+
+            {/* Ubicación */}
+            {selectedActivityDetail.ubicacion && (
+              <div className="bg-orange-50 border border-orange-200 p-2 rounded">
+                <h4 className="text-xs font-semibold text-orange-700 mb-1">📍 Ubicación</h4>
+                <p className="text-[11px] text-gray-700">{selectedActivityDetail.ubicacion}</p>
+              </div>
+            )}
+
+            {/* Objetivos */}
+            {selectedActivityDetail.objetivos && (
+              <div className="bg-blue-50 border border-blue-200 p-2 rounded">
+                <h4 className="text-xs font-semibold text-blue-700 mb-1">🎯 Objetivos</h4>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  {selectedActivityDetail.objetivos}
+                </p>
+              </div>
+            )}
+
+            {/* Recursos */}
+            {selectedActivityDetail.recursos && (
+              <div className="bg-purple-50 border border-purple-200 p-2 rounded">
+                <h4 className="text-xs font-semibold text-purple-700 mb-1">🛠️ Recursos</h4>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  {selectedActivityDetail.recursos}
+                </p>
+              </div>
+            )}
+
+            {/* Participantes y Presupuesto */}
+            {(selectedActivityDetail.participantesEsperados > 0 || selectedActivityDetail.presupuesto > 0) && (
+              <div className="grid grid-cols-2 gap-2">
+                {selectedActivityDetail.participantesEsperados > 0 && (
+                  <div className="bg-indigo-50 p-2 rounded border-l-2 border-indigo-500">
+                    <h4 className="text-xs font-semibold text-indigo-700 mb-1">👥 Participantes</h4>
+                    <p className="text-lg font-bold text-indigo-600">{selectedActivityDetail.participantesEsperados}</p>
+                  </div>
+                )}
+                {selectedActivityDetail.presupuesto > 0 && (
+                  <div className="bg-yellow-50 p-2 rounded border-l-2 border-yellow-500">
+                    <h4 className="text-xs font-semibold text-yellow-700 mb-1">💰 Presupuesto</h4>
+                    <p className="text-sm font-bold text-yellow-600">${selectedActivityDetail.presupuesto.toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Observaciones */}
+            {selectedActivityDetail.observaciones && (
+              <div className="bg-yellow-50 border border-yellow-200 p-2 rounded">
+                <h4 className="text-xs font-semibold text-yellow-700 mb-1">💬 Observaciones</h4>
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  {selectedActivityDetail.observaciones}
+                </p>
+              </div>
+            )}
+          </div>
+        </SmallModal>
+      )}
     </div>
   )
 };
@@ -441,17 +616,27 @@ export default function RevisionActividadesDashboard() {
       const response = await reportService.getReportById(reportId)
       const reporte = response?.data || response
 
+      console.log('🔍 [RevisionActividades] Reporte cargado:', reporte);
+      console.log('📝 [RevisionActividades] Campos del reporte:', {
+        resultados: reporte?.resultados,
+        observaciones: reporte?.observaciones,
+        resumenEjecutivo: reporte?.resumenEjecutivo
+      });
+
       const detalle = {
         ...activity,
         actividades: reporte?.actividades || activity?.actividades || [],
         resumenEjecutivo: reporte?.resumenEjecutivo ?? activity?.resumenEjecutivo,
+        resultados: reporte?.resultados ?? activity?.resultados ?? reporte?.reporte?.resultados,
+        observaciones: reporte?.observaciones ?? activity?.observaciones ?? reporte?.reporte?.observaciones,
         comentariosRevision: reporte?.comentariosRevision ?? activity?.comentariosRevision,
         archivos: reporte?.archivos || activity?.archivos || [],
         usuario: reporte?.usuario || activity?.usuario,
         titulo: reporte?.titulo || activity?.titulo,
         fechaEnvio: reporte?.fechaEnvio || activity?.fechaEnvio,
         updatedAt: reporte?.updatedAt || activity?.updatedAt,
-        estado_realizado: activity?.estado_realizado
+        estado_realizado: activity?.estado_realizado,
+        reporte: reporte // Mantener el objeto reporte completo por si acaso
       }
 
       setSelectedActivity(detalle)
@@ -1476,21 +1661,72 @@ export default function RevisionActividadesDashboard() {
                       <div className="border-b border-gray-200 p-4">
                         <h3 className="text-lg font-semibold text-gray-900">Resumen Ejecutivo del Período</h3>
                       </div>
-                      <div className="p-4">
-                        {selectedActivity?.resumenEjecutivo ? (
-                          <div className="prose max-w-none">
-                            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                              {selectedActivity.resumenEjecutivo}
+                      <div className="p-4 space-y-6">
+                        {/* Resumen Ejecutivo */}
+                        <div>
+                          <h4 className="text-md font-semibold text-green-700 mb-2 flex items-center gap-2">
+                            <FileText className="w-5 h-5" />
+                            Resumen Ejecutivo
+                          </h4>
+                          {selectedActivity?.resumenEjecutivo ? (
+                            <div className="prose max-w-none">
+                              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                {selectedActivity.resumenEjecutivo}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="text-center py-8">
-                            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500 italic">
-                              No hay resumen ejecutivo disponible para este reporte.
-                            </p>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="text-center py-6 bg-gray-50 rounded-lg">
+                              <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-500 italic text-sm">
+                                No hay resumen ejecutivo disponible
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Resultados */}
+                        <div>
+                          <h4 className="text-md font-semibold text-blue-700 mb-2 flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5" />
+                            Resultados Obtenidos
+                          </h4>
+                          {(selectedActivity?.resultados || selectedActivity?.reporte?.resultados) ? (
+                            <div className="prose max-w-none">
+                              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                {selectedActivity?.resultados || selectedActivity?.reporte?.resultados}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 bg-blue-50 rounded-lg">
+                              <CheckCircle2 className="w-10 h-10 text-blue-400 mx-auto mb-2" />
+                              <p className="text-blue-500 italic text-sm">
+                                No se especificaron resultados
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Observaciones */}
+                        <div>
+                          <h4 className="text-md font-semibold text-purple-700 mb-2 flex items-center gap-2">
+                            <Eye className="w-5 h-5" />
+                            Observaciones del Docente
+                          </h4>
+                          {(selectedActivity?.observaciones || selectedActivity?.reporte?.observaciones) ? (
+                            <div className="prose max-w-none">
+                              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                {selectedActivity?.observaciones || selectedActivity?.reporte?.observaciones}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 bg-purple-50 rounded-lg">
+                              <Eye className="w-10 h-10 text-purple-400 mx-auto mb-2" />
+                              <p className="text-purple-500 italic text-sm">
+                                No se agregaron observaciones
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </TabsContent>

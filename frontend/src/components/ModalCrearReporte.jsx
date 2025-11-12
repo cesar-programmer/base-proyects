@@ -471,7 +471,8 @@ const ModalCrearReporte = ({
                 />
               </div>
 
-              <div className="space-y-2">
+              {/* Participantes Reales - Campo oculto, se envía 0 por defecto */}
+              {/* <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Participantes Reales
                 </label>
@@ -484,7 +485,7 @@ const ModalCrearReporte = ({
                   placeholder="Número de participantes reales"
                   min="0"
                 />
-              </div>
+              </div> */}
 
             </div>
 
@@ -492,6 +493,9 @@ const ModalCrearReporte = ({
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Descripción
+                <span className="ml-2 text-xs font-normal text-blue-600">
+                  (Solo visible para ti como docente)
+                </span>
               </label>
               <textarea
                 name="descripcion"
@@ -501,6 +505,12 @@ const ModalCrearReporte = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Describe el propósito y contenido del reporte..."
               />
+              <p className="text-xs text-blue-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Esta descripción es privada y solo tú podrás verla. No será visible para el administrador.
+              </p>
             </div>
 
             {/* Resumen Ejecutivo */}
@@ -551,8 +561,8 @@ const ModalCrearReporte = ({
               />
             </div>
 
-            {/* Recomendaciones */}
-            <div className="space-y-2">
+            {/* Recomendaciones - Campo oculto, se envía vacío */}
+            {/* <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Recomendaciones
               </label>
@@ -564,7 +574,7 @@ const ModalCrearReporte = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Recomendaciones para futuras actividades o mejoras..."
               />
-            </div>
+            </div> */}
 
 
 

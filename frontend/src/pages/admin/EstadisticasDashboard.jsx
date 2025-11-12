@@ -123,7 +123,7 @@ const DownloadButton = ({ format, onClick, icon = "download" }) => {
 // Componente de encabezado con filtros
 const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSelectedMetric, selectedChart, setSelectedChart }) => (
   <Card className="p-6">
-    <h1 className="text-2xl font-bold text-gray-900 mb-6">Estadísticas de Reportes</h1>
+    <h1 className="text-2xl font-bold text-green-700 mb-6">Estadísticas de Reportes</h1>
     
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <Select
@@ -166,7 +166,7 @@ const DashboardHeader = ({ selectedDate, setSelectedDate, selectedMetric, setSel
 // Componente de gráfico de barras
 const BarChart = ({ chartData, maxValue, legendLabel = "Reportes Aprobados" }) => (
   <Card className="p-6">
-    <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
+    <h2 className="text-xl font-semibold text-green-700 mb-6">Rendimiento de Docentes</h2>
     
     <div className="space-y-6">
       {/* Y-axis labels and chart */}
@@ -227,7 +227,7 @@ const LineChart = ({ chartData, maxValue, legendLabel = "Reportes Aprobados" }) 
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
+      <h2 className="text-xl font-semibold text-green-700 mb-6">Rendimiento de Docentes</h2>
       <div className="space-y-4">
         <div className="border rounded">
           <svg width={width} height={height} className="w-full h-80">
@@ -290,7 +290,7 @@ const PieChart = ({ chartData, legendLabel = "Reportes Aprobados" }) => {
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Rendimiento de Docentes</h2>
+      <h2 className="text-xl font-semibold text-green-700 mb-6">Rendimiento de Docentes</h2>
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <div className="w-64 h-64 rounded-full" style={{ backgroundImage: `conic-gradient(${gradientCss})` }} />
         <div className="space-y-2">
@@ -311,7 +311,7 @@ const PieChart = ({ chartData, legendLabel = "Reportes Aprobados" }) => {
 // Componente de tabla de cumplimiento
 const ComplianceTable = ({ complianceData, downloadFile, downloadCSV }) => (
   <Card className="p-6">
-    <h2 className="text-xl font-semibold text-gray-900 mb-6">Cumplimiento de Reportes</h2>
+    <h2 className="text-xl font-semibold text-green-700 mb-6">Cumplimiento de Reportes</h2>
     
     {/* Contador de docentes */}
     <div className="mb-4 text-sm text-gray-600">

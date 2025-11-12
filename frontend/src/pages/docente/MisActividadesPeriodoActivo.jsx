@@ -193,19 +193,97 @@ export default function MisActividadesPeriodoActivo() {
 
   if (loading) {
     return (
-      <div className="p-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Cargando actividades...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">{error}</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-gray-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-red-200 p-8 max-w-md w-full">
+          <div className="flex justify-center mb-6">
+            <div className="bg-red-100 rounded-full p-4">
+              <AlertCircle className="w-12 h-12 text-red-600" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-red-800 text-center mb-4">Error al cargar</h2>
+          <p className="text-red-600 text-center mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  // Si no hay datos (pero ya se calcularon los hooks), mostrar mensaje
-  if (!data) {
-    return <div className="p-4">No hay datos disponibles.</div>;
+  // Si no hay datos (no hay período activo), mostrar mensaje mejorado
+  if (!data || !periodoAcademico) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl border-2 border-yellow-300 p-8 max-w-2xl w-full">
+          <div className="flex justify-center mb-6">
+            <div className="bg-yellow-100 rounded-full p-6 animate-pulse">
+              <Calendar className="w-16 h-16 text-yellow-600" />
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold text-yellow-800 text-center mb-4">
+            No hay período académico activo
+          </h2>
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-6">
+            <p className="text-yellow-800 text-center leading-relaxed">
+              Actualmente no hay un período académico activo configurado en el sistema.
+              Las actividades solo pueden visualizarse cuando existe un período académico en curso.
+            </p>
+          </div>
+          <div className="space-y-4 text-gray-700">
+            <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
+              <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">¿Qué significa esto?</h3>
+                <p className="text-sm text-gray-600">
+                  El administrador del sistema debe activar un período académico para que puedas registrar y visualizar tus actividades.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">¿Qué puedo hacer?</h3>
+                <p className="text-sm text-gray-600">
+                  Por favor, contacta al administrador del sistema para que active el período académico correspondiente.
+                  Una vez activado, tus actividades aparecerán aquí automáticamente.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Actualizar página
+            </button>
+            <button
+              onClick={() => window.history.back()}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+            >
+              Volver atrás
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

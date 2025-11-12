@@ -787,7 +787,10 @@ class ReporteService {
       
       if (filters.actividadId) whereClause.actividadId = filters.actividadId;
       if (filters.usuarioId) whereClause.usuarioId = filters.usuarioId;
-      if (!filters.includeArchivados) whereClause.archivado = false;
+      
+      // SIEMPRE excluir archivados de las estadísticas de pendientes
+      // Los archivados son reportes ya completados y aprobados
+      whereClause.archivado = false;
 
       // 1. Verificar si hay fecha límite de ENTREGA configurada (categoría ENTREGA)
       const fechaLimiteEntrega = await models.FechaLimite.findOne({
@@ -938,10 +941,10 @@ class ReporteService {
         };
       }
 
-      // 3. Obtener reportes del período actual
-      // Los reportes están vinculados al período a través de las actividades
+      // 3. Obtener reportes del período actual (SOLO NO archivados)
+      // Los archivados son del ciclo pasado, no deben aparecer en estadísticas
       const reportesPeriodo = await models.Reporte.findAll({
-        where: whereClause,
+        where: whereClause, // Ya tiene archivado: false
         include: [{
           model: models.Actividad,
           as: 'actividades',
@@ -962,6 +965,7 @@ class ReporteService {
       }));
 
       // 4. Agrupar reportes por docente (cada docente solo debe tener 1 reporte por período)
+      // SOLO reportes NO archivados (los archivados son del ciclo pasado)
       const reportesPorDocente = {};
       reportesData.forEach(reporte => {
         // Si un docente tiene múltiples reportes, tomar el de mayor prioridad:
@@ -984,6 +988,17 @@ class ReporteService {
       const docentesConReporte = Object.keys(reportesPorDocente).length;
       const docentesSinReporte = totalDocentesDebenEntregar - docentesConReporte;
       const pendientes = docentesSinReporte + borradores;
+
+      console.log(`📊 Estadísticas del período ${periodoActivo.nombre}:`);
+      console.log(`   - Total docentes que deben entregar: ${totalDocentesDebenEntregar}`);
+      console.log(`   - Reportes activos (NO archivados): ${reportesPeriodo.length}`);
+      console.log(`   - Completados (aprobados activos): ${completados}`);
+      console.log(`   - En revisión: ${enRevision}`);
+      console.log(`   - Devueltos: ${devueltos}`);
+      console.log(`   - Borradores: ${borradores}`);
+      console.log(`   - Sin reporte: ${docentesSinReporte}`);
+      console.log(`   - PENDIENTES (sin reporte + borradores): ${pendientes}`);
+      console.log(`   ℹ️  Nota: Los reportes archivados NO se cuentan (son del ciclo pasado)`);
 
       // 7. Calcular porcentajes sobre el TOTAL DE DOCENTES
       const calcularPorcentaje = (cantidad) => {

@@ -369,7 +369,7 @@ export default function GestionUsuariosDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Usuarios</h1>
+        <h1 className="text-3xl font-bold text-green-700 mb-2">Gestión de Usuarios</h1>
         <p className="text-gray-600">Administra usuarios del sistema</p>
       </div>
 
@@ -484,7 +484,7 @@ export default function GestionUsuariosDashboard() {
         {filteredUsers.length === 0 && (
           <div className="text-center py-8">
             <Users className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No hay usuarios</h3>
+            <h3 className="mt-2 text-sm font-medium text-green-700">No hay usuarios</h3>
             <p className="mt-1 text-sm text-gray-500">No se encontraron usuarios con los filtros aplicados.</p>
           </div>
         )}
@@ -494,7 +494,7 @@ export default function GestionUsuariosDashboard() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Crear Nuevo Usuario</h3>
+            <h3 className="text-lg font-bold text-green-700 mb-4">Crear Nuevo Usuario</h3>
             <form onSubmit={handleCreateUser}>
               <div className="mb-4">
                 <Label htmlFor="nombre">Nombre</Label>
@@ -587,7 +587,7 @@ export default function GestionUsuariosDashboard() {
       {editingUser && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Editar Usuario</h3>
+            <h3 className="text-lg font-bold text-green-700 mb-4">Editar Usuario</h3>
             <form onSubmit={handleUpdateUser}>
               <div className="mb-4">
                 <Label htmlFor="edit-nombre">Nombre</Label>
@@ -679,8 +679,8 @@ export default function GestionUsuariosDashboard() {
       {showBulkUploadModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-bold text-green-700 mb-4 flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-green-600" />
               Carga Masiva de Usuarios
             </h3>
             

@@ -94,10 +94,10 @@ class UserService {
         throw boom.conflict('Ya existe un usuario con ese email');
       }
 
-      // Convertir strings vacíos a null para campos opcionales
-      if (userData.telefono === '') userData.telefono = null;
-      if (userData.direccion === '') userData.direccion = null;
-      if (userData.fechaNacimiento === '') userData.fechaNacimiento = null;
+      // Convertir strings vacíos a null o undefined para campos opcionales
+      if (userData.telefono === '' || userData.telefono === undefined) userData.telefono = null;
+      if (userData.direccion === '' || userData.direccion === undefined) userData.direccion = null;
+      if (userData.fechaNacimiento === '' || userData.fechaNacimiento === undefined) userData.fechaNacimiento = null;
 
       // Hashear la contraseña antes de crear el usuario
       if (userData.password) {
@@ -146,10 +146,10 @@ class UserService {
         }
       }
 
-      // Convertir strings vacíos a null para campos opcionales
-      if (userData.telefono === '') userData.telefono = null;
-      if (userData.direccion === '') userData.direccion = null;
-      if (userData.fechaNacimiento === '') userData.fechaNacimiento = null;
+      // Convertir strings vacíos a null o undefined para campos opcionales
+      if (userData.telefono === '' || userData.telefono === undefined) userData.telefono = null;
+      if (userData.direccion === '' || userData.direccion === undefined) userData.direccion = null;
+      if (userData.fechaNacimiento === '' || userData.fechaNacimiento === undefined) userData.fechaNacimiento = null;
 
       // Si se está actualizando la contraseña, hashearla
       if (userData.password) {

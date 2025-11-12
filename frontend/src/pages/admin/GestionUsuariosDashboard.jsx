@@ -83,7 +83,6 @@ export default function GestionUsuariosDashboard() {
     email: '',
     password: '',
     cedula: '',
-    telefono: '',
     rolId: ''
   });
 
@@ -138,7 +137,7 @@ export default function GestionUsuariosDashboard() {
       await userService.createUser(formData);
       toast.success('Usuario creado exitosamente');
       setShowCreateModal(false);
-      setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
+      setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', rolId: '' });
       loadUsers();
     } catch (error) {
       toast.error('Error al crear usuario: ' + error.message);
@@ -155,7 +154,7 @@ export default function GestionUsuariosDashboard() {
       await userService.updateUser(editingUser.id, updateData);
       toast.success('Usuario actualizado exitosamente');
       setEditingUser(null);
-      setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
+      setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', rolId: '' });
       loadUsers();
     } catch (error) {
       toast.error('Error al actualizar usuario: ' + error.message);
@@ -217,7 +216,6 @@ export default function GestionUsuariosDashboard() {
       email: user.email || '',
       password: '',
       cedula: user.cedula || '',
-      telefono: user.telefono || '',
       rolId: user.rol?.id?.toString() || ''
     });
   };
@@ -228,13 +226,13 @@ export default function GestionUsuariosDashboard() {
     setEditingUser(null);
     setBulkFile(null);
     setUploadProgress(0);
-    setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', telefono: '', rolId: '' });
+    setFormData({ nombre: '', apellido: '', email: '', password: '', cedula: '', rolId: '' });
   };
 
   // Función para descargar plantilla CSV
   const downloadTemplate = () => {
     // rolId: 1=ADMINISTRADOR, 3=DOCENTE (2=COORDINADOR está oculto)
-    const csvContent = "nombre,apellido,email,cedula,telefono,rolId,password\nJuan,Pérez,juan.perez@universidad.edu,12345678,555-1234,3,Password123\nMaría,González,maria.gonzalez@universidad.edu,87654321,555-5678,1,Password123";
+    const csvContent = "nombre,apellido,email,cedula,rolId,password\nJuan,Pérez,juan.perez@universidad.edu,12345678,3,Password123\nMaría,González,maria.gonzalez@universidad.edu,87654321,1,Password123";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -313,14 +311,19 @@ export default function GestionUsuariosDashboard() {
       
       for (let i = 0; i < users.length; i++) {
         try {
-          console.log(`Creando usuario ${i + 1}/${users.length}: ${users[i].email}`);
+          console.log(`Creando usuario ${i + 1}/${users.length}:`, users[i]);
           await userService.createUser(users[i]);
           successCount++;
           setUploadProgress(50 + (50 * (i + 1) / users.length));
         } catch (error) {
           errorCount++;
-          const errorMsg = error.message || 'Error desconocido';
-          console.error(`Error al crear usuario ${users[i].email}:`, errorMsg);
+          const errorMsg = error.response?.data?.message || error.message || 'Error desconocido';
+          const errorDetails = error.response?.data || error;
+          console.error(`❌ Error al crear usuario ${users[i].email}:`, {
+            mensaje: errorMsg,
+            detalles: errorDetails,
+            usuario: users[i]
+          });
           errors.push(`${users[i].email}: ${errorMsg}`);
         }
       }
@@ -537,15 +540,6 @@ export default function GestionUsuariosDashboard() {
                 />
               </div>
               <div className="mb-4">
-                <Label htmlFor="telefono">Teléfono (opcional)</Label>
-                <Input
-                  id="telefono"
-                  type="text"
-                  value={formData.telefono}
-                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
-                />
-              </div>
-              <div className="mb-4">
                 <Label htmlFor="password">Contraseña</Label>
                 <Input
                   id="password"
@@ -627,15 +621,6 @@ export default function GestionUsuariosDashboard() {
                   value={formData.cedula}
                   onChange={(e) => setFormData({...formData, cedula: e.target.value})}
                   required
-                />
-              </div>
-              <div className="mb-4">
-                <Label htmlFor="edit-telefono">Teléfono (opcional)</Label>
-                <Input
-                  id="edit-telefono"
-                  type="text"
-                  value={formData.telefono}
-                  onChange={(e) => setFormData({...formData, telefono: e.target.value})}
                 />
               </div>
               <div className="mb-4">
@@ -746,7 +731,7 @@ export default function GestionUsuariosDashboard() {
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs font-semibold text-gray-700 mb-1">Formato CSV esperado:</p>
                 <code className="text-xs text-gray-600 block">
-                  nombre,apellido,email,cedula,telefono,rolId,password
+                  nombre,apellido,email,cedula,rolId,password
                 </code>
               </div>
 

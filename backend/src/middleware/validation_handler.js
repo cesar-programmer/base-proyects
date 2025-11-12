@@ -19,6 +19,15 @@ function validatorHandle(schema, property) {
       }
       next();
     } catch (error) {
+      console.error('❌ Error de validación Joi:', {
+        property,
+        details: error.details?.map(d => ({
+          message: d.message,
+          path: d.path,
+          type: d.type
+        })),
+        value: req[property]
+      });
       next(Boom.badRequest(error));
     }
   };

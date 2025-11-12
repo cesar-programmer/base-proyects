@@ -58,6 +58,7 @@ class UserController {
   async createUser(req, res, next) {
     try {
       const userData = req.body;
+      console.log('📝 Datos recibidos para crear usuario:', JSON.stringify(userData, null, 2));
       const newUser = await userService.create(userData);
       
       res.status(201).json({
@@ -65,6 +66,7 @@ class UserController {
         data: newUser
       });
     } catch (error) {
+      console.error('❌ Error al crear usuario:', error.message);
       next(error);
     }
   }

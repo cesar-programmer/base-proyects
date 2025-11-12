@@ -1186,36 +1186,21 @@ export default function RevisionActividadesDashboard() {
                           </button>
                           
                           {activity.estado_realizado === "pendiente" && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setSelectedActivity(activity)
-                                  setIsReviewDialogOpen(true)
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await handleQuickApproveReport(activity.reporteId)
                                   setDropdownOpen(null)
-                                }}
-                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                role="menuitem"
-                              >
-                                <CheckCircle className="mr-3 h-4 w-4 text-blue-500" />
-                                Revisar reporte
-                              </button>
-                              
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await handleQuickApproveReport(activity.reporteId)
-                                    setDropdownOpen(null)
-                                  } catch (error) {
-                                    toast.error('Error al aprobar reporte: ' + error.message)
-                                  }
-                                }}
-                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                role="menuitem"
-                              >
-                                <CheckCircle className="mr-3 h-4 w-4 text-green-500" />
-                                Aprobar rápidamente
-                              </button>
-                            </>
+                                } catch (error) {
+                                  toast.error('Error al aprobar reporte: ' + error.message)
+                                }
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              role="menuitem"
+                            >
+                              <CheckCircle className="mr-3 h-4 w-4 text-green-500" />
+                              Aprobar rápidamente
+                            </button>
                           )}
                           
                           {activity.estado_realizado === "devuelto" && (

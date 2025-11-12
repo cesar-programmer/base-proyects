@@ -136,23 +136,6 @@ function Modal({ isOpen, onClose, children, title, description }) {
   )
 }
 
-function SmallModal({ isOpen, onClose, children, title, description }) {
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-green-800">{title}</h2>
-          {description && <p className="text-gray-600 mt-1">{description}</p>}
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  )
-}
-
 function DropdownMenu({ trigger, children, isOpen, onToggle }) {
   return (
     <div className="relative">
@@ -756,8 +739,6 @@ export default function PendingReports() {
 
   const [reporteSeleccionado, setReporteSeleccionado] = useState(null)
   const [openDetalle, setOpenDetalle] = useState(false)
-  const [openSolicitud, setOpenSolicitud] = useState(false)
-  const [mensajeSolicitud, setMensajeSolicitud] = useState("")
   const [openCrearReporte, setOpenCrearReporte] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [openEditarReporte, setOpenEditarReporte] = useState(false)
@@ -791,22 +772,6 @@ export default function PendingReports() {
     }
   }
 
-  const solicitarEdicion = (rep) => {
-    setReporteSeleccionado(rep)
-    setMensajeSolicitud("")
-    setOpenSolicitud(true)
-    setDropdownOpen(null)
-  }
-
-  const confirmarSolicitudEdicion = () => {
-    if (!reporteSeleccionado) return
-    setReportes((prev) => {
-      const currentReports = Array.isArray(prev) ? prev : [];
-      return currentReports.map((r) => (r.id === reporteSeleccionado.id ? { ...r, estado: "Pendiente" } : r));
-    })
-    setOpenSolicitud(false)
-  }
-
   const abrirCorreccion = async (rep) => {
     try {
       setDropdownOpen(null)
@@ -833,17 +798,6 @@ export default function PendingReports() {
       toast.error('Error al cargar el reporte para corrección')
     }
   }
-
-  // Función para mapear estados del frontend al backend
-  const mapEstadoToBackend = (estadoFrontend) => {
-    const estadoMap = {
-      'Pendiente': 'borrador',
-      'En revisión': 'enviado',
-      'Aprobado': 'aprobado',
-      'Devuelto': 'devuelto'
-    };
-    return estadoMap[estadoFrontend] || 'borrador';
-  };
 
   const enviarReporte = async (rep) => {
     if (!rep?.id || enviando) return
@@ -1047,27 +1001,18 @@ export default function PendingReports() {
                               Editar reporte
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => !enviando && enviarReporte(r)} className={enviando ? 'opacity-50 cursor-not-allowed' : ''}>
-                              <Send className="w-4 h-4 mr-2 text-blue-600" />
-                              {enviando ? 'Enviando…' : 'Enviar para revisión'}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-
-                        {r.estado === "En revisión" && (
-                          <DropdownMenuItem onClick={() => solicitarEdicion(r)}>
-                            <Edit3 className="w-4 h-4 mr-2 text-amber-600" />
-                            Solicitar edición
+                            <Send className="w-4 h-4 mr-2 text-blue-600" />
+                            {enviando ? 'Enviando…' : 'Enviar para revisión'}
                           </DropdownMenuItem>
-                        )}
+                        </>
+                      )}
 
-                        {r.estado === "Devuelto" && (
-                          <DropdownMenuItem onClick={() => abrirCorreccion(r)}>
-                            <RotateCcw className="w-4 h-4 mr-2 text-red-600" />
-                            Corregir y reenviar
-                          </DropdownMenuItem>
-                        )}
-
-                        <DropdownMenuItem onClick={() => descargarReportePDF(r)}>
+                      {r.estado === "Devuelto" && (
+                        <DropdownMenuItem onClick={() => abrirCorreccion(r)}>
+                          <RotateCcw className="w-4 h-4 mr-2 text-red-600" />
+                          Corregir y reenviar
+                        </DropdownMenuItem>
+                      )}                        <DropdownMenuItem onClick={() => descargarReportePDF(r)}>
                           <Download className="w-4 h-4 mr-2 text-gray-600" />
                           Descargar PDF
                         </DropdownMenuItem>
@@ -1120,16 +1065,6 @@ export default function PendingReports() {
                   </Button>
                 </>
               )}
-              {reporteSeleccionado?.estado === "En revisión" && (
-                <Button
-                  onClick={() => solicitarEdicion(reporteSeleccionado)}
-                  variant="outline"
-                  className="inline-flex items-center px-4 py-2 border-amber-200 text-amber-600 hover:bg-amber-50 bg-transparent rounded-md transition-colors focus:ring-amber-500"
-                >
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Solicitar edición
-                </Button>
-              )}
               {reporteSeleccionado?.estado === "Devuelto" && (
                 <Button
                   onClick={() => abrirCorreccion(reporteSeleccionado)}
@@ -1151,43 +1086,6 @@ export default function PendingReports() {
             </>
           }
         />
-
-        {/* Modal de solicitud de edición */}
-        <SmallModal
-          isOpen={openSolicitud}
-          onClose={() => setOpenSolicitud(false)}
-          title="Solicitar edición del reporte"
-          description="Envía una solicitud para poder editar un reporte que está en revisión."
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de la solicitud</label>
-              <textarea
-                placeholder="Describe brevemente los cambios que necesitas realizar..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                rows={3}
-                value={mensajeSolicitud}
-                onChange={(e) => setMensajeSolicitud(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-            <Button
-              onClick={() => setOpenSolicitud(false)}
-              variant="outline"
-              className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-colors border-gray-300 focus:ring-gray-300"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={confirmarSolicitudEdicion}
-              disabled={!mensajeSolicitud.trim()}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-green-500"
-            >
-              Enviar solicitud
-            </Button>
-          </div>
-        </SmallModal>
 
         {/* Modal para crear reporte */}
         {openCrearReporte && (

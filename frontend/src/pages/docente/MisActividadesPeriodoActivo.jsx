@@ -41,6 +41,8 @@ export default function MisActividadesPeriodoActivo() {
     participantes: ''
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [canModifyActivities, setCanModifyActivities] = useState(true);
+  const [fechaLimiteMessage, setFechaLimiteMessage] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +74,11 @@ export default function MisActividadesPeriodoActivo() {
           actividades: actividadesFiltradas,
           periodoAcademico: response?.periodoActivo || null,
         });
+
+        // Verificar si se pueden modificar actividades (fecha límite de registro)
+        if (response?.periodoActivo?.id) {
+          await checkCanModifyActivities(response.periodoActivo.id);
+        }
       } catch (err) {
         setError(err.message || 'Error al cargar mis actividades');
       } finally {
@@ -80,6 +87,44 @@ export default function MisActividadesPeriodoActivo() {
     };
     load();
   }, [user]);
+
+  // Función para verificar si se pueden modificar actividades
+  const checkCanModifyActivities = async (periodoId) => {
+    try {
+      // Hacer una petición al backend para verificar fechas límite
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'}/fechas-limite?periodoId=${periodoId}&categoria=REGISTRO`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const fechasLimite = data.data || [];
+        
+        if (fechasLimite.length > 0) {
+          const fechaLimite = fechasLimite[0];
+          const hoy = new Date();
+          hoy.setHours(0, 0, 0, 0);
+          
+          const fechaLimiteDate = new Date(fechaLimite.fecha_limite);
+          fechaLimiteDate.setHours(23, 59, 59, 999);
+          
+          if (hoy > fechaLimiteDate || !fechaLimite.activo) {
+            setCanModifyActivities(false);
+            setFechaLimiteMessage(`La fecha límite de registro (${new Date(fechaLimite.fecha_limite).toLocaleDateString('es-ES')}) ha expirado. No puedes modificar ni eliminar actividades.`);
+          } else {
+            setCanModifyActivities(true);
+            setFechaLimiteMessage(`Puedes modificar actividades hasta el ${new Date(fechaLimite.fecha_limite).toLocaleDateString('es-ES')}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar fecha límite:', error);
+      // Por defecto, permitir modificaciones si hay error
+      setCanModifyActivities(true);
+    }
+  };
 
   // Derivar datos de forma segura para mantener el orden de hooks estable en todos los renders
   const actividades = data?.actividades || [];
@@ -128,6 +173,12 @@ export default function MisActividadesPeriodoActivo() {
 
   const saveEdit = async () => {
     if (!editingId) return;
+    
+    if (!canModifyActivities) {
+      toast.error('No puedes modificar actividades: la fecha límite de registro ha expirado');
+      return;
+    }
+    
     try {
       const payload = {
         nombre: form.nombre?.trim() || '',
@@ -169,11 +220,18 @@ export default function MisActividadesPeriodoActivo() {
       }, 1000);
       cancelEdit();
     } catch (err) {
-      setError(err.message || 'Error al guardar cambios de la actividad');
+      const errorMessage = err.response?.data?.message || err.message || 'Error al guardar cambios de la actividad';
+      toast.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
   const deleteActivity = async (actId, titulo) => {
+    if (!canModifyActivities) {
+      toast.error('No puedes eliminar actividades: la fecha límite de registro ha expirado');
+      return;
+    }
+    
     if (!window.confirm(`¿Estás seguro de eliminar la actividad "${titulo}"?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
@@ -185,7 +243,8 @@ export default function MisActividadesPeriodoActivo() {
       }));
       toast.success('Actividad eliminada exitosamente');
     } catch (err) {
-      toast.error(err.message || 'Error al eliminar la actividad');
+      const errorMessage = err.response?.data?.message || err.message || 'Error al eliminar la actividad';
+      toast.error(errorMessage);
     }
   };
 
@@ -302,6 +361,22 @@ export default function MisActividadesPeriodoActivo() {
         </div>
       </div>
 
+      {/* Mensaje de fecha límite */}
+      {fechaLimiteMessage && (
+        <div className={`mb-6 p-4 rounded-lg border-2 ${canModifyActivities ? 'bg-blue-50 border-blue-300' : 'bg-red-50 border-red-300'}`}>
+          <div className="flex items-center gap-3">
+            {canModifyActivities ? (
+              <Clock className="w-6 h-6 text-blue-600 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+            )}
+            <p className={`text-sm font-medium ${canModifyActivities ? 'text-blue-800' : 'text-red-800'}`}>
+              {fechaLimiteMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Barra de búsqueda eliminada para una interfaz más limpia */}
 
       {actividadesFiltradas.length === 0 ? (
@@ -386,14 +461,26 @@ export default function MisActividadesPeriodoActivo() {
                   )}
                   <div className="flex justify-end gap-2 mt-2">
                     <button
-                      className="inline-flex items-center px-3 py-2 text-sm rounded-md bg-green-600 text-white hover:bg-green-700"
-                      onClick={() => startEdit(act)}
+                      className={`inline-flex items-center px-3 py-2 text-sm rounded-md ${
+                        canModifyActivities 
+                          ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      onClick={() => canModifyActivities && startEdit(act)}
+                      disabled={!canModifyActivities}
+                      title={!canModifyActivities ? 'No se puede editar: fecha límite de registro expirada' : 'Editar actividad'}
                     >
                       Editar
                     </button>
                     <button
-                      className="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
-                      onClick={() => deleteActivity(act.id, titulo)}
+                      className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md ${
+                        canModifyActivities 
+                          ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer' 
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      onClick={() => canModifyActivities && deleteActivity(act.id, titulo)}
+                      disabled={!canModifyActivities}
+                      title={!canModifyActivities ? 'No se puede eliminar: fecha límite de registro expirada' : 'Eliminar actividad'}
                     >
                       <Trash2 className="w-4 h-4" />
                       Eliminar

@@ -156,6 +156,13 @@ const ModalCrearReporte = ({
         console.log('🔄 Estableciendo actividades en el estado...');
         setActividades(actividadesDisponibles);
         
+        // Seleccionar TODAS las actividades automáticamente (si no estamos en modo edición)
+        if (!modoEdicion) {
+          const todasLasActividadesIds = actividadesDisponibles.map(a => a.id);
+          console.log('✅ Seleccionando TODAS las actividades automáticamente:', todasLasActividadesIds);
+          setActividadesSeleccionadas(todasLasActividadesIds);
+        }
+        
         // Verificar el estado después de un pequeño delay
         setTimeout(() => {
           console.log('🔍 Estado de actividades después de setActividades:', actividadesDisponibles);
@@ -185,16 +192,6 @@ const ModalCrearReporte = ({
       setLoading(false);
       console.log('🏁 Carga de actividades finalizada');
     }
-  };
-
-  const handleSelectActividad = (actividadId) => {
-    setActividadesSeleccionadas(prev => {
-      if (prev.includes(actividadId)) {
-        return prev.filter(id => id !== actividadId);
-      } else {
-        return [...prev, actividadId];
-      }
-    });
   };
 
   const handleInputChange = (e) => {
@@ -244,13 +241,29 @@ const ModalCrearReporte = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (actividadesSeleccionadas.length === 0) {
-      toast.error('⚠️ Debe seleccionar al menos una actividad para crear el reporte');
+    // Validar que haya actividades disponibles (ya deberían estar todas seleccionadas automáticamente)
+    if (actividades.length === 0) {
+      toast.error('⚠️ No hay actividades disponibles para crear el reporte. Debes registrar al menos una actividad primero.');
       return;
     }
 
     if (!formData.titulo.trim()) {
       toast.error('⚠️ El título del reporte es obligatorio');
+      return;
+    }
+
+    // Validar que se haya subido al menos un archivo PDF
+    const tienePDF = archivosSeleccionados.some(file => 
+      file.name.toLowerCase().endsWith('.pdf')
+    );
+    
+    if (archivosSeleccionados.length === 0) {
+      toast.error('⚠️ Debe subir al menos un archivo PDF con la evidencia de las actividades realizadas');
+      return;
+    }
+    
+    if (!tienePDF) {
+      toast.error('⚠️ Debe incluir al menos un archivo PDF con la documentación de validación de las actividades');
       return;
     }
 
@@ -580,9 +593,20 @@ const ModalCrearReporte = ({
 
             {/* Selección de actividades */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Seleccionar Actividades ({actividadesSeleccionadas.length} seleccionadas)
-              </h3>
+              <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-green-800 mb-1">
+                      📋 Todas tus actividades están incluidas automáticamente
+                    </h3>
+                    <p className="text-sm text-green-700">
+                      Este reporte incluirá <strong>todas las actividades</strong> que has registrado en el período académico actual. 
+                      Total: <strong>{actividades.length} actividades</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
               
               {/* Debug logs para renderizado */}
               {console.log('🎨 RENDERIZADO - Estado actual:')}
@@ -607,19 +631,17 @@ const ModalCrearReporte = ({
                   {actividades.map((actividad) => (
                     <div
                       key={actividad.id}
-                      className={`p-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 ${
-                        actividadesSeleccionadas.includes(actividad.id) ? 'bg-green-50 border-l-4 border-l-green-500' : ''
-                      }`}
-                      onClick={() => handleSelectActividad(actividad.id)}
+                      className="p-3 border-b border-gray-100 last:border-b-0 bg-green-50 border-l-4 border-l-green-500"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <input
                               type="checkbox"
-                              checked={actividadesSeleccionadas.includes(actividad.id)}
-                              onChange={() => handleSelectActividad(actividad.id)}
-                              className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              checked={true}
+                              disabled={true}
+                              className="rounded border-gray-300 text-green-600 cursor-not-allowed opacity-75"
+                              title="Todas las actividades están incluidas automáticamente"
                             />
                             <h4 className="font-medium text-gray-900">{actividad.titulo || actividad.nombre}</h4>
                           </div>
@@ -643,9 +665,31 @@ const ModalCrearReporte = ({
 
             {/* Subir archivos */}
             <div className="space-y-2">
+              {/* Banner informativo importante */}
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-4">
+                <div className="flex items-start gap-3">
+                  <Upload className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-1">
+                      📄 Documentación Requerida - IMPORTANTE
+                    </h4>
+                    <p className="text-sm text-blue-700 mb-2">
+                      <strong>Debes subir UN ARCHIVO PDF POR CADA ACTIVIDAD</strong> que hayas registrado en este reporte.
+                    </p>
+                    <ul className="text-xs text-blue-600 space-y-1 ml-4 list-disc">
+                      <li><strong>Ejemplo:</strong> Si registraste 3 actividades, debes subir 3 archivos PDF (uno por cada actividad)</li>
+                      <li>Cada PDF debe tener un <strong>nombre descriptivo</strong> que identifique la actividad correspondiente</li>
+                      <li>El contenido del PDF debe incluir evidencias, comprobantes o capturas que validen esa actividad específica</li>
+                      <li>Asegúrate de que cada documento sea legible y esté correctamente organizado</li>
+                      <li>Todos los archivos serán revisados por el administrador junto con tu reporte</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               <label className="block text-sm font-medium text-gray-700">
                 <Upload className="w-4 h-4 inline mr-1" />
-                Archivos de Evidencia (opcional)
+                Archivos de Evidencia <span className="text-red-600">*</span> (Requerido)
               </label>
               <input
                 type="file"
@@ -655,7 +699,8 @@ const ModalCrearReporte = ({
                 multiple
               />
               <p className="text-xs text-gray-500">
-                Formatos permitidos: PDF, Word, Excel, imágenes (JPG, PNG)
+                <strong className="text-red-600">Importante:</strong> Debes subir <strong>un PDF por cada actividad registrada</strong> con el nombre de la actividad. 
+                También puedes incluir Word, Excel o imágenes (JPG, PNG) como complemento adicional.
               </p>
               
               {/* Lista de archivos seleccionados */}
@@ -720,7 +765,7 @@ const ModalCrearReporte = ({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || subiendoArchivos || actividadesSeleccionadas.length === 0 || !formData.titulo.trim()}
+                disabled={loading || subiendoArchivos || actividades.length === 0 || !formData.titulo.trim()}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {subiendoArchivos 

@@ -31,7 +31,8 @@ class ReporteService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'email'],
+            where: { activo: true }
           },
           {
             model: models.User,
@@ -73,7 +74,9 @@ class ReporteService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email'],
+            where: { activo: true },
+            required: false
           },
           {
             model: models.User,
@@ -315,7 +318,8 @@ class ReporteService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'email'],
+            where: { activo: true }
           },
           {
             model: models.Actividad,
@@ -354,7 +358,8 @@ class ReporteService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'email'],
+            where: { activo: true }
           },
           {
             model: models.Actividad,
@@ -1047,7 +1052,8 @@ class ReporteService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email'],
+            where: { activo: true }
           }
         ],
         order: [['updatedAt', 'DESC']],

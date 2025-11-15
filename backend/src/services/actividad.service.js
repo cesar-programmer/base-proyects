@@ -3,6 +3,49 @@ import { models, sequelize } from '../db/models/index.js';
 import FechaLimiteService from './fechaLimite.service.js';
 
 class ActividadService {
+  constructor() {
+    this.fechaLimiteService = new FechaLimiteService();
+  }
+
+  // Método helper para verificar si se puede modificar actividades (dentro de fecha límite de REGISTRO)
+  async canModifyActivities(periodoAcademicoId) {
+    try {
+      // Obtener la fecha límite de REGISTRO del período académico
+      const fechasLimite = await models.FechaLimite.findAll({
+        where: {
+          id_periodo: periodoAcademicoId,
+          categoria: 'REGISTRO',
+          activo: true
+        }
+      });
+
+      if (fechasLimite.length === 0) {
+        // Si no hay fecha límite de registro, permitir modificaciones
+        return { allowed: true, message: 'No hay fecha límite de registro configurada' };
+      }
+
+      const fechaLimite = fechasLimite[0];
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche
+      
+      const fechaLimiteDate = new Date(fechaLimite.fecha_limite);
+      fechaLimiteDate.setHours(23, 59, 59, 999); // Final del día
+
+      if (hoy > fechaLimiteDate) {
+        return { 
+          allowed: false, 
+          message: `La fecha límite de registro (${fechaLimite.fecha_limite}) ha expirado. No se pueden modificar actividades.`
+        };
+      }
+
+      return { allowed: true, message: 'Dentro del período de registro' };
+    } catch (error) {
+      console.error('Error al verificar fecha límite:', error);
+      // En caso de error, permitir por defecto (fail-open)
+      return { allowed: true, message: 'Error al verificar fecha límite' };
+    }
+  }
+
   // Obtener todas las actividades
   async find() {
     try {
@@ -10,7 +53,8 @@ class ActividadService {
         include: [
           {
             association: 'usuario',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'email'],
+            where: { activo: true }
           },
           {
             association: 'periodoAcademico',
@@ -36,7 +80,9 @@ class ActividadService {
         include: [
           {
             association: 'usuario',
-            attributes: ['id', 'nombre', 'email']
+            attributes: ['id', 'nombre', 'email'],
+            where: { activo: true },
+            required: false
           },
           {
             association: 'periodoAcademico',
@@ -76,7 +122,8 @@ class ActividadService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email'],
+            where: { activo: true }
           },
           {
             model: models.PeriodoAcademico,
@@ -112,7 +159,8 @@ class ActividadService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido', 'email']
+            attributes: ['id', 'nombre', 'apellido', 'email'],
+            where: { activo: true }
           },
           {
             model: models.PeriodoAcademico,
@@ -155,10 +203,13 @@ class ActividadService {
   // Crear una nueva actividad
   async create(actividadData, options = {}) {
     try {
-      // Verificar que el usuario existe
+      // Verificar que el usuario existe y está activo
       const usuario = await models.User.findByPk(actividadData.usuarioId);
       if (!usuario) {
         throw boom.notFound('Usuario no encontrado');
+      }
+      if (!usuario.activo) {
+        throw boom.forbidden('No se pueden crear actividades para un usuario inactivo');
       }
 
       // Verificar que el periodo académico existe
@@ -210,11 +261,22 @@ class ActividadService {
     try {
       const actividad = await this.findOne(id);
 
-      // Si se está cambiando el usuario, verificar que existe
+      // Verificar si está dentro de la fecha límite de registro
+      const periodoId = actividad.periodoAcademicoId;
+      const canModify = await this.canModifyActivities(periodoId);
+      
+      if (!canModify.allowed) {
+        throw boom.forbidden(canModify.message);
+      }
+
+      // Si se está cambiando el usuario, verificar que existe y está activo
       if (actividadData.usuarioId && actividadData.usuarioId !== actividad.usuarioId) {
         const usuario = await models.User.findByPk(actividadData.usuarioId);
         if (!usuario) {
           throw boom.notFound('Usuario no encontrado');
+        }
+        if (!usuario.activo) {
+          throw boom.forbidden('No se pueden asignar actividades a un usuario inactivo');
         }
       }
 
@@ -241,6 +303,15 @@ class ActividadService {
   async delete(id) {
     try {
       const actividad = await this.findOne(id);
+      
+      // Verificar si está dentro de la fecha límite de registro
+      const periodoId = actividad.periodoAcademicoId;
+      const canModify = await this.canModifyActivities(periodoId);
+      
+      if (!canModify.allowed) {
+        throw boom.forbidden(canModify.message);
+      }
+      
       await actividad.destroy();
       return { message: 'Actividad eliminada correctamente' };
     } catch (error) {
@@ -386,7 +457,8 @@ class ActividadService {
           {
             model: models.User,
             as: 'usuario',
-            attributes: ['id', 'nombre', 'apellido']
+            attributes: ['id', 'nombre', 'apellido'],
+            where: { activo: true }
           }
         ],
         order: [['createdAt', 'ASC']],
@@ -427,12 +499,17 @@ class ActividadService {
           as: 'usuario',
           attributes: ['id', 'nombre', 'apellido', 'email'],
           where: searchTerm ? {
-            [models.Sequelize.Op.or]: [
-              { nombre: { [models.Sequelize.Op.like]: `%${searchTerm}%` } },
-              { apellido: { [models.Sequelize.Op.like]: `%${searchTerm}%` } },
-              { email: { [models.Sequelize.Op.like]: `%${searchTerm}%` } }
+            [models.Sequelize.Op.and]: [
+              { activo: true },
+              {
+                [models.Sequelize.Op.or]: [
+                  { nombre: { [models.Sequelize.Op.like]: `%${searchTerm}%` } },
+                  { apellido: { [models.Sequelize.Op.like]: `%${searchTerm}%` } },
+                  { email: { [models.Sequelize.Op.like]: `%${searchTerm}%` } }
+                ]
+              }
             ]
-          } : {}
+          } : { activo: true }
         },
         {
           model: models.Reporte,
@@ -551,14 +628,18 @@ class ActividadService {
     try {
       console.log('🔍 [submitPlanification] Transacción creada exitosamente');
 
-      // Verificar que el usuario existe
+      // Verificar que el usuario existe y está activo
       console.log('🔍 [submitPlanification] Verificando usuario con ID:', usuarioId);
       const usuario = await models.User.findByPk(usuarioId);
       if (!usuario) {
         console.log('❌ [submitPlanification] Usuario no encontrado:', usuarioId);
         throw boom.notFound('Usuario no encontrado');
       }
-      console.log('✅ [submitPlanification] Usuario encontrado:', usuario.nombre);
+      if (!usuario.activo) {
+        console.log('❌ [submitPlanification] Usuario inactivo:', usuarioId);
+        throw boom.forbidden('No se pueden crear actividades para un usuario inactivo');
+      }
+      console.log('✅ [submitPlanification] Usuario verificado correctamente');
 
       // Verificar que todas las actividades existen y pertenecen al usuario
     const actividadesExistentes = await models.Actividad.findAll({

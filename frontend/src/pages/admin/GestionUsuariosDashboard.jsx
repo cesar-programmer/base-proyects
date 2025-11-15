@@ -174,12 +174,18 @@ export default function GestionUsuariosDashboard() {
   };
 
   const handleToggleStatus = async (userId) => {
-    try {
-      await userService.toggleUserStatus(userId);
-      toast.success('Estado del usuario actualizado');
-      loadUsers();
-    } catch (error) {
-      toast.error('Error al cambiar estado: ' + error.message);
+    const user = users.find(u => u.id === userId);
+    const newStatus = !user.activo;
+    const action = newStatus ? 'activar' : 'desactivar';
+    
+    if (window.confirm(`¿Estás seguro de que deseas ${action} este usuario?\n\n${newStatus ? '✅ El usuario podrá acceder al sistema y aparecerá en los listados.' : '⚠️ El usuario NO podrá acceder al sistema y será excluido de todos los listados y correos.'}`)) {
+      try {
+        await userService.toggleUserStatus(userId);
+        toast.success(`Usuario ${newStatus ? 'activado' : 'desactivado'} exitosamente`);
+        loadUsers();
+      } catch (error) {
+        toast.error('Error al cambiar estado: ' + error.message);
+      }
     }
   };
 
@@ -421,6 +427,13 @@ export default function GestionUsuariosDashboard() {
 
       {/* Tabla de usuarios */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Mensaje informativo */}
+        <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+          <p className="text-sm text-blue-800 flex items-center gap-2">
+            <Eye className="w-4 h-4" />
+            <span><strong>💡 Tip:</strong> Haz clic en el estado (Activo/Inactivo) para cambiar el acceso del usuario al sistema.</span>
+          </p>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -450,14 +463,17 @@ export default function GestionUsuariosDashboard() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => handleToggleStatus(user.id)}
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:shadow-md active:scale-95 cursor-pointer ${
+                        user.activo 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-300' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-300'
                       }`}
+                      title={user.activo ? 'Clic para desactivar usuario' : 'Clic para activar usuario'}
                     >
                       {user.activo ? (
-                        <><Eye className="w-3 h-3 mr-1" /> Activo</>
+                        <><Eye className="w-3 h-3 mr-1" /> Activo (clic para cambiar)</>
                       ) : (
-                        <><EyeOff className="w-3 h-3 mr-1" /> Inactivo</>
+                        <><EyeOff className="w-3 h-3 mr-1" /> Inactivo (clic para cambiar)</>
                       )}
                     </button>
                   </td>
